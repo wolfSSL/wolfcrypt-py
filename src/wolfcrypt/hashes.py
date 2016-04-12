@@ -20,6 +20,7 @@
 
 
 class Hash(object):
+    # Magic object that protects against constructors.
     _JAPANESE_CYBER_SWORD = object()
 
 
@@ -29,18 +30,13 @@ class Hash(object):
             raise ValueError("don't construct directly, use new([string])")
 
 
-    @classmethod
-    def new(cls):
-        return cls(cls._JAPANESE_CYBER_SWORD)
-
-
 class Sha(Hash):
     digest_size = 20
 
 
     @classmethod
     def new(cls, string=None):
-        obj = Hash.new()
+        obj = Sha(Hash._JAPANESE_CYBER_SWORD)
 
         obj.digest_size = cls.digest_size
 
@@ -72,7 +68,7 @@ class Sha256(Hash):
 
     @classmethod
     def new(cls, string=None):
-        obj = Hash.new()
+        obj = Sha256(Hash._JAPANESE_CYBER_SWORD)
 
         obj.digest_size = cls.digest_size
 
@@ -103,7 +99,7 @@ class Sha384(Hash):
 
     @classmethod
     def new(cls, string=None):
-        obj = Hash.new()
+        obj = Sha384(Hash._JAPANESE_CYBER_SWORD)
 
         obj.digest_size = cls.digest_size
 
@@ -134,7 +130,7 @@ class Sha512(Hash):
 
     @classmethod
     def new(cls, string=None):
-        obj = Hash.new()
+        obj = Sha512(Hash._JAPANESE_CYBER_SWORD)
 
         obj.digest_size = cls.digest_size
 
