@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+from wolfcrypt._hashes import ffi
+from wolfcrypt._hashes import lib
 
 
 class Hash(object):
@@ -30,127 +32,118 @@ class Hash(object):
             raise ValueError("don't construct directly, use new([string])")
 
 
-class Sha(Hash):
-    digest_size = 20
-
-
     @classmethod
     def new(cls, string=None):
-        obj = Sha(Hash._JAPANESE_CYBER_SWORD)
+        obj = cls(Hash._JAPANESE_CYBER_SWORD)
 
-        obj.digest_size = cls.digest_size
+        obj._native_object = ffi.new(obj._native_type)
+
+        obj._init()
 
         if (string):
-            obj.update(string)
+            obj._update(string)
 
         return obj
 
 
     def copy(self):
-        pass
+        copy = self.new()
+
+        ffi.memmove(copy._native_object,
+                    self._native_object,
+                    self._native_size)
+
+        return copy
 
 
     def update(self, string):
-        pass
+        self._update(string)
 
 
     def digest(self):
-        pass
+        ret = "\0" * self.digest_size
+
+        if self._native_object:
+            obj = ffi.new(self._native_type)
+
+            ffi.memmove(obj, self._native_object, self._native_size)
+
+            self._final(obj, ret)
+
+        return ret
 
 
     def hexdigest(self):
-        pass
+        return "".join("{:02x}".format(ord(c)) for c in self.digest())
+
+
+class Sha(Hash):
+    digest_size  = 20
+    _native_type = "Sha *"
+    _native_size = ffi.sizeof("Sha")
+
+
+    def _init(self):
+        lib.wc_InitSha(self._native_object)
+
+
+    def _update(self, data):
+        lib.wc_ShaUpdate(self._native_object, data, len(data))
+
+
+    def _final(self, obj, ret):
+        lib.wc_ShaFinal(obj, ret)
 
 
 class Sha256(Hash):
-    digest_size = 32
+    digest_size  = 32
+    _native_type = "Sha256 *"
+    _native_size = ffi.sizeof("Sha256")
 
 
-    @classmethod
-    def new(cls, string=None):
-        obj = Sha256(Hash._JAPANESE_CYBER_SWORD)
-
-        obj.digest_size = cls.digest_size
-
-        if (string):
-            obj.update(string)
-
-        return obj
+    def _init(self):
+        lib.wc_InitSha256(self._native_object)
 
 
-    def copy(self):
-        pass
+    def _update(self, data):
+        lib.wc_Sha256Update(self._native_object, data, len(data))
 
 
-    def update(self, string):
-        pass
-
-
-    def digest(self):
-        pass
-
-
-    def hexdigest(self):
-        pass
+    def _final(self, obj, ret):
+        lib.wc_Sha256Final(obj, ret)
 
 
 class Sha384(Hash):
-    digest_size = 48
-
-    @classmethod
-    def new(cls, string=None):
-        obj = Sha384(Hash._JAPANESE_CYBER_SWORD)
-
-        obj.digest_size = cls.digest_size
-
-        if (string):
-            obj.update(string)
-
-        return obj
+    digest_size  = 48
+    _native_type = "Sha384 *"
+    _native_size = ffi.sizeof("Sha384")
 
 
-    def copy(self):
-        pass
+    def _init(self):
+        lib.wc_InitSha384(self._native_object)
 
 
-    def update(self, string):
-        pass
+    def _update(self, data):
+        lib.wc_Sha384Update(self._native_object, data, len(data))
 
 
-    def digest(self):
-        pass
-
-
-    def hexdigest(self):
-        pass
+    def _final(self, obj, ret):
+        lib.wc_Sha384Final(obj, ret)
 
 
 class Sha512(Hash):
-    digest_size = 64
-
-    @classmethod
-    def new(cls, string=None):
-        obj = Sha512(Hash._JAPANESE_CYBER_SWORD)
-
-        obj.digest_size = cls.digest_size
-
-        if (string):
-            obj.update(string)
-
-        return obj
+    digest_size  = 64
+    _native_type = "Sha512 *"
+    _native_size = ffi.sizeof("Sha512")
 
 
-    def copy(self):
-        pass
+    def _init(self):
+        lib.wc_InitSha512(self._native_object)
 
 
-    def update(self, string):
-        pass
+    def _update(self, data):
+        lib.wc_Sha512Update(self._native_object, data, len(data))
 
 
-    def digest(self):
-        pass
-
-
-    def hexdigest(self):
-        pass
+    def _final(self, obj, ret):
+        lib.wc_Sha512Final(obj, ret)
