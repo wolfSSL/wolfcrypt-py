@@ -43,30 +43,30 @@ ffi.cdef(
 
     typedef struct { ...; } Sha;
 
-    int wc_InitSha(Sha* sha);
-    int wc_ShaUpdate(Sha* sha, const byte* data, word32 length);
-    int wc_ShaFinal(Sha* sha, byte* digest);
+    int wc_InitSha(Sha*);
+    int wc_ShaUpdate(Sha*, const byte*, word32);
+    int wc_ShaFinal(Sha*, byte*);
 
 
     typedef struct { ...; } Sha256;
 
-    int wc_InitSha256(Sha256* sha);
-    int wc_Sha256Update(Sha256* sha, const byte* data, word32 length);
-    int wc_Sha256Final(Sha256* sha, byte* digest);
+    int wc_InitSha256(Sha256*);
+    int wc_Sha256Update(Sha256*, const byte*, word32);
+    int wc_Sha256Final(Sha256*, byte*);
 
 
     typedef struct { ...; } Sha384;
 
-    int wc_InitSha384(Sha384* sha);
-    int wc_Sha384Update(Sha384* sha, const byte* data, word32 length);
-    int wc_Sha384Final(Sha384* sha, byte* digest);
+    int wc_InitSha384(Sha384*);
+    int wc_Sha384Update(Sha384*, const byte*, word32);
+    int wc_Sha384Final(Sha384*, byte*);
 
 
     typedef struct { ...; } Sha512;
 
-    int wc_InitSha512(Sha512* sha);
-    int wc_Sha512Update(Sha512* sha, const byte* data, word32 length);
-    int wc_Sha512Final(Sha512* sha, byte* digest);
+    int wc_InitSha512(Sha512*);
+    int wc_Sha512Update(Sha512*, const byte*, word32);
+    int wc_Sha512Final(Sha512*, byte*);
 
 """
 )

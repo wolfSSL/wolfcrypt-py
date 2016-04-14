@@ -27,7 +27,7 @@ setup(
     setup_requires=["cffi>=1.5.2"],
     install_requires=["cffi>=1.5.2"],
     cffi_modules=[
-        #"./wolfcrypt/build_hashes.py:ffi",
+        "./wolfcrypt/build_hashes.py:ffi",
         "./wolfcrypt/build_ciphers.py:ffi"
     ],
 )

@@ -20,11 +20,19 @@
 from wolfcrypt._ciphers import ffi
 from wolfcrypt._ciphers import lib
 
+
+# key direction flags
+ENCRYPTION  = 0
+DECRYPTION  = 1
+
+
+# encryption modes
 MODE_ECB = 1 # Electronic Code Book
 MODE_CBC = 2 # Cipher Block Chaining
 MODE_CFB = 3 # Cipher Feedback
 MODE_OFB = 5 # Output Feedback
 MODE_CTR = 6 # Counter
+
 
 class Cipher(object):
     # Magic object that protects against constructors.
@@ -44,8 +52,15 @@ class Cipher(object):
 
         obj = cls(Cipher._JAPANESE_CYBER_SWORD)
 
-        if len(key) != obj.key_size:
-            raise ValueError("key must be %d in length" % obj.key_size)
+        if obj.key_size:
+            if obj.key_size != len(key):
+                raise ValueError("key must be %d in length" % obj.key_size)
+        elif obj._key_sizes:
+            if len(key) not in obj._key_sizes:
+                raise ValueError("key must be %s in length" % obj._key_sizes)
+        else:
+            if not len(key):
+                raise ValueError("key must not be 0 in length")
 
         if IV is not None and len(IV) != obj.block_size:
             raise ValueError("IV must be %d in length" % obj.block_size)
@@ -53,7 +68,7 @@ class Cipher(object):
         obj._native_object = ffi.new(obj._native_type)
 
         obj._key = key
-        obj._IV  = IV
+        obj._IV  = IV if IV else "\0" * obj.block_size
 
         return obj
 
@@ -66,7 +81,7 @@ class Cipher(object):
         cipher = ffi.new(self._native_type)
         ret    = "\0" * len(string)
 
-        self._set_key(cipher, self._ENCRYPTION)
+        self._set_key(cipher, ENCRYPTION)
         self._encrypt(cipher, ret, string)
 
         return ret
@@ -80,20 +95,36 @@ class Cipher(object):
         cipher = ffi.new(self._native_type)
         ret    = "\0" * len(string)
 
-        self._set_key(cipher, self._DECRYPTION)
+        self._set_key(cipher, DECRYPTION)
         self._decrypt(cipher, ret, string)
 
         return ret
+
+
+class Aes(Cipher):
+    key_size     = None # 16, 24, 32
+    _key_sizes   = [16, 24, 32]
+    block_size   = 16
+    _native_type = "Aes *"
+
+
+    def _set_key(self, native_object, direction):
+        lib.wc_AesSetKey(
+            native_object, self._key, len(self._key), self._IV, direction)
+
+
+    def _encrypt(self, native_object, destination, source):
+        lib.wc_AesCbcEncrypt(native_object, destination, source, len(source))
+
+
+    def _decrypt(self, native_object, destination, source):
+        lib.wc_AesCbcDecrypt(native_object, destination, source, len(source))
 
 
 class Des3(Cipher):
     key_size     = 24
     block_size   = 8
     _native_type = "Des3 *"
-
-    # key direction flags
-    _ENCRYPTION  = 0
-    _DECRYPTION  = 1
 
 
     def _set_key(self, native_object, direction):

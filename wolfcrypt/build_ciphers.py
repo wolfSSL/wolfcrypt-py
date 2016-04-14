@@ -26,6 +26,7 @@ ffi = FFI()
 ffi.set_source("wolfcrypt._ciphers",
     """
         #include <wolfssl/options.h>
+        #include <wolfssl/wolfcrypt/aes.h>
         #include <wolfssl/wolfcrypt/des3.h>
     """,
     include_dirs=["/usr/local/include"],
@@ -39,11 +40,17 @@ ffi.cdef(
     typedef unsigned char byte;
     typedef unsigned int  word32;
 
+    typedef struct { ...; } Aes;
+
+    int wc_AesSetKey(Aes*, const byte*, word32, const byte*, int);
+    int wc_AesCbcEncrypt(Aes*, byte*, const byte*, word32);
+    int wc_AesCbcDecrypt(Aes*, byte*, const byte*, word32);
+
     typedef struct { ...; } Des3;
 
-    int wc_Des3_SetKey(Des3* des, const byte* key, const byte* iv,int dir);
-    int wc_Des3_CbcEncrypt(Des3* des, byte* out, const byte* in,word32 sz);
-    int wc_Des3_CbcDecrypt(Des3* des, byte* out, const byte* in,word32 sz);
+    int wc_Des3_SetKey(Des3*, const byte*, const byte*, int);
+    int wc_Des3_CbcEncrypt(Des3*, byte*, const byte*, word32);
+    int wc_Des3_CbcDecrypt(Des3*, byte*, const byte*, word32);
 
 """
 )
