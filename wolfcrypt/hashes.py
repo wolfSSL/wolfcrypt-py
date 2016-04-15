@@ -21,7 +21,7 @@ from wolfcrypt._hashes import ffi
 from wolfcrypt._hashes import lib
 
 
-class Hash(object):
+class _Hash(object):
     # Magic object that protects against constructors.
     _JAPANESE_CYBER_SWORD = object()
 
@@ -30,20 +30,6 @@ class Hash(object):
         if token is not self._JAPANESE_CYBER_SWORD:
             # PEP 247 -- API for Cryptographic Hash Functions
             raise ValueError("don't construct directly, use new([string])")
-
-
-    @classmethod
-    def new(cls, string=None):
-        obj = cls(Hash._JAPANESE_CYBER_SWORD)
-
-        obj._native_object = ffi.new(obj._native_type)
-
-        obj._init()
-
-        if (string):
-            obj._update(string)
-
-        return obj
 
 
     def copy(self):
@@ -77,7 +63,62 @@ class Hash(object):
         return "".join("{:02x}".format(ord(c)) for c in self.digest())
 
 
-class Sha(Hash):
+class _UnkeyedHash(_Hash):
+    @classmethod
+    def new(cls, string=None):
+        self = cls(cls._JAPANESE_CYBER_SWORD)
+
+        self._native_object = ffi.new(self._native_type)
+
+        self._init()
+
+        if (string):
+            self._update(string)
+
+        return self
+
+
+# Hmac types
+
+_TYPE_SHA    = 1
+_TYPE_SHA256 = 2
+_TYPE_SHA384 = 5
+_TYPE_SHA512 = 4
+_HMAC_TYPES = [_TYPE_SHA, _TYPE_SHA256, _TYPE_SHA384, _TYPE_SHA512]
+
+
+class _Hmac(_Hash):
+    digest_size  = None
+    _native_type = "Hmac *"
+    _native_size = ffi.sizeof("Hmac")
+
+    @classmethod
+    def new(cls, type, key, string=None):
+        self = cls(cls._JAPANESE_CYBER_SWORD)
+
+        self._native_object = ffi.new(self._native_type)
+
+        self._init(type, key)
+
+        if (string):
+            self._update(string)
+
+        return self
+
+
+    def _init(self, type, key):
+        lib.wc_HmacSetKey(self._native_object, type, key, len(key))
+
+
+    def _update(self, data):
+        lib.wc_HmacUpdate(self._native_object, data, len(data))
+
+
+    def _final(self, obj, ret):
+        lib.wc_HmacFinal(obj, ret)
+
+
+class Sha(_UnkeyedHash):
     digest_size  = 20
     _native_type = "Sha *"
     _native_size = ffi.sizeof("Sha")
@@ -95,7 +136,16 @@ class Sha(Hash):
         lib.wc_ShaFinal(obj, ret)
 
 
-class Sha256(Hash):
+class HmacSha(_Hmac):
+    @classmethod
+    def new(cls, key, string=None):
+        self = _Hmac.new(_TYPE_SHA, key, string)
+        self.digest_size = Sha.digest_size
+
+        return self
+
+
+class Sha256(_UnkeyedHash):
     digest_size  = 32
     _native_type = "Sha256 *"
     _native_size = ffi.sizeof("Sha256")
@@ -113,7 +163,16 @@ class Sha256(Hash):
         lib.wc_Sha256Final(obj, ret)
 
 
-class Sha384(Hash):
+class HmacSha256(_Hmac):
+    @classmethod
+    def new(cls, key, string=None):
+        self = _Hmac.new(_TYPE_SHA256, key, string)
+        self.digest_size = Sha256.digest_size
+
+        return self
+
+
+class Sha384(_UnkeyedHash):
     digest_size  = 48
     _native_type = "Sha384 *"
     _native_size = ffi.sizeof("Sha384")
@@ -131,7 +190,16 @@ class Sha384(Hash):
         lib.wc_Sha384Final(obj, ret)
 
 
-class Sha512(Hash):
+class HmacSha384(_Hmac):
+    @classmethod
+    def new(cls, key, string=None):
+        self = _Hmac.new(_TYPE_SHA384, key, string)
+        self.digest_size = Sha384.digest_size
+
+        return self
+
+
+class Sha512(_UnkeyedHash):
     digest_size  = 64
     _native_type = "Sha512 *"
     _native_size = ffi.sizeof("Sha512")
@@ -147,3 +215,12 @@ class Sha512(Hash):
 
     def _final(self, obj, ret):
         lib.wc_Sha512Final(obj, ret)
+
+
+class HmacSha512(_Hmac):
+    @classmethod
+    def new(cls, key, string=None):
+        self = _Hmac.new(_TYPE_SHA512, key, string)
+        self.digest_size = Sha512.digest_size
+
+        return self

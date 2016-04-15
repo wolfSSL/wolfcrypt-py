@@ -26,12 +26,14 @@ ENCRYPTION  = 0
 DECRYPTION  = 1
 
 
-# encryption modes
+# feedback modes
 MODE_ECB = 1 # Electronic Code Book
 MODE_CBC = 2 # Cipher Block Chaining
 MODE_CFB = 3 # Cipher Feedback
 MODE_OFB = 5 # Output Feedback
 MODE_CTR = 6 # Counter
+
+FEEDBACK_MODES = [MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR]
 
 
 class Cipher(object):
@@ -47,6 +49,8 @@ class Cipher(object):
 
     @classmethod
     def new(cls, key, mode, IV=None, **kwargs):
+        if mode not in FEEDBACK_MODES:
+            raise ValueError("this mode is not supported")
         if mode != MODE_CBC:
             raise ValueError("this mode is not supported by this cipher")
 

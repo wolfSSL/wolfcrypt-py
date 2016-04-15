@@ -29,6 +29,7 @@ ffi.set_source("wolfcrypt._hashes",
         #include <wolfssl/wolfcrypt/sha.h>
         #include <wolfssl/wolfcrypt/sha256.h>
         #include <wolfssl/wolfcrypt/sha512.h>
+        #include <wolfssl/wolfcrypt/hmac.h>
     """,
     include_dirs=["/usr/local/include"],
     library_dirs=["/usr/local/lib"],
@@ -67,6 +68,12 @@ ffi.cdef(
     int wc_InitSha512(Sha512*);
     int wc_Sha512Update(Sha512*, const byte*, word32);
     int wc_Sha512Final(Sha512*, byte*);
+
+    typedef struct { ...; } Hmac;
+
+    int wc_HmacSetKey(Hmac*, int, const byte*, word32);
+    int wc_HmacUpdate(Hmac*, const byte*, word32);
+    int wc_HmacFinal(Hmac*, byte*);
 
 """
 )
