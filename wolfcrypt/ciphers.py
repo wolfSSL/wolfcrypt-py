@@ -17,13 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-from wolfcrypt._ciphers import ffi
-from wolfcrypt._ciphers import lib
+from wolfcrypt._ciphers import ffi as _ffi
+from wolfcrypt._ciphers import lib as _lib
 
 
 # key direction flags
-ENCRYPTION  = 0
-DECRYPTION  = 1
+_ENCRYPTION  = 0
+_DECRYPTION  = 1
 
 
 # feedback modes
@@ -33,10 +33,10 @@ MODE_CFB = 3 # Cipher Feedback
 MODE_OFB = 5 # Output Feedback
 MODE_CTR = 6 # Counter
 
-FEEDBACK_MODES = [MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR]
+_FEEDBACK_MODES = [MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR]
 
 
-class Cipher(object):
+class _Cipher(object):
     # Magic object that protects against constructors.
     _JAPANESE_CYBER_SWORD = object()
 
@@ -49,7 +49,7 @@ class Cipher(object):
 
     @classmethod
     def new(cls, key, mode, IV=None, **kwargs):
-        if mode not in FEEDBACK_MODES:
+        if mode not in _FEEDBACK_MODES:
             raise ValueError("this mode is not supported")
         if mode != MODE_CBC:
             raise ValueError("this mode is not supported by this cipher")
@@ -69,7 +69,7 @@ class Cipher(object):
         if IV is not None and len(IV) != obj.block_size:
             raise ValueError("IV must be %d in length" % obj.block_size)
 
-        obj._native_object = ffi.new(obj._native_type)
+        obj._native_object = _ffi.new(obj._native_type)
 
         obj._key = key
         obj._IV  = IV if IV else "\0" * obj.block_size
@@ -82,10 +82,10 @@ class Cipher(object):
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
 
-        cipher = ffi.new(self._native_type)
+        cipher = _ffi.new(self._native_type)
         ret    = "\0" * len(string)
 
-        self._set_key(cipher, ENCRYPTION)
+        self._set_key(cipher, _ENCRYPTION)
         self._encrypt(cipher, ret, string)
 
         return ret
@@ -96,16 +96,16 @@ class Cipher(object):
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
 
-        cipher = ffi.new(self._native_type)
+        cipher = _ffi.new(self._native_type)
         ret    = "\0" * len(string)
 
-        self._set_key(cipher, DECRYPTION)
+        self._set_key(cipher, _DECRYPTION)
         self._decrypt(cipher, ret, string)
 
         return ret
 
 
-class Aes(Cipher):
+class Aes(_Cipher):
     key_size     = None # 16, 24, 32
     _key_sizes   = [16, 24, 32]
     block_size   = 16
@@ -113,31 +113,31 @@ class Aes(Cipher):
 
 
     def _set_key(self, native_object, direction):
-        lib.wc_AesSetKey(
+        _lib.wc_AesSetKey(
             native_object, self._key, len(self._key), self._IV, direction)
 
 
     def _encrypt(self, native_object, destination, source):
-        lib.wc_AesCbcEncrypt(native_object, destination, source, len(source))
+        _lib.wc_AesCbcEncrypt(native_object, destination, source, len(source))
 
 
     def _decrypt(self, native_object, destination, source):
-        lib.wc_AesCbcDecrypt(native_object, destination, source, len(source))
+        _lib.wc_AesCbcDecrypt(native_object, destination, source, len(source))
 
 
-class Des3(Cipher):
+class Des3(_Cipher):
     key_size     = 24
     block_size   = 8
     _native_type = "Des3 *"
 
 
     def _set_key(self, native_object, direction):
-        lib.wc_Des3_SetKey(native_object, self._key, self._IV, direction)
+        _lib.wc_Des3_SetKey(native_object, self._key, self._IV, direction)
 
 
     def _encrypt(self, native_object, destination, source):
-        lib.wc_Des3_CbcEncrypt(native_object, destination, source, len(source))
+        _lib.wc_Des3_CbcEncrypt(native_object, destination, source, len(source))
 
 
     def _decrypt(self, native_object, destination, source):
-        lib.wc_Des3_CbcDecrypt(native_object, destination, source, len(source))
+        _lib.wc_Des3_CbcDecrypt(native_object, destination, source, len(source))

@@ -17,8 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-from wolfcrypt._hashes import ffi
-from wolfcrypt._hashes import lib
+from wolfcrypt._hashes import ffi as _ffi
+from wolfcrypt._hashes import lib as _lib
 
 
 class _Hash(object):
@@ -35,9 +35,9 @@ class _Hash(object):
     def copy(self):
         copy = self.new()
 
-        ffi.memmove(copy._native_object,
-                    self._native_object,
-                    self._native_size)
+        _ffi.memmove(copy._native_object,
+                     self._native_object,
+                     self._native_size)
 
         return copy
 
@@ -50,9 +50,9 @@ class _Hash(object):
         ret = "\0" * self.digest_size
 
         if self._native_object:
-            obj = ffi.new(self._native_type)
+            obj = _ffi.new(self._native_type)
 
-            ffi.memmove(obj, self._native_object, self._native_size)
+            _ffi.memmove(obj, self._native_object, self._native_size)
 
             self._final(obj, ret)
 
@@ -68,7 +68,7 @@ class _UnkeyedHash(_Hash):
     def new(cls, string=None):
         self = cls(cls._JAPANESE_CYBER_SWORD)
 
-        self._native_object = ffi.new(self._native_type)
+        self._native_object = _ffi.new(self._native_type)
 
         self._init()
 
@@ -90,13 +90,13 @@ _HMAC_TYPES = [_TYPE_SHA, _TYPE_SHA256, _TYPE_SHA384, _TYPE_SHA512]
 class _Hmac(_Hash):
     digest_size  = None
     _native_type = "Hmac *"
-    _native_size = ffi.sizeof("Hmac")
+    _native_size = _ffi.sizeof("Hmac")
 
     @classmethod
     def new(cls, type, key, string=None):
         self = cls(cls._JAPANESE_CYBER_SWORD)
 
-        self._native_object = ffi.new(self._native_type)
+        self._native_object = _ffi.new(self._native_type)
 
         self._init(type, key)
 
@@ -107,33 +107,33 @@ class _Hmac(_Hash):
 
 
     def _init(self, type, key):
-        lib.wc_HmacSetKey(self._native_object, type, key, len(key))
+        _lib.wc_HmacSetKey(self._native_object, type, key, len(key))
 
 
     def _update(self, data):
-        lib.wc_HmacUpdate(self._native_object, data, len(data))
+        _lib.wc_HmacUpdate(self._native_object, data, len(data))
 
 
     def _final(self, obj, ret):
-        lib.wc_HmacFinal(obj, ret)
+        _lib.wc_HmacFinal(obj, ret)
 
 
 class Sha(_UnkeyedHash):
     digest_size  = 20
     _native_type = "Sha *"
-    _native_size = ffi.sizeof("Sha")
+    _native_size = _ffi.sizeof("Sha")
 
 
     def _init(self):
-        lib.wc_InitSha(self._native_object)
+        _lib.wc_InitSha(self._native_object)
 
 
     def _update(self, data):
-        lib.wc_ShaUpdate(self._native_object, data, len(data))
+        _lib.wc_ShaUpdate(self._native_object, data, len(data))
 
 
     def _final(self, obj, ret):
-        lib.wc_ShaFinal(obj, ret)
+        _lib.wc_ShaFinal(obj, ret)
 
 
 class HmacSha(_Hmac):
@@ -148,19 +148,19 @@ class HmacSha(_Hmac):
 class Sha256(_UnkeyedHash):
     digest_size  = 32
     _native_type = "Sha256 *"
-    _native_size = ffi.sizeof("Sha256")
+    _native_size = _ffi.sizeof("Sha256")
 
 
     def _init(self):
-        lib.wc_InitSha256(self._native_object)
+        _lib.wc_InitSha256(self._native_object)
 
 
     def _update(self, data):
-        lib.wc_Sha256Update(self._native_object, data, len(data))
+        _lib.wc_Sha256Update(self._native_object, data, len(data))
 
 
     def _final(self, obj, ret):
-        lib.wc_Sha256Final(obj, ret)
+        _lib.wc_Sha256Final(obj, ret)
 
 
 class HmacSha256(_Hmac):
@@ -175,19 +175,19 @@ class HmacSha256(_Hmac):
 class Sha384(_UnkeyedHash):
     digest_size  = 48
     _native_type = "Sha384 *"
-    _native_size = ffi.sizeof("Sha384")
+    _native_size = _ffi.sizeof("Sha384")
 
 
     def _init(self):
-        lib.wc_InitSha384(self._native_object)
+        _lib.wc_InitSha384(self._native_object)
 
 
     def _update(self, data):
-        lib.wc_Sha384Update(self._native_object, data, len(data))
+        _lib.wc_Sha384Update(self._native_object, data, len(data))
 
 
     def _final(self, obj, ret):
-        lib.wc_Sha384Final(obj, ret)
+        _lib.wc_Sha384Final(obj, ret)
 
 
 class HmacSha384(_Hmac):
@@ -202,19 +202,19 @@ class HmacSha384(_Hmac):
 class Sha512(_UnkeyedHash):
     digest_size  = 64
     _native_type = "Sha512 *"
-    _native_size = ffi.sizeof("Sha512")
+    _native_size = _ffi.sizeof("Sha512")
 
 
     def _init(self):
-        lib.wc_InitSha512(self._native_object)
+        _lib.wc_InitSha512(self._native_object)
 
 
     def _update(self, data):
-        lib.wc_Sha512Update(self._native_object, data, len(data))
+        _lib.wc_Sha512Update(self._native_object, data, len(data))
 
 
     def _final(self, obj, ret):
-        lib.wc_Sha512Final(obj, ret)
+        _lib.wc_Sha512Final(obj, ret)
 
 
 class HmacSha512(_Hmac):
