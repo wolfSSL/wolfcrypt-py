@@ -54,27 +54,29 @@ class _Cipher(object):
         if mode != MODE_CBC:
             raise ValueError("this mode is not supported by this cipher")
 
-        obj = cls(Cipher._JAPANESE_CYBER_SWORD)
+        self = cls(_Cipher._JAPANESE_CYBER_SWORD)
 
-        if obj.key_size:
-            if obj.key_size != len(key):
-                raise ValueError("key must be %d in length" % obj.key_size)
-        elif obj._key_sizes:
-            if len(key) not in obj._key_sizes:
-                raise ValueError("key must be %s in length" % obj._key_sizes)
+        if self.key_size:
+            if self.key_size != len(key):
+                raise ValueError("key must be %d in length" % self.key_size)
+        elif self._key_sizes:
+            if len(key) not in self._key_sizes:
+                raise ValueError("key must be %s in length" % self._key_sizes)
         else:
             if not len(key):
                 raise ValueError("key must not be 0 in length")
 
-        if IV is not None and len(IV) != obj.block_size:
-            raise ValueError("IV must be %d in length" % obj.block_size)
+        if IV is not None and len(IV) != self.block_size:
+            raise ValueError("IV must be %d in length" % self.block_size)
 
-        obj._native_object = _ffi.new(obj._native_type)
+        self._native_object = _ffi.new(self._native_type)
 
-        obj._key = key
-        obj._IV  = IV if IV else "\0" * obj.block_size
+        self._enc = None
+        self._dec = None
+        self._key = key
+        self._IV  = IV if IV else "\0" * self.block_size
 
-        return obj
+        return self
 
 
     def encrypt(self, string):
@@ -82,11 +84,12 @@ class _Cipher(object):
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
 
-        cipher = _ffi.new(self._native_type)
-        ret    = "\0" * len(string)
+        if self._enc is None:
+            self._enc = _ffi.new(self._native_type)
+            self._set_key(_ENCRYPTION)
 
-        self._set_key(cipher, _ENCRYPTION)
-        self._encrypt(cipher, ret, string)
+        ret = "\0" * len(string)
+        self._encrypt(ret, string)
 
         return ret
 
@@ -96,48 +99,56 @@ class _Cipher(object):
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
 
-        cipher = _ffi.new(self._native_type)
-        ret    = "\0" * len(string)
+        if self._dec is None:
+            self._dec = _ffi.new(self._native_type)
+            self._set_key(_DECRYPTION)
 
-        self._set_key(cipher, _DECRYPTION)
-        self._decrypt(cipher, ret, string)
+        ret = "\0" * len(string)
+        self._decrypt(ret, string)
 
         return ret
 
 
 class Aes(_Cipher):
+    block_size   = 16
     key_size     = None # 16, 24, 32
     _key_sizes   = [16, 24, 32]
-    block_size   = 16
     _native_type = "Aes *"
 
 
-    def _set_key(self, native_object, direction):
-        _lib.wc_AesSetKey(
-            native_object, self._key, len(self._key), self._IV, direction)
+    def _set_key(self, direction):
+        if direction == _ENCRYPTION:
+            _lib.wc_AesSetKey(
+                self._enc, self._key, len(self._key), self._IV, _ENCRYPTION)
+        else:
+            _lib.wc_AesSetKey(
+                self._dec, self._key, len(self._key), self._IV, _DECRYPTION)
 
 
-    def _encrypt(self, native_object, destination, source):
-        _lib.wc_AesCbcEncrypt(native_object, destination, source, len(source))
+    def _encrypt(self, destination, source):
+        _lib.wc_AesCbcEncrypt(self._enc, destination, source, len(source))
 
 
-    def _decrypt(self, native_object, destination, source):
-        _lib.wc_AesCbcDecrypt(native_object, destination, source, len(source))
+    def _decrypt(self, destination, source):
+        _lib.wc_AesCbcDecrypt(self._dec, destination, source, len(source))
 
 
 class Des3(_Cipher):
-    key_size     = 24
     block_size   = 8
+    key_size     = 24
     _native_type = "Des3 *"
 
 
-    def _set_key(self, native_object, direction):
-        _lib.wc_Des3_SetKey(native_object, self._key, self._IV, direction)
+    def _set_key(self, direction):
+        if direction == _ENCRYPTION:
+            _lib.wc_Des3_SetKey(self._enc, self._key, self._IV, _ENCRYPTION)
+        else:
+            _lib.wc_Des3_SetKey(self._dec, self._key, self._IV, _DECRYPTION)
 
 
-    def _encrypt(self, native_object, destination, source):
-        _lib.wc_Des3_CbcEncrypt(native_object, destination, source, len(source))
+    def _encrypt(self, destination, source):
+        _lib.wc_Des3_CbcEncrypt(self._enc, destination, source, len(source))
 
 
-    def _decrypt(self, native_object, destination, source):
-        _lib.wc_Des3_CbcDecrypt(native_object, destination, source, len(source))
+    def _decrypt(self, destination, source):
+        _lib.wc_Des3_CbcDecrypt(self._dec, destination, source, len(source))
