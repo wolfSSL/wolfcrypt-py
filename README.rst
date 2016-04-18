@@ -1,4 +1,4 @@
-wolfcrypt: the wolfSSL crypto engine
+wolfcrypt: the wolfSSL Crypto Engine
 ====================================
 
 A Python wrapper which encapsulates the wolfCrypt API inside wolfSSL library
