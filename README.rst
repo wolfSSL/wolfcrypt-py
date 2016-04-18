@@ -1,5 +1,5 @@
-wolfcrypt: the wolfSSL crypto engine library
-============================================
+wolfcrypt: the wolfSSL crypto engine
+====================================
 
 A Python wrapper which encapsulates the wolfCrypt API inside wolfSSL library
 
