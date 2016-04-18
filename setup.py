@@ -12,7 +12,7 @@ setup(
     name="wolfcrypt",
     version="0.1",
     description="A python wrapper for the wolfCrypt API",
-    long_description=open("README.md", "rt").read(),
+    long_description=open("README.rst", "rt").read(),
     url="https://github.com/wolfssl/wolfcrypt-py",
     author="Moisés Guimarães",
     author_email="moises@wolfssl.com",
