@@ -1,9 +1,9 @@
 wolfcrypt: the wolfSSL crypto engine library
 ============================================
 
-A Python wrapper which encapsulates the wolfCrypt API inside wolfSSL
+A Python wrapper which encapsulates the wolfCrypt API inside wolfSSL library
 
-** Requires wolfSSL installed **
+**REQUIRES** [wolfSSL](https://github.com/wolfSSL/wolfssl)
 
 1. Clone the repository::
 
