@@ -17,8 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-from wolfcrypt._hashes import ffi as _ffi
-from wolfcrypt._hashes import lib as _lib
+from wolfcrypt._ffi import ffi as _ffi
+from wolfcrypt._ffi import lib as _lib
 
 
 class _Hash(object):

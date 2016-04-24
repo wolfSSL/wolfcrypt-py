@@ -17,8 +17,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-from wolfcrypt._ciphers import ffi as _ffi
-from wolfcrypt._ciphers import lib as _lib
+from wolfcrypt._ffi import ffi as _ffi
+from wolfcrypt._ffi import lib as _lib
+from wolfcrypt.random import Random
 
 
 # key direction flags
@@ -152,3 +153,75 @@ class Des3(_Cipher):
 
     def _decrypt(self, destination, source):
         _lib.wc_Des3_CbcDecrypt(self._dec, destination, source, len(source))
+
+
+class _Rsa(object):
+    def __init__(self):
+        self.native_object = _ffi.new("RsaKey *")
+        if _lib.wc_InitRsaKey(self.native_object, _ffi.NULL) != 0:
+            raise KeyError
+
+        self._random = Random()
+
+
+    def __del__(self):
+        if self.native_object:
+            _lib.wc_FreeRsaKey(self.native_object)
+
+
+class RsaPrivate(_Rsa):
+    def __init__(self, key):
+        _Rsa.__init__(self)
+
+        idx = _ffi.new("word32*")
+        idx[0] = 0
+
+        if _lib.wc_RsaPrivateKeyDecode(key, idx, self.native_object, len(key)):
+            raise KeyError
+
+        self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
+
+
+    def decrypt(self, data):
+        ret = "\0" * self.output_size
+
+        _lib.wc_RsaPrivateDecrypt(data, len(data), ret, len(ret),
+                                  self.native_object)
+
+        return ret
+
+
+    def sign(self, data):
+        ret = "\0" * self.output_size
+
+        _lib.wc_RsaSSL_Sign(data, len(data), ret, len(ret),
+                            self.native_object, self._random.native_object)
+
+        return ret
+
+
+class RsaPublic(_Rsa):
+    def __init__(self, key):
+        _Rsa.__init__(self)
+
+        idx = _ffi.new("word32*")
+        idx[0] = 0
+
+        if _lib.wc_RsaPublicKeyDecode(key, idx, self.native_object, len(key)):
+            raise KeyError
+
+        self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
+
+
+    def encrypt(self, data):
+        ret = "\0" * self.output_size
+
+        _lib.wc_RsaPublicEncrypt(data, len(data), ret, len(ret),
+                                 self.native_object, self._random.native_object)
+
+        return ret
+
+
+    def verify(self, data, signature):
+        return _lib.wc_RsaSSL_Verify(data, len(data), ret, len(ret),
+                                     self.native_object)
