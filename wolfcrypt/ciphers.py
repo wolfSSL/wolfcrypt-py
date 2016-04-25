@@ -89,10 +89,10 @@ class _Cipher(object):
             self._enc = _ffi.new(self._native_type)
             self._set_key(_ENCRYPTION)
 
-        ret = "\0" * len(string)
-        self._encrypt(ret, string)
+        result = "\0" * len(string)
+        self._encrypt(result, string)
 
-        return ret
+        return result
 
 
     def decrypt(self, string):
@@ -104,10 +104,10 @@ class _Cipher(object):
             self._dec = _ffi.new(self._native_type)
             self._set_key(_DECRYPTION)
 
-        ret = "\0" * len(string)
-        self._decrypt(ret, string)
+        result = "\0" * len(string)
+        self._decrypt(result, string)
 
-        return ret
+        return result
 
 
 class Aes(_Cipher):
@@ -169,37 +169,6 @@ class _Rsa(object):
             _lib.wc_FreeRsaKey(self.native_object)
 
 
-class RsaPrivate(_Rsa):
-    def __init__(self, key):
-        _Rsa.__init__(self)
-
-        idx = _ffi.new("word32*")
-        idx[0] = 0
-
-        if _lib.wc_RsaPrivateKeyDecode(key, idx, self.native_object, len(key)):
-            raise KeyError
-
-        self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
-
-
-    def decrypt(self, data):
-        ret = "\0" * self.output_size
-
-        _lib.wc_RsaPrivateDecrypt(data, len(data), ret, len(ret),
-                                  self.native_object)
-
-        return ret
-
-
-    def sign(self, data):
-        ret = "\0" * self.output_size
-
-        _lib.wc_RsaSSL_Sign(data, len(data), ret, len(ret),
-                            self.native_object, self._random.native_object)
-
-        return ret
-
-
 class RsaPublic(_Rsa):
     def __init__(self, key):
         _Rsa.__init__(self)
@@ -212,16 +181,72 @@ class RsaPublic(_Rsa):
 
         self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
 
-
-    def encrypt(self, data):
-        ret = "\0" * self.output_size
-
-        _lib.wc_RsaPublicEncrypt(data, len(data), ret, len(ret),
-                                 self.native_object, self._random.native_object)
-
-        return ret
+        if self.output_size <= 0:
+            raise KeyError
 
 
-    def verify(self, data, signature):
-        return _lib.wc_RsaSSL_Verify(data, len(data), ret, len(ret),
-                                     self.native_object)
+    def encrypt(self, plaintext):
+        ciphertext = "\0" * self.output_size
+
+        ret = _lib.wc_RsaPublicEncrypt(plaintext, len(plaintext),
+                                       ciphertext, len(ciphertext),
+                                       self.native_object,
+                                       self._random.native_object)
+
+        if ret != self.output_size:
+            raise KeyError
+
+        return ciphertext
+
+
+    def verify(self, signature):
+        plaintext = "\0" * self.output_size
+
+        ret = _lib.wc_RsaSSL_Verify(signature, len(signature),
+                                    plaintext, len(plaintext),
+                                    self.native_object)
+
+        if ret < 0:
+            raise KeyError
+
+        return plaintext[:ret]
+
+
+class RsaPrivate(RsaPublic):
+    def __init__(self, key):
+        _Rsa.__init__(self)
+
+        idx = _ffi.new("word32*")
+        idx[0] = 0
+
+        if _lib.wc_RsaPrivateKeyDecode(key, idx, self.native_object, len(key)):
+            raise KeyError
+
+        self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
+
+
+    def decrypt(self, ciphertext):
+        plaintext = "\0" * self.output_size
+
+        ret = _lib.wc_RsaPrivateDecrypt(ciphertext, len(ciphertext),
+                                        plaintext, len(plaintext),
+                                        self.native_object)
+
+        if ret < 0:
+            raise KeyError
+
+        return plaintext[:ret]
+
+
+    def sign(self, plaintext):
+        signature = "\0" * self.output_size
+
+        ret = _lib.wc_RsaSSL_Sign(plaintext, len(plaintext),
+                                  signature, len(signature),
+                                  self.native_object,
+                                  self._random.native_object)
+
+        if ret != self.output_size:
+            raise KeyError
+
+        return signature
