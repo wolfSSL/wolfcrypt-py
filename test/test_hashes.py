@@ -26,13 +26,10 @@ class TestSha(unittest.TestCase):
 
 
     def setUp(self):
-        self.hash = Sha.new()
+        self.hash = Sha()
 
 
     def test_new(self):
-        # invalid construction
-        self.assertRaises(ValueError, Sha)
-
         # update inside constructor
         assert Sha.new("wolfcrypt").hexdigest() == self.digest
 
@@ -71,13 +68,10 @@ class TestSha256(unittest.TestCase):
 
 
     def setUp(self):
-        self.hash = Sha256.new()
+        self.hash = Sha256()
 
 
     def test_new(self):
-        # invalid construction
-        self.assertRaises(ValueError, Sha256)
-
         # update inside constructor
         assert Sha256.new("wolfcrypt").hexdigest() == self.digest
 
@@ -117,13 +111,10 @@ class TestSha384(unittest.TestCase):
 
 
     def setUp(self):
-        self.hash = Sha384.new()
+        self.hash = Sha384()
 
 
     def test_new(self):
-        # invalid construction
-        self.assertRaises(ValueError, Sha384)
-
         # update inside constructor
         assert Sha384.new("wolfcrypt").hexdigest() == self.digest
 
@@ -163,13 +154,10 @@ class TestSha512(unittest.TestCase):
 
 
     def setUp(self):
-        self.hash = Sha512.new()
+        self.hash = Sha512()
 
 
     def test_new(self):
-        # invalid construction
-        self.assertRaises(ValueError, Sha512)
-
         # update inside constructor
         assert Sha512.new("wolfcrypt").hexdigest() == self.digest
 
@@ -211,13 +199,10 @@ class TestHmacSha(unittest.TestCase):
 
 
     def setUp(self):
-        self.hash = HmacSha.new(_HMAC_KEY)
+        self.hash = HmacSha(_HMAC_KEY)
 
 
     def test_new(self):
-        # invalid construction
-        self.assertRaises(ValueError, HmacSha)
-
         # update inside constructor
         assert HmacSha.new(_HMAC_KEY, "wolfcrypt").hexdigest() == self.digest
 
@@ -256,13 +241,10 @@ class TestHmacSha256(unittest.TestCase):
 
 
     def setUp(self):
-        self.hash = HmacSha256.new(_HMAC_KEY)
+        self.hash = HmacSha256(_HMAC_KEY)
 
 
     def test_new(self):
-        # invalid construction
-        self.assertRaises(ValueError, HmacSha256)
-
         # update inside constructor
         assert HmacSha256.new(_HMAC_KEY, "wolfcrypt").hexdigest() == self.digest
 
@@ -302,13 +284,10 @@ class TestHmacSha384(unittest.TestCase):
 
 
     def setUp(self):
-        self.hash = HmacSha384.new(_HMAC_KEY)
+        self.hash = HmacSha384(_HMAC_KEY)
 
 
     def test_new(self):
-        # invalid construction
-        self.assertRaises(ValueError, HmacSha384)
-
         # update inside constructor
         assert HmacSha384.new(_HMAC_KEY, "wolfcrypt").hexdigest() == self.digest
 
@@ -348,13 +327,10 @@ class TestHmacSha512(unittest.TestCase):
 
 
     def setUp(self):
-        self.hash = HmacSha512.new(_HMAC_KEY)
+        self.hash = HmacSha512(_HMAC_KEY)
 
 
     def test_new(self):
-        # invalid construction
-        self.assertRaises(ValueError, HmacSha512)
-
         # update inside constructor
         assert HmacSha512.new(_HMAC_KEY, "wolfcrypt").hexdigest() == self.digest
 

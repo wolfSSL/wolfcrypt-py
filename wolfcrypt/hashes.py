@@ -22,28 +22,21 @@ from wolfcrypt._ffi import lib as _lib
 
 
 class _Hash(object):
-    # Magic object that protects against constructors.
-    _JAPANESE_CYBER_SWORD = object()
-
-
-    def __init__(self, token=""):
-        if token is not self._JAPANESE_CYBER_SWORD:
-            # PEP 247 -- API for Cryptographic Hash Functions
-            raise ValueError("don't construct directly, use new([string])")
+    def __init__(self, string=None):
+        self._native_object = _ffi.new(self._native_type)
+        self._init()
 
 
     @classmethod
     def new(cls, string=None):
-        self = cls(cls._JAPANESE_CYBER_SWORD)
-
-        self._native_object = _ffi.new(self._native_type)
-
-        self._init()
+        # PEP 247 -- API for Cryptographic Hash Functions
+        self = cls(string)
 
         if (string):
             self._update(string)
 
         return self
+
 
 
     def copy(self):
@@ -164,13 +157,15 @@ class _Hmac(_Hash):
     _native_size = _ffi.sizeof("Hmac")
 
 
+    def __init__(self, key):
+        self._native_object = _ffi.new(self._native_type)
+        self._init(self._type, key)
+
+
     @classmethod
     def new(cls, key, string=None):
-        self = cls(cls._JAPANESE_CYBER_SWORD)
-
-        self._native_object = _ffi.new(self._native_type)
-
-        self._init(self._type, key)
+        # PEP 247 -- API for Cryptographic Hash Functions
+        self = cls(key)
 
         if (string):
             self._update(string)

@@ -38,24 +38,12 @@ _FEEDBACK_MODES = [MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR]
 
 
 class _Cipher(object):
-    # Magic object that protects against constructors.
-    _JAPANESE_CYBER_SWORD = object()
-
-
-    def __init__(self, token=""):
-        if token is not self._JAPANESE_CYBER_SWORD:
-            # PEP 272 -- API for Block Encryption Algorithms v1.0
-            raise ValueError("don't construct directly, use new([string])")
-
-
-    @classmethod
-    def new(cls, key, mode, IV=None, **kwargs):
+    def __init__(self, key, mode, IV=None):
         if mode not in _FEEDBACK_MODES:
             raise ValueError("this mode is not supported")
+
         if mode != MODE_CBC:
             raise ValueError("this mode is not supported by this cipher")
-
-        self = cls(_Cipher._JAPANESE_CYBER_SWORD)
 
         if self.key_size:
             if self.key_size != len(key):
@@ -71,13 +59,16 @@ class _Cipher(object):
             raise ValueError("IV must be %d in length" % self.block_size)
 
         self._native_object = _ffi.new(self._native_type)
-
         self._enc = None
         self._dec = None
         self._key = key
-        self._IV  = IV if IV else "\0" * self.block_size
+        self._IV = IV if IV else "\0" * self.block_size
 
-        return self
+
+    @classmethod
+    def new(cls, key, mode, IV=None, **kwargs):
+        # PEP 272 -- API for Block Encryption Algorithms
+        return cls(key, mode, IV)
 
 
     def encrypt(self, string):

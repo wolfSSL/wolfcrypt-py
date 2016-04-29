@@ -32,9 +32,6 @@ class TestDes3(unittest.TestCase):
 
 
     def test_raises(self):
-        # invalid construction
-        self.assertRaises(ValueError, Des3)
-
         # invalid key length
         self.assertRaises(ValueError, Des3.new, "key", MODE_CBC, self.IV)
 
@@ -91,9 +88,6 @@ class TestAes(unittest.TestCase):
 
 
     def test_raises(self):
-        # invalid construction
-        self.assertRaises(ValueError, Aes)
-
         # invalid key length
         self.assertRaises(ValueError, Aes.new, "key", MODE_CBC, self.IV)
 
