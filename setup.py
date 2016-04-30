@@ -24,7 +24,7 @@ setup(
         "License :: GPLv2 License :: Commercial License",
     ],
     packages=find_packages(),
-    setup_requires=["cffi>=1.5.2"],
-    install_requires=["cffi>=1.5.2"],
+    setup_requires=["cffi>=1.6.0"],
+    install_requires=["cffi>=1.6.0"],
     cffi_modules=["./wolfcrypt/build_ffi.py:ffi"]
 )
