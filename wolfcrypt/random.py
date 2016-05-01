@@ -25,6 +25,9 @@ from wolfcrypt.exceptions import *
 
 
 class Random(object):
+    """
+    A Cryptographically Secure Pseudo Random Number Generator - CSPRNG
+    """
     def __init__(self):
         self.native_object = _ffi.new("WC_RNG *")
 
@@ -40,6 +43,9 @@ class Random(object):
 
 
     def byte(self):
+        """
+        Generate and return a random byte.
+        """
         result = t2b("\0")
 
         ret = _lib.wc_RNG_GenerateByte(self.native_object, result)
@@ -50,6 +56,9 @@ class Random(object):
 
 
     def bytes(self, length):
+        """
+        Generate and return a random sequence of length bytes.
+        """
         result = t2b("\0" * length)
 
         ret = _lib.wc_RNG_GenerateBlock(self.native_object, result, length)

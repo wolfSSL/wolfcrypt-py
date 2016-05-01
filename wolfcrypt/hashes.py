@@ -33,7 +33,12 @@ class _Hash(object):
 
     @classmethod
     def new(cls, string=None):
-        # PEP 247 -- API for Cryptographic Hash Functions
+        """
+        Create a new hashing object and returns it. The optional
+        'string' parameter, if supplied, will be immediately hashed
+        into the object's starting state, as if obj.update(string)
+        was called.
+        """
         self = cls(string)
 
         if (string):
@@ -44,6 +49,10 @@ class _Hash(object):
 
 
     def copy(self):
+        """
+        Return a separate copy of this hashing object. An update to
+        this copy won't affect the original object.
+        """
         copy = self.new("")
 
         _ffi.memmove(copy._native_object,
@@ -54,6 +63,11 @@ class _Hash(object):
 
 
     def update(self, string):
+        """
+        Hash 'string' into the current state of the hashing object.
+        update() can be called any number of times during a hashing
+        object's lifetime.
+        """
         string = t2b(string)
 
         ret = self._update(string)
@@ -62,6 +76,12 @@ class _Hash(object):
 
 
     def digest(self):
+        """
+        Return the hash value of this hashing object as a string
+        containing 8-bit data. The object is not altered in any
+        way by this function; you can continue updating the object
+        after calling this function.
+        """
         result = t2b("\0" * self.digest_size)
 
         if self._native_object:
@@ -77,6 +97,12 @@ class _Hash(object):
 
 
     def hexdigest(self):
+        """
+        Return the hash value of this hashing object as a string
+        containing hexadecimal digits. Lowercase letters are used
+        for the digits 'a' through 'f'. Like the .digest() method,
+        this method doesn't alter the object.
+        """
         return b2h(self.digest())
 
 
@@ -178,7 +204,13 @@ class _Hmac(_Hash):
 
     @classmethod
     def new(cls, key, string=None):
-        # PEP 247 -- API for Cryptographic Hash Functions
+        """
+        Create a new hashing object and returns it. 'key' is a
+        required parameter containing a string giving the key
+        to use. The optional 'string' parameter, if supplied, will
+        be immediately hashed into the object's starting state, as
+        if obj.update(string) was called.
+        """
         self = cls(key)
 
         if (string):

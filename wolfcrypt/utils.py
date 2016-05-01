@@ -30,6 +30,9 @@ else:
 
 
 def t2b(s):
+    """
+    Converts text to bynary.
+    """
     if isinstance(s, _binary_type):
         return s
     return _text_type(s).encode("utf-8")
