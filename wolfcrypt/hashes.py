@@ -24,6 +24,9 @@ from wolfcrypt.utils import t2b, b2h
 from wolfcrypt.exceptions import *
 
 class _Hash(object):
+    """
+    A PEP 247 compliant Cryptographic Hash Function.
+    """
     def __init__(self, string=None):
         self._native_object = _ffi.new(self._native_type)
         ret = self._init()
@@ -34,7 +37,7 @@ class _Hash(object):
     @classmethod
     def new(cls, string=None):
         """
-        Create a new hashing object and returns it. The optional
+        Creates a new hashing object and returns it. The optional
         'string' parameter, if supplied, will be immediately hashed
         into the object's starting state, as if obj.update(string)
         was called.
@@ -50,8 +53,8 @@ class _Hash(object):
 
     def copy(self):
         """
-        Return a separate copy of this hashing object. An update to
-        this copy won't affect the original object.
+        Returns a separate copy of this hashing object. An update
+        to this copy won't affect the original object.
         """
         copy = self.new("")
 
@@ -64,9 +67,9 @@ class _Hash(object):
 
     def update(self, string):
         """
-        Hash 'string' into the current state of the hashing object.
-        update() can be called any number of times during a hashing
-        object's lifetime.
+        Hashes 'string' into the current state of the hashing
+        object. update() can be called any number of times during
+        a hashing object's lifetime.
         """
         string = t2b(string)
 
@@ -77,7 +80,7 @@ class _Hash(object):
 
     def digest(self):
         """
-        Return the hash value of this hashing object as a string
+        Returns the hash value of this hashing object as a string
         containing 8-bit data. The object is not altered in any
         way by this function; you can continue updating the object
         after calling this function.
@@ -98,7 +101,7 @@ class _Hash(object):
 
     def hexdigest(self):
         """
-        Return the hash value of this hashing object as a string
+        Returns the hash value of this hashing object as a string
         containing hexadecimal digits. Lowercase letters are used
         for the digits 'a' through 'f'. Like the .digest() method,
         this method doesn't alter the object.
@@ -205,7 +208,7 @@ class _Hmac(_Hash):
     @classmethod
     def new(cls, key, string=None):
         """
-        Create a new hashing object and returns it. 'key' is a
+        Creates a new hashing object and returns it. 'key' is a
         required parameter containing a string giving the key
         to use. The optional 'string' parameter, if supplied, will
         be immediately hashed into the object's starting state, as

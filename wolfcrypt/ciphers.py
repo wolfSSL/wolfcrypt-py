@@ -41,11 +41,17 @@ _FEEDBACK_MODES = [MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR]
 
 
 class _Cipher(object):
+    """
+    A PEP 272 compliant Block Encryption Algorithm.
+    """
     def __init__(self, key, mode, IV=None):
         if mode not in _FEEDBACK_MODES:
             raise ValueError("this mode is not supported")
 
-        if mode != MODE_CBC:
+        if mode == MODE_CBC:
+            if IV is None:
+                raise ValueError("this mode requires an 'IV' string")
+        else:
             raise ValueError("this mode is not supported by this cipher")
 
         if self.key_size:
@@ -74,11 +80,27 @@ class _Cipher(object):
 
     @classmethod
     def new(cls, key, mode, IV=None, **kwargs):
-        # PEP 272 -- API for Block Encryption Algorithms
+        """
+        Returns a ciphering object, using the secret key contained in
+        the string 'key', and using the feedback mode 'mode', which
+        must be one of MODE_* defined in this module.
+
+        If 'mode' is MODE_CBC or MODE_CFB, 'IV' must be provided and
+        must be a string of the same length as the block size. Not
+        providing a value of 'IV' will result in a ValueError exception
+        being raised.
+        """
         return cls(key, mode, IV)
 
 
     def encrypt(self, string):
+        """
+        Encrypts a non-empty string, using the key-dependent data in
+        the object, and with the appropriate feedback mode. The
+        string's length must be an exact multiple of the algorithm's
+        block size or, in CFB mode, of the segment size. Returns a
+        string containing the ciphertext.
+        """
         string = t2b(string)
 
         if not string or len(string) % self.block_size:
@@ -100,6 +122,13 @@ class _Cipher(object):
 
 
     def decrypt(self, string):
+        """
+        Decrypts 'string', using the key-dependent data in the
+        object and with the appropriate feedback mode. The string's
+        length must be an exact multiple of the algorithm's block
+        size or, in CFB mode, of the segment size.  Returns a string
+        containing the plaintext.
+        """
         string = t2b(string)
 
         if not string or len(string) % self.block_size:
@@ -166,6 +195,8 @@ class Des3(_Cipher):
 
 
 class _Rsa(object):
+    RSA_MIN_PAD_SIZE = 11
+
     def __init__(self):
         self.native_object = _ffi.new("RsaKey *")
         ret = _lib.wc_InitRsaKey(self.native_object, _ffi.NULL)
@@ -199,6 +230,13 @@ class RsaPublic(_Rsa):
 
 
     def encrypt(self, plaintext):
+        """
+        Encrypts plaintext, using the public key data in the
+        object. The plaintext's length must not be greater than:
+            self.output_size - self.RSA_MIN_PAD_SIZE
+        Returns a string containing the ciphertext.
+        """
+
         plaintext = t2b(plaintext)
         ciphertext = t2b("\0" * self.output_size)
 
@@ -214,6 +252,12 @@ class RsaPublic(_Rsa):
 
 
     def verify(self, signature):
+        """
+        Verifies signature, using the public key data in the
+        object. The signature's length must be equal to:
+            self.output_size
+        Returns a string containing the plaintext.
+        """
         signature = t2b(signature)
         plaintext = t2b("\0" * self.output_size)
 
@@ -246,6 +290,12 @@ class RsaPrivate(RsaPublic):
 
 
     def decrypt(self, ciphertext):
+        """
+        Decrypts ciphertext, using the private key data in the
+        object. The ciphertext's length must be equal to:
+            self.output_size
+        Returns a string containing the plaintext.
+        """
         ciphertext = t2b(ciphertext)
         plaintext = t2b("\0" * self.output_size)
 
@@ -260,6 +310,12 @@ class RsaPrivate(RsaPublic):
 
 
     def sign(self, plaintext):
+        """
+        Signs plaintext, using the private key data in the object.
+        The plaintext's length must not be greater than:
+            self.output_size - self.RSA_MIN_PAD_SIZE
+        Returns a string containing the signature.
+        """
         plaintext = t2b(plaintext)
         signature = t2b("\0" * self.output_size)
 
