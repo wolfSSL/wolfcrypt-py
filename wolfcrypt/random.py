@@ -40,20 +40,20 @@ class Random(object):
 
 
     def byte(self):
-        ret = _t2b("\0")
+        result = _t2b("\0")
 
-        ret = _lib.wc_RNG_GenerateByte(self.native_object, ret)
+        ret = _lib.wc_RNG_GenerateByte(self.native_object, result)
         if ret < 0:
             raise WolfCryptError("RNG generate byte error (%d)" % ret)
 
-        return ret
+        return result
 
 
     def bytes(self, length):
-        ret = _t2b("\0" * length)
+        result = _t2b("\0" * length)
 
-        ret = _lib.wc_RNG_GenerateBlock(self.native_object, ret, length)
+        ret = _lib.wc_RNG_GenerateBlock(self.native_object, result, length)
         if ret < 0:
             raise WolfCryptError("RNG generate block error (%d)" % ret)
 
-        return ret
+        return result
