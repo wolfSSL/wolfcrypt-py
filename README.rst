@@ -25,7 +25,7 @@ A Python wrapper that encapsulates wolfSSL's wolfCrypt API
 
     $ python setup.py install
     ...
-    Finished processing dependencies for wolfcrypt==0.1
+    Finished processing dependencies for wolfcrypt==0.1.0
 
 
 4. Test locally with ``tox``::

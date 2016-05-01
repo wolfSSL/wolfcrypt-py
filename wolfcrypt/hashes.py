@@ -17,8 +17,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-from wolfcrypt._ffi import ffi as _ffi
-from wolfcrypt._ffi import lib as _lib
+from wolfcrypt._ffi  import ffi as _ffi
+from wolfcrypt._ffi  import lib as _lib
+from wolfcrypt.utils import _t2b, _b2h
 
 
 class _Hash(object):
@@ -33,7 +34,7 @@ class _Hash(object):
         self = cls(string)
 
         if (string):
-            self._update(string)
+            self.update(string)
 
         return self
 
@@ -50,11 +51,13 @@ class _Hash(object):
 
 
     def update(self, string):
+        string = _t2b(string)
+
         self._update(string)
 
 
     def digest(self):
-        ret = "\0" * self.digest_size
+        ret = _t2b("\0" * self.digest_size)
 
         if self._native_object:
             obj = _ffi.new(self._native_type)
@@ -67,7 +70,7 @@ class _Hash(object):
 
 
     def hexdigest(self):
-        return self.digest().encode("hex")
+        return _b2h(self.digest())
 
 
 class Sha(_Hash):
@@ -77,15 +80,15 @@ class Sha(_Hash):
 
 
     def _init(self):
-        _lib.wc_InitSha(self._native_object)
+        return _lib.wc_InitSha(self._native_object)
 
 
     def _update(self, data):
-        _lib.wc_ShaUpdate(self._native_object, data, len(data))
+        return _lib.wc_ShaUpdate(self._native_object, data, len(data))
 
 
     def _final(self, obj, ret):
-        _lib.wc_ShaFinal(obj, ret)
+        return _lib.wc_ShaFinal(obj, ret)
 
 
 class Sha256(_Hash):
@@ -95,15 +98,15 @@ class Sha256(_Hash):
 
 
     def _init(self):
-        _lib.wc_InitSha256(self._native_object)
+        return _lib.wc_InitSha256(self._native_object)
 
 
     def _update(self, data):
-        _lib.wc_Sha256Update(self._native_object, data, len(data))
+        return _lib.wc_Sha256Update(self._native_object, data, len(data))
 
 
     def _final(self, obj, ret):
-        _lib.wc_Sha256Final(obj, ret)
+        return _lib.wc_Sha256Final(obj, ret)
 
 
 class Sha384(_Hash):
@@ -113,15 +116,15 @@ class Sha384(_Hash):
 
 
     def _init(self):
-        _lib.wc_InitSha384(self._native_object)
+        return _lib.wc_InitSha384(self._native_object)
 
 
     def _update(self, data):
-        _lib.wc_Sha384Update(self._native_object, data, len(data))
+        return _lib.wc_Sha384Update(self._native_object, data, len(data))
 
 
     def _final(self, obj, ret):
-        _lib.wc_Sha384Final(obj, ret)
+        return _lib.wc_Sha384Final(obj, ret)
 
 
 class Sha512(_Hash):
@@ -131,15 +134,15 @@ class Sha512(_Hash):
 
 
     def _init(self):
-        _lib.wc_InitSha512(self._native_object)
+        return _lib.wc_InitSha512(self._native_object)
 
 
     def _update(self, data):
-        _lib.wc_Sha512Update(self._native_object, data, len(data))
+        return _lib.wc_Sha512Update(self._native_object, data, len(data))
 
 
     def _final(self, obj, ret):
-        _lib.wc_Sha512Final(obj, ret)
+        return _lib.wc_Sha512Final(obj, ret)
 
 
 # Hmac types
@@ -158,6 +161,8 @@ class _Hmac(_Hash):
 
 
     def __init__(self, key):
+        key = _t2b(key)
+
         self._native_object = _ffi.new(self._native_type)
         self._init(self._type, key)
 
@@ -168,21 +173,21 @@ class _Hmac(_Hash):
         self = cls(key)
 
         if (string):
-            self._update(string)
+            self.update(string)
 
         return self
 
 
     def _init(self, type, key):
-        _lib.wc_HmacSetKey(self._native_object, type, key, len(key))
+        return _lib.wc_HmacSetKey(self._native_object, type, key, len(key))
 
 
     def _update(self, data):
-        _lib.wc_HmacUpdate(self._native_object, data, len(data))
+        return _lib.wc_HmacUpdate(self._native_object, data, len(data))
 
 
     def _final(self, obj, ret):
-        _lib.wc_HmacFinal(obj, ret)
+        return _lib.wc_HmacFinal(obj, ret)
 
 
 class HmacSha(_Hmac):

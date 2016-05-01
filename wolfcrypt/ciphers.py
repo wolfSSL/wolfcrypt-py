@@ -17,8 +17,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-from wolfcrypt._ffi import ffi as _ffi
-from wolfcrypt._ffi import lib as _lib
+from wolfcrypt._ffi   import ffi as _ffi
+from wolfcrypt._ffi   import lib as _lib
+from wolfcrypt.utils  import _t2b
 from wolfcrypt.random import Random
 
 
@@ -61,8 +62,12 @@ class _Cipher(object):
         self._native_object = _ffi.new(self._native_type)
         self._enc = None
         self._dec = None
-        self._key = key
-        self._IV = IV if IV else "\0" * self.block_size
+        self._key = _t2b(key)
+
+        if IV:
+            self._IV = _t2b(IV)
+        else:
+            self._IV = _t2b("\0" * self.block_size)
 
 
     @classmethod
@@ -72,6 +77,8 @@ class _Cipher(object):
 
 
     def encrypt(self, string):
+        string = _t2b(string)
+
         if not string or len(string) % self.block_size:
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
@@ -80,13 +87,15 @@ class _Cipher(object):
             self._enc = _ffi.new(self._native_type)
             self._set_key(_ENCRYPTION)
 
-        result = "\0" * len(string)
+        result = _t2b("\0" * len(string))
         self._encrypt(result, string)
 
         return result
 
 
     def decrypt(self, string):
+        string = _t2b(string)
+
         if not string or len(string) % self.block_size:
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
@@ -95,7 +104,7 @@ class _Cipher(object):
             self._dec = _ffi.new(self._native_type)
             self._set_key(_DECRYPTION)
 
-        result = "\0" * len(string)
+        result = _t2b("\0" * len(string))
         self._decrypt(result, string)
 
         return result
@@ -162,6 +171,8 @@ class _Rsa(object):
 
 class RsaPublic(_Rsa):
     def __init__(self, key):
+        key = _t2b(key)
+
         _Rsa.__init__(self)
 
         idx = _ffi.new("word32*")
@@ -177,7 +188,8 @@ class RsaPublic(_Rsa):
 
 
     def encrypt(self, plaintext):
-        ciphertext = "\0" * self.output_size
+        plaintext = _t2b(plaintext)
+        ciphertext = _t2b("\0" * self.output_size)
 
         ret = _lib.wc_RsaPublicEncrypt(plaintext, len(plaintext),
                                        ciphertext, len(ciphertext),
@@ -191,7 +203,8 @@ class RsaPublic(_Rsa):
 
 
     def verify(self, signature):
-        plaintext = "\0" * self.output_size
+        signature = _t2b(signature)
+        plaintext = _t2b("\0" * self.output_size)
 
         ret = _lib.wc_RsaSSL_Verify(signature, len(signature),
                                     plaintext, len(plaintext),
@@ -205,6 +218,8 @@ class RsaPublic(_Rsa):
 
 class RsaPrivate(RsaPublic):
     def __init__(self, key):
+        key = _t2b(key)
+
         _Rsa.__init__(self)
 
         idx = _ffi.new("word32*")
@@ -217,7 +232,8 @@ class RsaPrivate(RsaPublic):
 
 
     def decrypt(self, ciphertext):
-        plaintext = "\0" * self.output_size
+        ciphertext = _t2b(ciphertext)
+        plaintext = _t2b("\0" * self.output_size)
 
         ret = _lib.wc_RsaPrivateDecrypt(ciphertext, len(ciphertext),
                                         plaintext, len(plaintext),
@@ -230,7 +246,8 @@ class RsaPrivate(RsaPublic):
 
 
     def sign(self, plaintext):
-        signature = "\0" * self.output_size
+        plaintext = _t2b(plaintext)
+        signature = _t2b("\0" * self.output_size)
 
         ret = _lib.wc_RsaSSL_Sign(plaintext, len(plaintext),
                                   signature, len(signature),

@@ -1,4 +1,4 @@
-# random.py
+# utils.py
 #
 # Copyright (C) 2006-2016 wolfSSL Inc.
 #
@@ -17,34 +17,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-from wolfcrypt._ffi  import ffi as _ffi
-from wolfcrypt._ffi  import lib as _lib
-from wolfcrypt.utils import _t2b
+import sys
+from binascii import hexlify as _b2h, unhexlify as _h2b
 
 
-class Random(object):
-    def __init__(self):
-        self.native_object = _ffi.new("WC_RNG *")
-        if _lib.wc_InitRng(self.native_object) != 0:
-            self.native_object = None
+if sys.version_info[0] == 3:
+    _text_type = str
+    _binary_type = bytes
+else:
+    _text_type = unicode
+    _binary_type = str
 
 
-    def __del__(self):
-        if self.native_object:
-            _lib.wc_FreeRng(self.native_object)
-
-
-    def byte(self):
-        ret = _t2b("\0")
-
-        _lib.wc_RNG_GenerateByte(self.native_object, ret)
-
-        return ret
-
-
-    def bytes(self, length):
-        ret = _t2b("\0" * length)
-
-        _lib.wc_RNG_GenerateBlock(self.native_object, ret, length)
-
-        return ret
+def _t2b(s):
+    if isinstance(s, _binary_type):
+        return s
+    return _text_type(s).encode("utf-8")
