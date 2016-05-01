@@ -34,9 +34,10 @@ A Python wrapper that encapsulates wolfSSL's wolfCrypt API
     $ tox
     ...
     _________________________________ summary _________________________________
+    py26: commands succeeded
     py27: commands succeeded
+    py35: commands succeeded
     congratulations :)
-
 
 Licensing
 =========
