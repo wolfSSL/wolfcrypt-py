@@ -19,7 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 from wolfcrypt._ffi  import ffi as _ffi
 from wolfcrypt._ffi  import lib as _lib
-from wolfcrypt.utils import _t2b
+from wolfcrypt.utils import t2b
 
 from wolfcrypt.exceptions import *
 
@@ -40,7 +40,7 @@ class Random(object):
 
 
     def byte(self):
-        result = _t2b("\0")
+        result = t2b("\0")
 
         ret = _lib.wc_RNG_GenerateByte(self.native_object, result)
         if ret < 0:
@@ -50,7 +50,7 @@ class Random(object):
 
 
     def bytes(self, length):
-        result = _t2b("\0" * length)
+        result = t2b("\0" * length)
 
         ret = _lib.wc_RNG_GenerateBlock(self.native_object, result, length)
         if ret < 0:

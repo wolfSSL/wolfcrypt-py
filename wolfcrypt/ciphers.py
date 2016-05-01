@@ -19,7 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 from wolfcrypt._ffi   import ffi as _ffi
 from wolfcrypt._ffi   import lib as _lib
-from wolfcrypt.utils  import _t2b
+from wolfcrypt.utils  import t2b
 from wolfcrypt.random import Random
 
 from wolfcrypt.exceptions import *
@@ -64,12 +64,12 @@ class _Cipher(object):
         self._native_object = _ffi.new(self._native_type)
         self._enc = None
         self._dec = None
-        self._key = _t2b(key)
+        self._key = t2b(key)
 
         if IV:
-            self._IV = _t2b(IV)
+            self._IV = t2b(IV)
         else:
-            self._IV = _t2b("\0" * self.block_size)
+            self._IV = t2b("\0" * self.block_size)
 
 
     @classmethod
@@ -79,7 +79,7 @@ class _Cipher(object):
 
 
     def encrypt(self, string):
-        string = _t2b(string)
+        string = t2b(string)
 
         if not string or len(string) % self.block_size:
             raise ValueError(
@@ -91,7 +91,7 @@ class _Cipher(object):
             if ret < 0:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
-        result = _t2b("\0" * len(string))
+        result = t2b("\0" * len(string))
         ret = self._encrypt(result, string)
         if ret < 0:
             raise WolfCryptError("Encryption error (%d)" % ret)
@@ -100,7 +100,7 @@ class _Cipher(object):
 
 
     def decrypt(self, string):
-        string = _t2b(string)
+        string = t2b(string)
 
         if not string or len(string) % self.block_size:
             raise ValueError(
@@ -112,7 +112,7 @@ class _Cipher(object):
             if ret < 0:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
-        result = _t2b("\0" * len(string))
+        result = t2b("\0" * len(string))
         ret = self._decrypt(result, string)
         if ret < 0:
             raise WolfCryptError("Decryption error (%d)" % ret)
@@ -182,7 +182,7 @@ class _Rsa(object):
 
 class RsaPublic(_Rsa):
     def __init__(self, key):
-        key = _t2b(key)
+        key = t2b(key)
 
         _Rsa.__init__(self)
 
@@ -199,8 +199,8 @@ class RsaPublic(_Rsa):
 
 
     def encrypt(self, plaintext):
-        plaintext = _t2b(plaintext)
-        ciphertext = _t2b("\0" * self.output_size)
+        plaintext = t2b(plaintext)
+        ciphertext = t2b("\0" * self.output_size)
 
         ret = _lib.wc_RsaPublicEncrypt(plaintext, len(plaintext),
                                        ciphertext, len(ciphertext),
@@ -214,8 +214,8 @@ class RsaPublic(_Rsa):
 
 
     def verify(self, signature):
-        signature = _t2b(signature)
-        plaintext = _t2b("\0" * self.output_size)
+        signature = t2b(signature)
+        plaintext = t2b("\0" * self.output_size)
 
         ret = _lib.wc_RsaSSL_Verify(signature, len(signature),
                                     plaintext, len(plaintext),
@@ -229,7 +229,7 @@ class RsaPublic(_Rsa):
 
 class RsaPrivate(RsaPublic):
     def __init__(self, key):
-        key = _t2b(key)
+        key = t2b(key)
 
         _Rsa.__init__(self)
 
@@ -246,8 +246,8 @@ class RsaPrivate(RsaPublic):
 
 
     def decrypt(self, ciphertext):
-        ciphertext = _t2b(ciphertext)
-        plaintext = _t2b("\0" * self.output_size)
+        ciphertext = t2b(ciphertext)
+        plaintext = t2b("\0" * self.output_size)
 
         ret = _lib.wc_RsaPrivateDecrypt(ciphertext, len(ciphertext),
                                         plaintext, len(plaintext),
@@ -260,8 +260,8 @@ class RsaPrivate(RsaPublic):
 
 
     def sign(self, plaintext):
-        plaintext = _t2b(plaintext)
-        signature = _t2b("\0" * self.output_size)
+        plaintext = t2b(plaintext)
+        signature = t2b("\0" * self.output_size)
 
         ret = _lib.wc_RsaSSL_Sign(plaintext, len(plaintext),
                                   signature, len(signature),

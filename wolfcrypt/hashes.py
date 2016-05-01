@@ -19,7 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 from wolfcrypt._ffi  import ffi as _ffi
 from wolfcrypt._ffi  import lib as _lib
-from wolfcrypt.utils import _t2b, _b2h
+from wolfcrypt.utils import t2b, b2h
 
 from wolfcrypt.exceptions import *
 
@@ -54,7 +54,7 @@ class _Hash(object):
 
 
     def update(self, string):
-        string = _t2b(string)
+        string = t2b(string)
 
         ret = self._update(string)
         if ret < 0:
@@ -62,7 +62,7 @@ class _Hash(object):
 
 
     def digest(self):
-        result = _t2b("\0" * self.digest_size)
+        result = t2b("\0" * self.digest_size)
 
         if self._native_object:
             obj = _ffi.new(self._native_type)
@@ -77,7 +77,7 @@ class _Hash(object):
 
 
     def hexdigest(self):
-        return _b2h(self.digest())
+        return b2h(self.digest())
 
 
 class Sha(_Hash):
@@ -168,7 +168,7 @@ class _Hmac(_Hash):
 
 
     def __init__(self, key):
-        key = _t2b(key)
+        key = t2b(key)
 
         self._native_object = _ffi.new(self._native_type)
         ret = self._init(self._type, key)

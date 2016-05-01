@@ -19,12 +19,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 import unittest
 from wolfcrypt.hashes import *
-from wolfcrypt.utils  import _t2b, _h2b
+from wolfcrypt.utils  import t2b, h2b
 
 
 class TestSha(unittest.TestCase):
     _class = Sha
-    digest = _t2b("1b6182d68ae91ce0853bd9c6b6edfedd4b6a510d")
+    digest = t2b("1b6182d68ae91ce0853bd9c6b6edfedd4b6a510d")
 
 
     def setUp(self):
@@ -40,7 +40,7 @@ class TestSha(unittest.TestCase):
         self.hash.update("wolfcrypt")
 
         assert self.hash.hexdigest() == self.digest
-        assert self.hash.digest() == _h2b(self.digest)
+        assert self.hash.digest() == h2b(self.digest)
 
 
     def test_hash_update_002(self):
@@ -48,7 +48,7 @@ class TestSha(unittest.TestCase):
         self.hash.update("crypt")
 
         assert self.hash.hexdigest() == self.digest
-        assert self.hash.digest() == _h2b(self.digest)
+        assert self.hash.digest() == h2b(self.digest)
 
 
     def test_hash_copy(self):
@@ -67,19 +67,19 @@ class TestSha(unittest.TestCase):
 
 class TestSha256(TestSha):
     _class = Sha256
-    digest = _t2b("96e02e7b1cbcd6f104fe1fdb4652027a" \
+    digest = t2b("96e02e7b1cbcd6f104fe1fdb4652027a" \
                 + "5505b68652b70095c6318f9dce0d1844")
 
 
 class TestSha384(TestSha):
     _class = Sha384
-    digest = _t2b("4c79d80531203a16f91bee325f18c6aada47f9382fe44fc1" \
+    digest = t2b("4c79d80531203a16f91bee325f18c6aada47f9382fe44fc1" \
                 + "1f92917837e9b7902f5dccb7d3656f667a1dce3460bc884b")
 
 
 class TestSha512(TestSha):
     _class = Sha512
-    digest = _t2b("88fcf67ffd8558d713f9cedcd852db47" \
+    digest = t2b("88fcf67ffd8558d713f9cedcd852db47" \
                 + "9e6573f0bd9955610a993f609637553c" \
                 + "e8fff55e644ee8a106aae19c07f91b3f" \
                 + "2a2a6d40dfa7302c0fa6a1a9a5bfa03f")
@@ -90,7 +90,7 @@ _HMAC_KEY = "python"
 
 class TestHmacSha(unittest.TestCase):
     _class = HmacSha
-    digest = _t2b("5dfabcfb3a25540824867cd21f065f52f73491e0")
+    digest = t2b("5dfabcfb3a25540824867cd21f065f52f73491e0")
 
 
     def setUp(self):
@@ -131,19 +131,19 @@ class TestHmacSha(unittest.TestCase):
 
 class TestHmacSha256(TestHmacSha):
     _class = HmacSha256
-    digest = _t2b("4b641d721493d80f019d9447830ebfee" \
+    digest = t2b("4b641d721493d80f019d9447830ebfee" \
                 + "89234a7d594378b89f8bb73873576bf6")
 
 
 class TestHmacSha384(TestHmacSha):
     _class = HmacSha384
-    digest = _t2b("e72c72070c9c5c78e3286593068a510c1740cdf9dc34b512" \
+    digest = t2b("e72c72070c9c5c78e3286593068a510c1740cdf9dc34b512" \
                 + "ccec97320295db1fe673216b46fe72e81f399a9ec04780ab")
 
 
 class TestHmacSha512(TestHmacSha):
     _class = HmacSha512
-    digest = _t2b("c7f48db79314fc2b5be9a93fd58601a1" \
+    digest = t2b("c7f48db79314fc2b5be9a93fd58601a1" \
                 + "bf42f397ec7f66dba034d44503890e6b" \
                 + "5708242dcd71a248a78162d815c685f6" \
                 + "038a4ac8cb34b8bf18986dbd300c9b41")

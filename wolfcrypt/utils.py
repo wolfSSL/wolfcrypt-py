@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 import sys
-from binascii import hexlify as _b2h, unhexlify as _h2b
+from binascii import hexlify as b2h, unhexlify as h2b
 
 
 if sys.version_info[0] == 3:
@@ -29,7 +29,7 @@ else:
     _binary_type = str
 
 
-def _t2b(s):
+def t2b(s):
     if isinstance(s, _binary_type):
         return s
     return _text_type(s).encode("utf-8")
