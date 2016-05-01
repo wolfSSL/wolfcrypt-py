@@ -21,11 +21,14 @@ from wolfcrypt._ffi  import ffi as _ffi
 from wolfcrypt._ffi  import lib as _lib
 from wolfcrypt.utils import _t2b, _b2h
 
+from wolfcrypt.exceptions import *
 
 class _Hash(object):
     def __init__(self, string=None):
         self._native_object = _ffi.new(self._native_type)
-        self._init()
+        ret = self._init()
+        if ret < 0:
+            raise WolfCryptError("Hash init error (%d)" % ret)
 
 
     @classmethod
@@ -53,20 +56,24 @@ class _Hash(object):
     def update(self, string):
         string = _t2b(string)
 
-        self._update(string)
+        ret = self._update(string)
+        if ret < 0:
+            raise WolfCryptError("Hash update error (%d)" % ret)
 
 
     def digest(self):
-        ret = _t2b("\0" * self.digest_size)
+        result = _t2b("\0" * self.digest_size)
 
         if self._native_object:
             obj = _ffi.new(self._native_type)
 
             _ffi.memmove(obj, self._native_object, self._native_size)
 
-            self._final(obj, ret)
+            ret = self._final(obj, result)
+            if ret < 0:
+                raise WolfCryptError("Hash finalize error (%d)" % ret)
 
-        return ret
+        return result
 
 
     def hexdigest(self):
@@ -164,7 +171,9 @@ class _Hmac(_Hash):
         key = _t2b(key)
 
         self._native_object = _ffi.new(self._native_type)
-        self._init(self._type, key)
+        ret = self._init(self._type, key)
+        if ret < 0:
+            raise WolfCryptError("Hmac init error (%d)" % ret)
 
 
     @classmethod

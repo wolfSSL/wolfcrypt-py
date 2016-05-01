@@ -22,6 +22,8 @@ from wolfcrypt._ffi   import lib as _lib
 from wolfcrypt.utils  import _t2b
 from wolfcrypt.random import Random
 
+from wolfcrypt.exceptions import *
+
 
 # key direction flags
 _ENCRYPTION  = 0
@@ -85,10 +87,14 @@ class _Cipher(object):
 
         if self._enc is None:
             self._enc = _ffi.new(self._native_type)
-            self._set_key(_ENCRYPTION)
+            ret = self._set_key(_ENCRYPTION)
+            if ret < 0:
+                raise WolfCryptError("Invalid key error (%d)" % ret)
 
         result = _t2b("\0" * len(string))
-        self._encrypt(result, string)
+        ret = self._encrypt(result, string)
+        if ret < 0:
+            raise WolfCryptError("Encryption error (%d)" % ret)
 
         return result
 
@@ -102,10 +108,14 @@ class _Cipher(object):
 
         if self._dec is None:
             self._dec = _ffi.new(self._native_type)
-            self._set_key(_DECRYPTION)
+            ret = self._set_key(_DECRYPTION)
+            if ret < 0:
+                raise WolfCryptError("Invalid key error (%d)" % ret)
 
         result = _t2b("\0" * len(string))
-        self._decrypt(result, string)
+        ret = self._decrypt(result, string)
+        if ret < 0:
+            raise WolfCryptError("Decryption error (%d)" % ret)
 
         return result
 
@@ -119,19 +129,19 @@ class Aes(_Cipher):
 
     def _set_key(self, direction):
         if direction == _ENCRYPTION:
-            _lib.wc_AesSetKey(
+            return _lib.wc_AesSetKey(
                 self._enc, self._key, len(self._key), self._IV, _ENCRYPTION)
         else:
-            _lib.wc_AesSetKey(
+            return _lib.wc_AesSetKey(
                 self._dec, self._key, len(self._key), self._IV, _DECRYPTION)
 
 
     def _encrypt(self, destination, source):
-        _lib.wc_AesCbcEncrypt(self._enc, destination, source, len(source))
+        return _lib.wc_AesCbcEncrypt(self._enc, destination, source,len(source))
 
 
     def _decrypt(self, destination, source):
-        _lib.wc_AesCbcDecrypt(self._dec, destination, source, len(source))
+        return _lib.wc_AesCbcDecrypt(self._dec, destination, source,len(source))
 
 
 class Des3(_Cipher):
@@ -142,24 +152,25 @@ class Des3(_Cipher):
 
     def _set_key(self, direction):
         if direction == _ENCRYPTION:
-            _lib.wc_Des3_SetKey(self._enc, self._key, self._IV, _ENCRYPTION)
+            return _lib.wc_Des3_SetKey(self._enc,self._key,self._IV,_ENCRYPTION)
         else:
-            _lib.wc_Des3_SetKey(self._dec, self._key, self._IV, _DECRYPTION)
+            return _lib.wc_Des3_SetKey(self._dec,self._key,self._IV,_DECRYPTION)
 
 
     def _encrypt(self, destination, source):
-        _lib.wc_Des3_CbcEncrypt(self._enc, destination, source, len(source))
+        return _lib.wc_Des3_CbcEncrypt(self._enc,destination,source,len(source))
 
 
     def _decrypt(self, destination, source):
-        _lib.wc_Des3_CbcDecrypt(self._dec, destination, source, len(source))
+        return _lib.wc_Des3_CbcDecrypt(self._dec,destination,source,len(source))
 
 
 class _Rsa(object):
     def __init__(self):
         self.native_object = _ffi.new("RsaKey *")
-        if _lib.wc_InitRsaKey(self.native_object, _ffi.NULL) != 0:
-            raise KeyError
+        ret = _lib.wc_InitRsaKey(self.native_object, _ffi.NULL)
+        if ret < 0:
+            raise WolfCryptError("Invalid key error (%d)" % ret)
 
         self._random = Random()
 
@@ -178,13 +189,13 @@ class RsaPublic(_Rsa):
         idx = _ffi.new("word32*")
         idx[0] = 0
 
-        if _lib.wc_RsaPublicKeyDecode(key, idx, self.native_object, len(key)):
-            raise KeyError
+        ret = _lib.wc_RsaPublicKeyDecode(key, idx, self.native_object, len(key))
+        if ret < 0:
+            raise WolfCryptError("Invalid key error (%d)" % ret)
 
         self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
-
         if self.output_size <= 0:
-            raise KeyError
+            raise WolfCryptError("Invalid key error (%d)" % self.output_size)
 
 
     def encrypt(self, plaintext):
@@ -197,7 +208,7 @@ class RsaPublic(_Rsa):
                                        self._random.native_object)
 
         if ret != self.output_size:
-            raise KeyError
+            raise WolfCryptError("Encryption error (%d)" % ret)
 
         return ciphertext
 
@@ -211,7 +222,7 @@ class RsaPublic(_Rsa):
                                     self.native_object)
 
         if ret < 0:
-            raise KeyError
+            raise WolfCryptError("Verify error (%d)" % ret)
 
         return plaintext[:ret]
 
@@ -225,10 +236,13 @@ class RsaPrivate(RsaPublic):
         idx = _ffi.new("word32*")
         idx[0] = 0
 
-        if _lib.wc_RsaPrivateKeyDecode(key, idx, self.native_object, len(key)):
-            raise KeyError
+        ret = _lib.wc_RsaPrivateKeyDecode(key, idx, self.native_object,len(key))
+        if ret < 0:
+            raise WolfCryptError("Invalid key error (%d)" % ret)
 
         self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
+        if self.output_size <= 0:
+            raise WolfCryptError("Invalid key error (%d)" % self.output_size)
 
 
     def decrypt(self, ciphertext):
@@ -240,7 +254,7 @@ class RsaPrivate(RsaPublic):
                                         self.native_object)
 
         if ret < 0:
-            raise KeyError
+            raise WolfCryptError("Decryption error (%d)" % ret)
 
         return plaintext[:ret]
 
@@ -255,6 +269,6 @@ class RsaPrivate(RsaPublic):
                                   self._random.native_object)
 
         if ret != self.output_size:
-            raise KeyError
+            raise WolfCryptError("Signature error (%d)" % ret)
 
         return signature

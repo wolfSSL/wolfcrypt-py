@@ -19,17 +19,5 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
 
-class UsageError(Exception):
-    pass
-
-
-class InvalidKey(Exception):
-    pass
-
-
-class InvalidIV(Exception):
-    pass
-
-
-class InvalidInput(Exception):
+class WolfCryptError(Exception):
     pass

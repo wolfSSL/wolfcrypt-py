@@ -163,7 +163,7 @@ class TestRsaPrivate(unittest.TestCase):
 
     def test_raises(self):
         # invalid key
-        self.assertRaises(KeyError, RsaPrivate, 'key')
+        self.assertRaises(WolfCryptError, RsaPrivate, 'key')
 
 
     def test_output_size(self):
@@ -223,7 +223,7 @@ class TestRsaPublic(unittest.TestCase):
 
     def test_raises(self):
         # invalid key
-        self.assertRaises(KeyError, RsaPublic, 'key')
+        self.assertRaises(WolfCryptError, RsaPublic, 'key')
 
 
     def test_output_size(self):
