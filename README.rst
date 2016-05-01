@@ -51,4 +51,4 @@ Please contact wolfSSL Inc. directly at:
 Email: licensing@wolfssl.com
 Phone: +1 425 245-8247
 
-More information can be found on the wolfSSL website at www.wolfssl.com.
+More information can be found on the `wolfSSL website <https://www.wolfssl.com>`_.
