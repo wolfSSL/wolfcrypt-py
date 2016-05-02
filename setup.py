@@ -13,7 +13,7 @@ setup(
     version="0.1.0",
     description="A Python wrapper that encapsulates wolfSSL's wolfCrypt API",
     long_description=open("README.rst", "rt").read(),
-    url="https://github.com/wolfssl/wolfcrypt-py",
+    url="https://wolfssl.github.io/wolfcrypt-py",
     author="wolfSSL",
     author_email="info@wolfssl.com",
     classifiers=[

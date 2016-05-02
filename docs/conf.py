@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# wolfcrypt-py documentation build configuration file, created by
+# wolfcrypt documentation build configuration file, created by
 # sphinx-quickstart on Fri Apr 29 16:47:53 2016.
 #
 # This file is execfile()d with the current directory set to its
@@ -52,7 +52,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'wolfcrypt-py'
+project = u'wolfcrypt'
 copyright = u'2016, wolfSSL Inc. All rights reserved'
 author = u'wolfSSL'
 
@@ -63,7 +63,7 @@ author = u'wolfSSL'
 
 base_dir = os.path.join(os.path.dirname(__file__), os.pardir)
 about = {}
-with open(os.path.join(base_dir, "wolfcrypt", "__about__.py")) as f:
+with open(os.path.join(base_dir, "wolfcrypt", "about.py")) as f:
     exec(f.read(), about)
 
 version = release = about["__version__"]
@@ -130,7 +130,7 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
-#html_title = u'wolfcrypt-py v0.1.0'
+#html_title = u'%s v%s' % (project, release)
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
@@ -234,7 +234,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'wolfcrypt-py.tex', u'wolfcrypt-py Documentation',
+    (master_doc, 'wolfcrypt.tex', u'wolfcrypt Python Documentation',
      u'wolfSSL', 'manual'),
 ]
 
@@ -264,7 +264,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'wolfcrypt-py', u'wolfcrypt-py Documentation',
+    (master_doc, 'wolfcrypt', u'wolfcrypt Python Documentation',
      [author], 1)
 ]
 
@@ -278,8 +278,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'wolfcrypt-py', u'wolfcrypt-py Documentation',
-     author, 'wolfcrypt-py', 'One line description of project.',
+    (master_doc, 'wolfcrypt', u'wolfcrypt Python Documentation',
+     author, 'wolfcrypt', 'One line description of project.',
      'Miscellaneous'),
 ]
 
