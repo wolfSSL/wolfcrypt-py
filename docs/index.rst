@@ -8,14 +8,19 @@ targeted at IoT, embedded, and RTOS environments primarily because of its size,
 speed, and feature set. It works seamlessly in desktop, enterprise, and cloud
 environments as well.
 
-Contents:
+Summary
+=======
 
 .. toctree::
    :maxdepth: 2
 
-   ciphers/index
-   hashes/index
    random
+   hashes/index
+   hashes/hmac
+   ciphers/symmetric
+   ciphers/asymmetric
+
+
 
 Indices and tables
 ==================

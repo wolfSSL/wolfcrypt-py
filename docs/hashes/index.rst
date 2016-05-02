@@ -9,4 +9,3 @@ Hashing Functions
    sha256
    sha384
    sha512
-   hmac
