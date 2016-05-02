@@ -18,7 +18,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
-from __future__ import absolute_import, division, print_function
 
 __all__ = [
     "__title__", "__summary__", "__uri__", "__version__", "__author__",
@@ -57,4 +56,4 @@ __license__ = """
     royalty-free distribution. Custom licensing terms are also available.
 """
 
-__copyright__ = "Copyright 2016 {0}".format(__author__)
+__copyright__ = "Copyright 2016 {0}  All rights reserved".format(__author__)
