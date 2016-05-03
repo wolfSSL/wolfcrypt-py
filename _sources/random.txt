@@ -22,7 +22,9 @@ Example
     >>> from wolfcrypt.random import Random
     >>>
     >>> r = Random()
-    >>> r.byte()
+    >>> b = r.byte()
+    >>> b # doctest: +SKIP
     b'\x8c'
-    >>> r.bytes(16)
+    >>> b16 = r.bytes(16)
+    >>> b16 # doctest: +SKIP
     b']\x93nk\x95\xbc@\xffX\xab\xdcB\xda\x11\xf7\x03'
