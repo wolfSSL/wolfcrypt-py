@@ -25,7 +25,7 @@ from wolfcrypt.exceptions import *
 
 class _Hash(object):
     """
-    A **PEP 247: Cryptographic Hash Function** compliant
+    A **PEP 247: Cryptographic Hash Functions** compliant
     **Hash Function Interface**.
     """
     def __init__(self, string=None):
@@ -65,7 +65,7 @@ class _Hash(object):
 
     def update(self, string):
         """
-        Hashes 'string' into the current state of the hashing
+        Hashes **string** into the current state of the hashing
         object. update() can be called any number of times during
         a hashing object's lifetime.
         """
@@ -132,8 +132,8 @@ class Sha(_Hash):
 
 class Sha256(_Hash):
     """
-    **SHA-256** is a cryptographic hash function from the **SHA-2 family** and
-    is standardized by **NIST**.
+    **SHA-256** is a cryptographic hash function from the
+    **SHA-2 family** and is standardized by **NIST**.
 
     It produces a [ **256-bit | 32 bytes** ] message digest.
     """
@@ -156,8 +156,8 @@ class Sha256(_Hash):
 
 class Sha384(_Hash):
     """
-    **SHA-384** is a cryptographic hash function from the **SHA-2 family** and
-    is standardized by **NIST**.
+    **SHA-384** is a cryptographic hash function from the
+    **SHA-2 family** and is standardized by **NIST**.
 
     It produces a [ **384-bit | 48 bytes** ] message digest.
     """
@@ -180,8 +180,8 @@ class Sha384(_Hash):
 
 class Sha512(_Hash):
     """
-    **SHA-512** is a cryptographic hash function from the **SHA-2 family** and
-    is standardized by **NIST**.
+    **SHA-512** is a cryptographic hash function from the
+    **SHA-2 family** and is standardized by **NIST**.
 
     It produces a [ **512-bit | 64 bytes** ] message digest.
     """
@@ -213,7 +213,7 @@ _HMAC_TYPES = [_TYPE_SHA, _TYPE_SHA256, _TYPE_SHA384, _TYPE_SHA512]
 
 class _Hmac(_Hash):
     """
-    A **PEP 247: Cryptographic Hash Function** compliant
+    A **PEP 247: Cryptographic Hash Functions** compliant
     **Keyed Hash Function Interface**.
     """
     digest_size  = None
@@ -237,8 +237,8 @@ class _Hmac(_Hash):
     @classmethod
     def new(cls, key, string=None):
         """
-        Creates a new hashing object and returns it. **key** is a
-        required parameter containing a string giving the key
+        Creates a new hashing object and returns it. **key** is
+        a required parameter containing a string giving the key
         to use. The optional **string** parameter, if supplied,
         will be immediately hashed into the object's starting
         state, as if obj.update(string) was called.
@@ -260,7 +260,8 @@ class _Hmac(_Hash):
 
 class HmacSha(_Hmac):
     """
-    A HMAC function using **SHA-1** as it's cryptographic hash function.
+    A HMAC function using **SHA-1** as it's cryptographic
+    hash function.
 
     It produces a [ **512-bit | 64 bytes** ] message digest.
     """
@@ -270,7 +271,8 @@ class HmacSha(_Hmac):
 
 class HmacSha256(_Hmac):
     """
-    A HMAC function using **SHA-256** as it's cryptographic hash function.
+    A HMAC function using **SHA-256** as it's cryptographic
+    hash function.
 
     It produces a [ **512-bit | 64 bytes** ] message digest.
     """
@@ -280,7 +282,8 @@ class HmacSha256(_Hmac):
 
 class HmacSha384(_Hmac):
     """
-    A HMAC function using **SHA-384** as it's cryptographic hash function.
+    A HMAC function using **SHA-384** as it's cryptographic
+    hash function.
 
     It produces a [ **512-bit | 64 bytes** ] message digest.
     """
@@ -290,7 +293,8 @@ class HmacSha384(_Hmac):
 
 class HmacSha512(_Hmac):
     """
-    A HMAC function using **SHA-512** as it's cryptographic hash function.
+    A HMAC function using **SHA-512** as it's cryptographic
+    hash function.
 
     It produces a [ **512-bit | 64 bytes** ] message digest.
     """

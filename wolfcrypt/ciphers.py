@@ -42,7 +42,8 @@ _FEEDBACK_MODES = [MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR]
 
 class _Cipher(object):
     """
-    A PEP 272 compliant Block Encryption Algorithm.
+    A **PEP 272: Block Encryption Algorithms** compliant
+    **Symmetric Key Cipher**.
     """
     def __init__(self, key, mode, IV=None):
         if mode not in _FEEDBACK_MODES:
@@ -82,12 +83,12 @@ class _Cipher(object):
     def new(cls, key, mode, IV=None, **kwargs):
         """
         Returns a ciphering object, using the secret key contained in
-        the string 'key', and using the feedback mode 'mode', which
+        the string **key**, and using the feedback mode **mode**, which
         must be one of MODE_* defined in this module.
 
-        If 'mode' is MODE_CBC or MODE_CFB, 'IV' must be provided and
+        If **mode** is MODE_CBC or MODE_CFB, **IV** must be provided and
         must be a string of the same length as the block size. Not
-        providing a value of 'IV' will result in a ValueError exception
+        providing a value of **IV** will result in a ValueError exception
         being raised.
         """
         return cls(key, mode, IV)
@@ -123,7 +124,7 @@ class _Cipher(object):
 
     def decrypt(self, string):
         """
-        Decrypts 'string', using the key-dependent data in the
+        Decrypts **string**, using the key-dependent data in the
         object and with the appropriate feedback mode. The string's
         length must be an exact multiple of the algorithm's block
         size or, in CFB mode, of the segment size.  Returns a string
@@ -150,6 +151,10 @@ class _Cipher(object):
 
 
 class Aes(_Cipher):
+    """
+    The **Advanced Encryption Standard** (AES), a.k.a. Rijndael, is
+    a symmetric-key cipher standardized by **NIST**.
+    """
     block_size   = 16
     key_size     = None # 16, 24, 32
     _key_sizes   = [16, 24, 32]
@@ -174,6 +179,12 @@ class Aes(_Cipher):
 
 
 class Des3(_Cipher):
+    """
+    **Triple DES** (3DES) is the common name for the **Triple Data
+    Encryption Algorithm** (TDEA or Triple DEA) symmetric-key block
+    cipher, which applies the **Data Encryption Standard** (DES)
+    cipher algorithm three times to each data block.
+    """
     block_size   = 8
     key_size     = 24
     _native_type = "Des3 *"
@@ -231,9 +242,11 @@ class RsaPublic(_Rsa):
 
     def encrypt(self, plaintext):
         """
-        Encrypts plaintext, using the public key data in the
+        Encrypts **plaintext**, using the public key data in the
         object. The plaintext's length must not be greater than:
-            self.output_size - self.RSA_MIN_PAD_SIZE
+
+            **self.output_size - self.RSA_MIN_PAD_SIZE**
+
         Returns a string containing the ciphertext.
         """
 
@@ -253,9 +266,11 @@ class RsaPublic(_Rsa):
 
     def verify(self, signature):
         """
-        Verifies signature, using the public key data in the
+        Verifies **signature**, using the public key data in the
         object. The signature's length must be equal to:
-            self.output_size
+
+            **self.output_size**
+
         Returns a string containing the plaintext.
         """
         signature = t2b(signature)
@@ -291,9 +306,11 @@ class RsaPrivate(RsaPublic):
 
     def decrypt(self, ciphertext):
         """
-        Decrypts ciphertext, using the private key data in the
+        Decrypts **ciphertext**, using the private key data in the
         object. The ciphertext's length must be equal to:
-            self.output_size
+
+            **self.output_size**
+
         Returns a string containing the plaintext.
         """
         ciphertext = t2b(ciphertext)
@@ -311,9 +328,11 @@ class RsaPrivate(RsaPublic):
 
     def sign(self, plaintext):
         """
-        Signs plaintext, using the private key data in the object.
+        Signs **plaintext**, using the private key data in the object.
         The plaintext's length must not be greater than:
-            self.output_size - self.RSA_MIN_PAD_SIZE
+
+            **self.output_size - self.RSA_MIN_PAD_SIZE**
+
         Returns a string containing the signature.
         """
         plaintext = t2b(plaintext)
