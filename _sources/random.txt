@@ -19,8 +19,6 @@ vectors can result in major security issues depending on the algorithms in use.
 Example
 -------
 
-.. doctest::
-
     >>> from wolfcrypt.random import Random
     >>>
     >>> r = Random()

@@ -24,8 +24,6 @@ Asymmetric Key Encryption Classes
 Example
 -------
 
-.. doctest::
-
     >>> from wolfcrypt.ciphers import RsaPrivate, RsaPublic
     >>> from wolfcrypt.utils import h2b
     >>>
