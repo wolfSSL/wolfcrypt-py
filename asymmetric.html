@@ -1,0 +1,340 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Asymmetric Key Algorithms &mdash; wolfcrypt 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="wolfcrypt 0.1.0 documentation" href="index.html"/>
+        <link rel="next" title="Message Digests" href="digest.html"/>
+        <link rel="prev" title="Symmetric Key Algorithms" href="symmetric.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> wolfcrypt
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="symmetric.html">Symmetric Key Algorithms</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Asymmetric Key Algorithms</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#asymmetric-key-encryption-classes">Asymmetric Key Encryption Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="digest.html">Message Digests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mac.html">Message Authentication Codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html">Random Number Generation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">wolfcrypt</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Asymmetric Key Algorithms</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/asymmetric.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-wolfcrypt.ciphers">
+<span id="asymmetric-key-algorithms"></span><h1>Asymmetric Key Algorithms<a class="headerlink" href="#module-wolfcrypt.ciphers" title="Permalink to this headline">¶</a></h1>
+<p><strong>Asymmetric key algorithms</strong> are encryption algorithms that use <strong>a pair
+of cryptographic keys</strong>, one for data encryption and signing and the other
+one for data decryption and signature verification.</p>
+<p><code class="docutils literal"><span class="pre">wolfcrypt</span></code> provides access to the following <strong>Asymmetric Key Ciphers</strong>:</p>
+<div class="section" id="asymmetric-key-encryption-classes">
+<h2>Asymmetric Key Encryption Classes<a class="headerlink" href="#asymmetric-key-encryption-classes" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="wolfcrypt.ciphers.RsaPublic">
+<em class="property">class </em><code class="descclassname">wolfcrypt.ciphers.</code><code class="descname">RsaPublic</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPublic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPublic" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="wolfcrypt.ciphers.RsaPublic.encrypt">
+<code class="descname">encrypt</code><span class="sig-paren">(</span><em>plaintext</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPublic.encrypt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPublic.encrypt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encrypts <strong>plaintext</strong>, using the public key data in the
+object. The plaintext&#8217;s length must not be greater than:</p>
+<blockquote>
+<div><strong>self.output_size - self.RSA_MIN_PAD_SIZE</strong></div></blockquote>
+<p>Returns a string containing the ciphertext.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.RsaPublic.verify">
+<code class="descname">verify</code><span class="sig-paren">(</span><em>signature</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPublic.verify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPublic.verify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verifies <strong>signature</strong>, using the public key data in the
+object. The signature&#8217;s length must be equal to:</p>
+<blockquote>
+<div><strong>self.output_size</strong></div></blockquote>
+<p>Returns a string containing the plaintext.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="wolfcrypt.ciphers.RsaPrivate">
+<em class="property">class </em><code class="descclassname">wolfcrypt.ciphers.</code><code class="descname">RsaPrivate</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPrivate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="wolfcrypt.ciphers.RsaPrivate.decrypt">
+<code class="descname">decrypt</code><span class="sig-paren">(</span><em>ciphertext</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPrivate.decrypt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate.decrypt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decrypts <strong>ciphertext</strong>, using the private key data in the
+object. The ciphertext&#8217;s length must be equal to:</p>
+<blockquote>
+<div><strong>self.output_size</strong></div></blockquote>
+<p>Returns a string containing the plaintext.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.RsaPrivate.encrypt">
+<code class="descname">encrypt</code><span class="sig-paren">(</span><em>plaintext</em><span class="sig-paren">)</span><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate.encrypt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encrypts <strong>plaintext</strong>, using the public key data in the
+object. The plaintext&#8217;s length must not be greater than:</p>
+<blockquote>
+<div><strong>self.output_size - self.RSA_MIN_PAD_SIZE</strong></div></blockquote>
+<p>Returns a string containing the ciphertext.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.RsaPrivate.sign">
+<code class="descname">sign</code><span class="sig-paren">(</span><em>plaintext</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPrivate.sign"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate.sign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Signs <strong>plaintext</strong>, using the private key data in the object.
+The plaintext&#8217;s length must not be greater than:</p>
+<blockquote>
+<div><strong>self.output_size - self.RSA_MIN_PAD_SIZE</strong></div></blockquote>
+<p>Returns a string containing the signature.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.RsaPrivate.verify">
+<code class="descname">verify</code><span class="sig-paren">(</span><em>signature</em><span class="sig-paren">)</span><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate.verify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verifies <strong>signature</strong>, using the public key data in the
+object. The signature&#8217;s length must be equal to:</p>
+<blockquote>
+<div><strong>self.output_size</strong></div></blockquote>
+<p>Returns a string containing the plaintext.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">wolfcrypt.ciphers</span> <span class="k">import</span> <span class="n">RsaPrivate</span><span class="p">,</span> <span class="n">RsaPublic</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">wolfcrypt.utils</span> <span class="k">import</span> <span class="n">h2b</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">private</span> <span class="o">=</span> <span class="s2">&quot;3082025C02010002818100BC730EA849F374A2A9EF18A5DA559921F9C8ECB36D&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;48E53535757737ECD161905F3ED9E4D5DF94CAC1A9D719DA86C9E84DC4613682&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;FEABAD7E7725BB8D11A5BC623AA838CC39A20466B4F7F7F3AADA4D020EBB5E8D&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;6948DC77C9280E22E96BA426BA4CE8C1FD4A6F2B1FEF8AAEF69062E5641EEB2B&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;3C67C8DC2700F6916865A902030100010281801397EAE8387825A25C04CE0D40&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;7C31E5C470CD9B823B5809863B665FDC3190F14FD5DB15DDDED73B9593311831&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;0E5EA3D6A21A716E81481C4BCFDB8E7A866132DCFB55C1166D279224458BF1B8&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;48B14B1DACDEDADD8E2FC291FBA5A96EF83A6AF1FD5018EF9FE7C3CA78EA56D3&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;D3725B96DD4E064E3AC3D9BE72B66507074C01024100FA47D47A7C923C55EF81&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;F041302DA3CF8F1CE6872705700DDF9835D6F18B382F24B5D084B6794F712994&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;5AF0646AACE772C6ED4D59983E673AF3742CF9611769024100C0C1820D0CEBC6&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;2FDC92F99D821A31E9E9F74BF282871CEE166AD11D188270F3C0B62FF6F3F71D&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;F18623C84EEB8F568E8FF5BFF1F72BB5CC3DC657390C1B54410241009D7E05DE&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;EDF4B7B2FBFC304B551DE32F0147966905CD0E2E2CBD8363B6AB7CB76DCA5B64&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;A7CEBE86DF3B53DE61D21EEBA5F637EDACAB78D94CE755FBD71199C102401898&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;1829E61E2739702168AC0A2FA172C121869538C65890A0579CBAE3A7B115C8DE&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;F61BC2612376EFB09D1C44BE1343396717C89DCAFBF545648B38822CF2810240&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;3989E59C195530BAB7488C48140EF49F7E779743E1B419353123759C3B44AD69&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;1256EE0061641666D37C742B15B4A2FEBF086B1A5D3F9012B105863129DBD9E2&quot;</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">prv</span> <span class="o">=</span> <span class="n">RsaPrivate</span><span class="p">(</span><span class="n">h2b</span><span class="p">(</span><span class="n">private</span><span class="p">))</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">public</span>  <span class="o">=</span> <span class="s2">&quot;30819F300D06092A864886F70D010101050003818D0030818902818100BC730E&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;A849F374A2A9EF18A5DA559921F9C8ECB36D48E53535757737ECD161905F3ED9&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;E4D5DF94CAC1A9D719DA86C9E84DC4613682FEABAD7E7725BB8D11A5BC623AA8&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;38CC39A20466B4F7F7F3AADA4D020EBB5E8D6948DC77C9280E22E96BA426BA4C&quot;</span> \
+<span class="gp">... </span>        <span class="o">+</span> <span class="s2">&quot;E8C1FD4A6F2B1FEF8AAEF69062E5641EEB2B3C67C8DC2700F6916865A90203010001&quot;</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pub</span> <span class="o">=</span> <span class="n">RsaPublic</span><span class="p">(</span><span class="n">h2b</span><span class="p">(</span><span class="n">public</span><span class="p">))</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plaintext</span> <span class="o">=</span> <span class="n">b</span><span class="s2">&quot;Everyone gets Friday off.&quot;</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ciphertext</span> <span class="o">=</span> <span class="n">pub</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">plaintext</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ciphertext</span>
+<span class="go">b&#39;e\xb7\xc2\xad\x0c\x04.\xefU8\x17QB\x852\x03\x01\xef\xbe=\xb4\xaf\xaf\x97\x9e4\x96\x9f\xc3\x8e\x87\x9a8o$.|_e\x1d\xa2yi?\x83\x18\xf9Yr|\x1fQ\x1a\x18\x1e\xab\xd17\xc5\x8c\xae\x08c)\xbc\nIr\x8d\xc3\x88\x7f\xde\x1f\x1a^lB\r\xf1\xc0\xfd0\xdeA\xf3\xd2\xe5q\x9a0\xee\xb4,\x97\x80\xa4|U;\xe6\x11\xf0\xc2Q\x987\xe1&gt;F\xf5\x14\x186@G~(Q\xf2;\xcb\x05\xee\x88\x0b\xd8\xa7&#39;</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">prv</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">ciphertext</span><span class="p">)</span>
+<span class="go">b&#39;Everyone gets Friday off.&#39;</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">signature</span> <span class="o">=</span> <span class="n">prv</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">plaintext</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">signature</span>
+<span class="go">b&#39;~\xc4\xe65\x15\xb17\x7fX\xaf,\xc2lw\xbd\x8f\t\x9d\xbf\xac\xdez\x90\xb4\x9f\x1aM\x88#Z\xea\xcb\xa6\xdb\x99\xf55\xd0\xfe|Mu\xb6\xb79(t\x81+h\xf2\xcd\x88v\xa8\xbaM\x86\xcfk\xe8\xf3\x0b\xb8\x8ew\xda&gt;\xf8\xd5[H\xeaAh\xc6\xdaQlo]\xdd\xf8w\xe7#M-\x12f\xae,\xdd\xa6d FP&lt;;R\xa2\x96hJ\xee_\x1fh\xaa\xc8\xdfAJ\xa5\xdd\x05\xc4\x89\x0c\xd7\xa0C\xb7u&quot;U\x03&#39;</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pub</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="n">signature</span><span class="p">)</span>
+<span class="go">b&#39;Everyone gets Friday off.&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="digest.html" class="btn btn-neutral float-right" title="Message Digests" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="symmetric.html" class="btn btn-neutral" title="Symmetric Key Algorithms" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, wolfSSL Inc. All rights reserved.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

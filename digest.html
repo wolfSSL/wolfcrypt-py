@@ -1,0 +1,343 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Message Digests &mdash; wolfcrypt 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="wolfcrypt 0.1.0 documentation" href="index.html"/>
+        <link rel="next" title="Message Authentication Codes" href="mac.html"/>
+        <link rel="prev" title="Asymmetric Key Algorithms" href="asymmetric.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> wolfcrypt
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="symmetric.html">Symmetric Key Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="asymmetric.html">Asymmetric Key Algorithms</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Message Digests</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#hashing-classes">Hashing Classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#interface">Interface</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sha-1">SHA-1</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sha-2-family">SHA-2 family</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="mac.html">Message Authentication Codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html">Random Number Generation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">wolfcrypt</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Message Digests</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/digest.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-wolfcrypt.hashes">
+<span id="message-digests"></span><h1>Message Digests<a class="headerlink" href="#module-wolfcrypt.hashes" title="Permalink to this headline">¶</a></h1>
+<p>A <strong>message digest</strong> is the output of a <strong>cryptographic hash function</strong>
+containing a string of bytes created by a <strong>one-way formula</strong> using the
+original message as input.</p>
+<p>Message digests are designed to protect the integrity of a piece of data or
+media to detect changes and alterations to any part of a message.</p>
+<div class="section" id="hashing-classes">
+<h2>Hashing Classes<a class="headerlink" href="#hashing-classes" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="interface">
+<h3>Interface<a class="headerlink" href="#interface" title="Permalink to this headline">¶</a></h3>
+<p>All Hashing Functions available in this module implements the following
+interface:</p>
+<dl class="class">
+<dt id="wolfcrypt.hashes._Hash">
+<em class="property">class </em><code class="descclassname">wolfcrypt.hashes.</code><code class="descname">_Hash</code><span class="sig-paren">(</span><em>string=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#_Hash"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes._Hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <strong>PEP 247: Cryptographic Hash Functions</strong> compliant
+<strong>Hash Function Interface</strong>.</p>
+<dl class="classmethod">
+<dt id="wolfcrypt.hashes._Hash.new">
+<em class="property">classmethod </em><code class="descname">new</code><span class="sig-paren">(</span><em>string=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#_Hash.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes._Hash.new" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new hashing object and returns it. The optional
+<strong>string</strong> parameter, if supplied, will be immediately
+hashed into the object&#8217;s starting state, as if
+obj.update(string) was called.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.hashes._Hash.copy">
+<code class="descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#_Hash.copy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes._Hash.copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a separate copy of this hashing object. An update
+to this copy won&#8217;t affect the original object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.hashes._Hash.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#_Hash.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes._Hash.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hashes <strong>string</strong> into the current state of the hashing
+object. update() can be called any number of times during
+a hashing object&#8217;s lifetime.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.hashes._Hash.digest">
+<code class="descname">digest</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#_Hash.digest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes._Hash.digest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the hash value of this hashing object as a string
+containing 8-bit data. The object is not altered in any
+way by this function; you can continue updating the object
+after calling this function.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.hashes._Hash.hexdigest">
+<code class="descname">hexdigest</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#_Hash.hexdigest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes._Hash.hexdigest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the hash value of this hashing object as a string
+containing hexadecimal digits. Lowercase letters are used
+for the digits &#8216;a&#8217; through &#8216;f&#8217;. Like the .digest() method,
+this method doesn&#8217;t alter the object.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="sha-1">
+<h3>SHA-1<a class="headerlink" href="#sha-1" title="Permalink to this headline">¶</a></h3>
+<div class="admonition attention">
+<p class="first admonition-title">Attention</p>
+<p class="last">NIST has deprecated SHA-1 in favor of the SHA-2 variants. New applications
+are strongly suggested to use SHA-2 over SHA-1.</p>
+</div>
+<dl class="class">
+<dt id="wolfcrypt.hashes.Sha">
+<em class="property">class </em><code class="descclassname">wolfcrypt.hashes.</code><code class="descname">Sha</code><span class="sig-paren">(</span><em>string=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#Sha"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes.Sha" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>SHA-1</strong> is a cryptographic hash function standardized by <strong>NIST</strong>.</p>
+<p>It produces an [ <strong>160-bit | 20 bytes</strong> ] message digest.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="sha-2-family">
+<h3>SHA-2 family<a class="headerlink" href="#sha-2-family" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="wolfcrypt.hashes.Sha256">
+<em class="property">class </em><code class="descclassname">wolfcrypt.hashes.</code><code class="descname">Sha256</code><span class="sig-paren">(</span><em>string=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#Sha256"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes.Sha256" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>SHA-256</strong> is a cryptographic hash function from the
+<strong>SHA-2 family</strong> and is standardized by <strong>NIST</strong>.</p>
+<p>It produces a [ <strong>256-bit | 32 bytes</strong> ] message digest.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="wolfcrypt.hashes.Sha384">
+<em class="property">class </em><code class="descclassname">wolfcrypt.hashes.</code><code class="descname">Sha384</code><span class="sig-paren">(</span><em>string=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#Sha384"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes.Sha384" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>SHA-384</strong> is a cryptographic hash function from the
+<strong>SHA-2 family</strong> and is standardized by <strong>NIST</strong>.</p>
+<p>It produces a [ <strong>384-bit | 48 bytes</strong> ] message digest.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="wolfcrypt.hashes.Sha512">
+<em class="property">class </em><code class="descclassname">wolfcrypt.hashes.</code><code class="descname">Sha512</code><span class="sig-paren">(</span><em>string=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#Sha512"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes.Sha512" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>SHA-512</strong> is a cryptographic hash function from the
+<strong>SHA-2 family</strong> and is standardized by <strong>NIST</strong>.</p>
+<p>It produces a [ <strong>512-bit | 64 bytes</strong> ] message digest.</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">wolfcrypt.hashes</span> <span class="k">import</span> <span class="n">Sha256</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">Sha256</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;wolf&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;crypt&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
+<span class="go">b&#39;\x96\xe0.{\x1c\xbc\xd6\xf1\x04\xfe\x1f\xdbFR\x02zU\x05\xb6\x86R\xb7\x00\x95\xc61\x8f\x9d\xce\r\x18D&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+<span class="go">b&#39;96e02e7b1cbcd6f104fe1fdb4652027a5505b68652b70095c6318f9dce0d1844&#39;</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;rocks&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+<span class="go">b&#39;e1a50df419d65715c48316bdc6a6f7f0485f4b26c1b107228faf17988b61c83f&#39;</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Sha256</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;wolfcryptrocks&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+<span class="go">b&#39;e1a50df419d65715c48316bdc6a6f7f0485f4b26c1b107228faf17988b61c83f&#39;</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Sha256</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;wolfcryptrocks&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+<span class="go">b&#39;e1a50df419d65715c48316bdc6a6f7f0485f4b26c1b107228faf17988b61c83f&#39;</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="mac.html" class="btn btn-neutral float-right" title="Message Authentication Codes" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="asymmetric.html" class="btn btn-neutral" title="Asymmetric Key Algorithms" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, wolfSSL Inc. All rights reserved.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
