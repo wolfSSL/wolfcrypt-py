@@ -24,5 +24,5 @@ wolfSSL, yaSSL, and wolfCrypt are available for $5,000 USD per end product
 or SKU. Licenses are generally issued for one product and include unlimited
 royalty-free distribution. Custom licensing terms are also available.
 
-Email: licensing@wolfssl.com
-Phone: +1 425 245-8247
+    Email: licensing@wolfssl.com
+    Phone: +1 425 245-8247
