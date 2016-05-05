@@ -23,9 +23,14 @@
 from __future__ import absolute_import
 import os
 import sys
-import about
 import wolfcrypt
 from setuptools import setup, find_packages
+
+try:
+    import about
+except ImportError:
+    error = "about is not installed, refer to <{url}> for instructions."
+    raise ImportError(error.format(url="https://pypi.io/project/about/"))
 
 os.chdir(os.path.dirname(sys.argv[0]) or ".")
 
@@ -44,7 +49,7 @@ info = dict(
     },
     requirements = {
                     "setup_requires":    ["cffi>=1.6.0", "about>=5.2"],
-                    "install_requires":  ["cffi>=1.6.0"],
+                    "install_requires":  ["cffi>=1.6.0", "about>=5.2"],
     },
     scripts      = {},
     plugins      = {},
