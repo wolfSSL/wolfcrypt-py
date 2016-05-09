@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>wolfCrypt Python Documentation &mdash; wolfcrypt 0.1.5 documentation</title>
+  <title>wolfcrypt: the wolfSSL Crypto Engine &mdash; wolfcrypt 0.1.6 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="wolfcrypt 0.1.5 documentation" href="#"/>
+    <link rel="top" title="wolfcrypt 0.1.6 documentation" href="#"/>
         <link rel="next" title="Symmetric Key Algorithms" href="symmetric.html"/> 
 
   
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                0.1.5
+                0.1.6
               </div>
             
           
@@ -116,7 +116,7 @@
   <ul class="wy-breadcrumbs">
     <li><a href="#">Docs</a> &raquo;</li>
       
-    <li>wolfCrypt Python Documentation</li>
+    <li>wolfcrypt: the wolfSSL Crypto Engine</li>
       <li class="wy-breadcrumbs-aside">
         
           
@@ -130,14 +130,84 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="wolfcrypt-python-documentation">
-<h1>wolfCrypt Python Documentation<a class="headerlink" href="#wolfcrypt-python-documentation" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="wolfcrypt-the-wolfssl-crypto-engine">
+<h1>wolfcrypt: the wolfSSL Crypto Engine<a class="headerlink" href="#wolfcrypt-the-wolfssl-crypto-engine" title="Permalink to this headline">¶</a></h1>
 <p><strong>wolfCrypt Python</strong>, a.k.a. <code class="docutils literal"><span class="pre">wolfcrypt</span></code> is a Python library that encapsulates
 <strong>wolfSSL&#8217;s wolfCrypt API</strong>.</p>
 <p><strong>wolfCrypt</strong> is a lightweight, portable, C-language-based crypto library
 targeted at IoT, embedded, and RTOS environments primarily because of its size,
 speed, and feature set. It works seamlessly in desktop, enterprise, and cloud
 environments as well.</p>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>You can install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> via <code class="docutils literal"><span class="pre">pip</span></code> or <code class="docutils literal"><span class="pre">source</span> <span class="pre">code</span></code>, but before
+installing it, make sure you have <code class="docutils literal"><span class="pre">wolfssl</span></code> C library installed in your
+machine.</p>
+<p>To install wolfssl do:</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone git@github.com:wolfssl/wolfssl.git
+<span class="gp">$</span> <span class="nb">cd</span> wolfssl
+<span class="gp">$</span> ./autogen.sh
+<span class="gp">$</span> ./configure
+<span class="gp">$</span> make
+<span class="gp">$</span> sudo make install
+</pre></div>
+</div>
+<div class="section" id="wolfcrypt-pip-installation">
+<h3>wolfcrypt pip installation<a class="headerlink" href="#wolfcrypt-pip-installation" title="Permalink to this headline">¶</a></h3>
+<p>To install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> with <code class="docutils literal"><span class="pre">pip</span></code>:</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> pip install wolfcrypt
+</pre></div>
+</div>
+<p>or if you need admin privileges to use <code class="docutils literal"><span class="pre">pip</span></code>:</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo -H pip install wolfcrypt
+</pre></div>
+</div>
+</div>
+<div class="section" id="wolfcrypt-source-installation">
+<h3>wolfcrypt source installation<a class="headerlink" href="#wolfcrypt-source-installation" title="Permalink to this headline">¶</a></h3>
+<p>To install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> from sources:</p>
+<ol class="arabic simple">
+<li>Get the sources:</li>
+</ol>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone git@github.com:wolfssl/wolfssl.git
+<span class="gp">$</span> <span class="nb">cd</span> wolfssl/wrappers/python
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li>Build and install <code class="docutils literal"><span class="pre">wolfcrypt</span></code></li>
+</ol>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> python setup.py install
+<span class="go">...</span>
+<span class="go">Finished processing dependencies for wolfcrypt...</span>
+</pre></div>
+</div>
+<p>or if you need admin privileges to use the install command:</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo python setup.py install
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="testing">
+<h2>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h2>
+<p>Test <code class="docutils literal"><span class="pre">wolfcrypt</span></code> locally with <code class="docutils literal"><span class="pre">tox</span></code>:</p>
+<ol class="arabic simple">
+<li>Make sure that the testing requirements are installed:</li>
+</ol>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> pip install -r requirements-testing.txt
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li>Call <code class="docutils literal"><span class="pre">tox</span></code>:</li>
+</ol>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> tox
+<span class="go">...</span>
+<span class="go">_________________________________ summary _________________________________</span>
+<span class="go">py27: commands succeeded</span>
+<span class="go">py35: commands succeeded</span>
+<span class="go">congratulations :)</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="summary">
 <h2>Summary<a class="headerlink" href="#summary" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
@@ -211,7 +281,7 @@ licensing terms are also available at <a class="reference external" href="mailto
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1.5',
+            VERSION:'0.1.6',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
