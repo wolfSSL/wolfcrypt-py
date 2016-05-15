@@ -143,6 +143,12 @@ environments as well.</p>
 <p>You can install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> via <code class="docutils literal"><span class="pre">pip</span></code> or <code class="docutils literal"><span class="pre">source</span> <span class="pre">code</span></code>, but before
 installing it, make sure you have <code class="docutils literal"><span class="pre">wolfssl</span></code> C library installed in your
 machine.</p>
+<p><strong>Linux ONLY:</strong> Make sure you have <code class="docutils literal"><span class="pre">python-dev</span></code>, <code class="docutils literal"><span class="pre">python3-dev</span></code>,
+<code class="docutils literal"><span class="pre">python-pip</span></code> and <code class="docutils literal"><span class="pre">libffi-dev</span></code> installed:</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo apt-get update
+<span class="gp">$</span> sudo apt-get install python-dev python3-dev python-pip libffi-dev
+</pre></div>
+</div>
 <p>To install wolfssl do:</p>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone git@github.com:wolfssl/wolfssl.git
 <span class="gp">$</span> <span class="nb">cd</span> wolfssl
@@ -150,6 +156,10 @@ machine.</p>
 <span class="gp">$</span> ./configure
 <span class="gp">$</span> make
 <span class="gp">$</span> sudo make install
+</pre></div>
+</div>
+<p><strong>Linux ONLY:</strong> Update your dynamic linker bindings with:</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo ldconfig
 </pre></div>
 </div>
 <div class="section" id="wolfcrypt-pip-installation">
@@ -203,10 +213,12 @@ machine.</p>
 <span class="go">...</span>
 <span class="go">_________________________________ summary _________________________________</span>
 <span class="go">py27: commands succeeded</span>
+<span class="go">SKIPPED: py34: InterpreterNotFound: python3.4</span>
 <span class="go">py35: commands succeeded</span>
 <span class="go">congratulations :)</span>
 </pre></div>
 </div>
+<p>Note that some tests might be skipped if you don&#8217;t have the proper interpreter.</p>
 </div>
 <div class="section" id="summary">
 <h2>Summary<a class="headerlink" href="#summary" title="Permalink to this headline">¶</a></h2>
