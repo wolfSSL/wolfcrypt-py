@@ -160,6 +160,10 @@ machine.</p>
 </div>
 <p><strong>Linux ONLY:</strong> Update your dynamic linker bindings with:</p>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo ldconfig
+
+<span class="gp">#</span> or
+
+<span class="gp">$</span> <span class="nb">export</span> <span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/usr/local/lib
 </pre></div>
 </div>
 <div class="section" id="wolfcrypt-pip-installation">
@@ -180,7 +184,7 @@ machine.</p>
 <li>Get the sources:</li>
 </ol>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone git@github.com:wolfssl/wolfssl.git
-<span class="gp">$</span> <span class="nb">cd</span> wolfssl/wrappers/python
+<span class="gp">$</span> <span class="nb">cd</span> wolfssl/wrapper/python
 </pre></div>
 </div>
 <ol class="arabic simple" start="2">
@@ -204,6 +208,10 @@ machine.</p>
 <li>Make sure that the testing requirements are installed:</li>
 </ol>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> pip install -r requirements-testing.txt
+</pre></div>
+</div>
+<p>or if you need admin privileges to use the install command:</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo -H pip install -r requirements-testing.txt
 </pre></div>
 </div>
 <ol class="arabic simple" start="2">
