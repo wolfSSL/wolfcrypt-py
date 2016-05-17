@@ -140,16 +140,10 @@ speed, and feature set. It works seamlessly in desktop, enterprise, and cloud
 environments as well.</p>
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
-<p>You can install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> via <code class="docutils literal"><span class="pre">pip</span></code> or <code class="docutils literal"><span class="pre">source</span> <span class="pre">code</span></code>, but before
-installing it, make sure you have <code class="docutils literal"><span class="pre">wolfssl</span></code> C library installed in your
-machine.</p>
-<p><strong>Linux ONLY:</strong> Make sure you have <code class="docutils literal"><span class="pre">python-dev</span></code>, <code class="docutils literal"><span class="pre">python3-dev</span></code>,
-<code class="docutils literal"><span class="pre">python-pip</span></code> and <code class="docutils literal"><span class="pre">libffi-dev</span></code> installed:</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo apt-get update
-<span class="gp">$</span> sudo apt-get install python-dev python3-dev python-pip libffi-dev
-</pre></div>
-</div>
-<p>To install wolfssl do:</p>
+<div class="section" id="dependencies">
+<h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h3>
+<p>Before installing <code class="docutils literal"><span class="pre">wolfcrypt</span></code>, make sure you have <code class="docutils literal"><span class="pre">wolfssl</span></code> C library
+installed in your machine:</p>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone git@github.com:wolfssl/wolfssl.git
 <span class="gp">$</span> <span class="nb">cd</span> wolfssl
 <span class="gp">$</span> ./autogen.sh
@@ -158,64 +152,39 @@ machine.</p>
 <span class="gp">$</span> sudo make install
 </pre></div>
 </div>
-<p><strong>Linux ONLY:</strong> Update your dynamic linker bindings with:</p>
+<p><strong>Linux ONLY:</strong> Update your dynamic linker:</p>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo ldconfig
-
 <span class="gp">#</span> or
-
 <span class="gp">$</span> <span class="nb">export</span> <span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/usr/local/lib
 </pre></div>
+</div>
+<p><strong>Linux ONLY:</strong> Make sure you have <code class="docutils literal"><span class="pre">python-dev</span></code>, <code class="docutils literal"><span class="pre">python3-dev</span></code>,
+<code class="docutils literal"><span class="pre">python-pip</span></code> and <code class="docutils literal"><span class="pre">libffi-dev</span></code> installed:</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo apt-get update
+<span class="gp">$</span> sudo apt-get install python-dev python3-dev python-pip libffi-dev
+</pre></div>
+</div>
+<p>Now, you can install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> via <code class="docutils literal"><span class="pre">pip</span></code> or <code class="docutils literal"><span class="pre">source</span> <span class="pre">code</span></code>:</p>
 </div>
 <div class="section" id="wolfcrypt-pip-installation">
 <h3>wolfcrypt pip installation<a class="headerlink" href="#wolfcrypt-pip-installation" title="Permalink to this headline">¶</a></h3>
 <p>To install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> with <code class="docutils literal"><span class="pre">pip</span></code>:</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> pip install wolfcrypt
-</pre></div>
-</div>
-<p>or if you need admin privileges to use <code class="docutils literal"><span class="pre">pip</span></code>:</p>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo -H pip install wolfcrypt
 </pre></div>
 </div>
 </div>
 <div class="section" id="wolfcrypt-source-installation">
 <h3>wolfcrypt source installation<a class="headerlink" href="#wolfcrypt-source-installation" title="Permalink to this headline">¶</a></h3>
-<p>To install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> from sources:</p>
-<ol class="arabic simple">
-<li>Get the sources:</li>
-</ol>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone git@github.com:wolfssl/wolfssl.git
-<span class="gp">$</span> <span class="nb">cd</span> wolfssl/wrapper/python
-</pre></div>
-</div>
-<ol class="arabic simple" start="2">
-<li>Build and install <code class="docutils literal"><span class="pre">wolfcrypt</span></code></li>
-</ol>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> python setup.py install
-<span class="go">...</span>
-<span class="go">Finished processing dependencies for wolfcrypt...</span>
-</pre></div>
-</div>
-<p>or if you need admin privileges to use the install command:</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo python setup.py install
-</pre></div>
-</div>
-</div>
-</div>
-<div class="section" id="testing">
-<h2>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h2>
-<p>Test <code class="docutils literal"><span class="pre">wolfcrypt</span></code> locally with <code class="docutils literal"><span class="pre">tox</span></code>:</p>
+<p><strong>Before</strong> proceeding with installation, you can test <code class="docutils literal"><span class="pre">wolfcrypt</span></code> locally with
+<code class="docutils literal"><span class="pre">tox</span></code>:</p>
 <ol class="arabic simple">
 <li>Make sure that the testing requirements are installed:</li>
 </ol>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> pip install -r requirements-testing.txt
-</pre></div>
-</div>
-<p>or if you need admin privileges to use the install command:</p>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo -H pip install -r requirements-testing.txt
 </pre></div>
 </div>
 <ol class="arabic simple" start="2">
-<li>Call <code class="docutils literal"><span class="pre">tox</span></code>:</li>
+<li>Run <code class="docutils literal"><span class="pre">tox</span></code>:</li>
 </ol>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> tox
 <span class="go">...</span>
@@ -227,6 +196,23 @@ machine.</p>
 </pre></div>
 </div>
 <p>Note that some tests might be skipped if you don&#8217;t have the proper interpreter.</p>
+<p><strong>Now</strong>, to install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> from sources:</p>
+<ol class="arabic simple">
+<li>Get the sources:</li>
+</ol>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone git@github.com:wolfssl/wolfssl.git
+<span class="gp">$</span> <span class="nb">cd</span> wolfssl/wrapper/python
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li>Build and install <code class="docutils literal"><span class="pre">wolfcrypt</span></code></li>
+</ol>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo python setup.py install
+<span class="go">...</span>
+<span class="go">Finished processing dependencies for wolfcrypt...</span>
+</pre></div>
+</div>
+</div>
 </div>
 <div class="section" id="summary">
 <h2>Summary<a class="headerlink" href="#summary" title="Permalink to this headline">¶</a></h2>
