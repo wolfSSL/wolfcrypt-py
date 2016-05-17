@@ -175,15 +175,22 @@ installed in your machine:</p>
 </div>
 <div class="section" id="wolfcrypt-source-installation">
 <h3>wolfcrypt source installation<a class="headerlink" href="#wolfcrypt-source-installation" title="Permalink to this headline">¶</a></h3>
-<p><strong>Before</strong> proceeding with installation, you can test <code class="docutils literal"><span class="pre">wolfcrypt</span></code> locally with
-<code class="docutils literal"><span class="pre">tox</span></code>:</p>
 <ol class="arabic simple">
+<li>Get the sources:</li>
+</ol>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone git@github.com:wolfssl/wolfssl.git
+<span class="gp">$</span> <span class="nb">cd</span> wolfssl/wrapper/python
+</pre></div>
+</div>
+<p><strong>Before</strong> proceeding with installation, you can test <code class="docutils literal"><span class="pre">wolfcrypt</span></code> locally with
+<code class="docutils literal"><span class="pre">tox</span></code>. If you don&#8217;t want to run the tests, jump to step 4 instead.</p>
+<ol class="arabic simple" start="2">
 <li>Make sure that the testing requirements are installed:</li>
 </ol>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo -H pip install -r requirements-testing.txt
 </pre></div>
 </div>
-<ol class="arabic simple" start="2">
+<ol class="arabic simple" start="3">
 <li>Run <code class="docutils literal"><span class="pre">tox</span></code>:</li>
 </ol>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> tox
@@ -197,14 +204,7 @@ installed in your machine:</p>
 </div>
 <p>Note that some tests might be skipped if you don&#8217;t have the proper interpreter.</p>
 <p><strong>Now</strong>, to install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> from sources:</p>
-<ol class="arabic simple">
-<li>Get the sources:</li>
-</ol>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone git@github.com:wolfssl/wolfssl.git
-<span class="gp">$</span> <span class="nb">cd</span> wolfssl/wrapper/python
-</pre></div>
-</div>
-<ol class="arabic simple" start="2">
+<ol class="arabic simple" start="4">
 <li>Build and install <code class="docutils literal"><span class="pre">wolfcrypt</span></code></li>
 </ol>
 <div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo python setup.py install
