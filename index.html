@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>wolfcrypt: the wolfSSL Crypto Engine &mdash; wolfcrypt 0.1.6 documentation</title>
+  <title>wolfcrypt: the wolfSSL Crypto Engine &mdash; wolfcrypt 0.1.7 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="wolfcrypt 0.1.6 documentation" href="#"/>
+    <link rel="top" title="wolfcrypt 0.1.7 documentation" href="#"/>
         <link rel="next" title="Symmetric Key Algorithms" href="symmetric.html"/> 
 
   
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                0.1.6
+                0.1.7
               </div>
             
           
@@ -137,81 +137,82 @@
 <p><strong>wolfCrypt</strong> is a lightweight, portable, C-language-based crypto library
 targeted at IoT, embedded, and RTOS environments primarily because of its size,
 speed, and feature set. It works seamlessly in desktop, enterprise, and cloud
-environments as well.</p>
+environments as well. It is the crypto engine behind wolfSSl&#8217;s embedded ssl
+library.</p>
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="dependencies">
-<h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h3>
-<p>Before installing <code class="docutils literal"><span class="pre">wolfcrypt</span></code>, make sure you have <code class="docutils literal"><span class="pre">wolfssl</span></code> C library
-installed in your machine:</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone git@github.com:wolfssl/wolfssl.git
-<span class="gp">$</span> <span class="nb">cd</span> wolfssl
-<span class="gp">$</span> ./autogen.sh
-<span class="gp">$</span> ./configure
-<span class="gp">$</span> make
-<span class="gp">$</span> sudo make install
+<p>In order to use <code class="docutils literal"><span class="pre">wolfcrypt</span></code>, first you&#8217;ll need to install <code class="docutils literal"><span class="pre">wolfssl</span></code> C
+embedded ssl library.</p>
+<div class="section" id="installing-wolfssl">
+<h3>Installing <code class="docutils literal"><span class="pre">wolfssl</span></code> :<a class="headerlink" href="#installing-wolfssl" title="Permalink to this headline">¶</a></h3>
+<p><strong>Mac OSX</strong></p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">brew install wolfssl</span>
 </pre></div>
 </div>
-<p><strong>Linux ONLY:</strong> Update your dynamic linker:</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo ldconfig
-<span class="gp">#</span> or
-<span class="gp">$</span> <span class="nb">export</span> <span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span>/usr/local/lib
+<p>or</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">git clone https://github.com/wolfssl/wolfssl.git</span>
+<span class="go">cd wolfssl/</span>
+<span class="go">./autogen.sh</span>
+<span class="go">./configure</span>
+<span class="go">make</span>
+<span class="go">sudo make install</span>
 </pre></div>
 </div>
-<p><strong>Linux ONLY:</strong> Make sure you have <code class="docutils literal"><span class="pre">python-dev</span></code>, <code class="docutils literal"><span class="pre">python3-dev</span></code>,
-<code class="docutils literal"><span class="pre">python-pip</span></code> and <code class="docutils literal"><span class="pre">libffi-dev</span></code> installed:</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo apt-get update
-<span class="gp">$</span> sudo apt-get install python-dev python3-dev python-pip libffi-dev
+<p><strong>Ubuntu</strong></p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">sudo apt-get update</span>
+<span class="go">sudo apt-get install -y git autoconf libtool</span>
+
+<span class="go">git clone https://github.com/wolfssl/wolfssl.git</span>
+<span class="go">cd wolfssl/</span>
+<span class="go">./autogen.sh</span>
+<span class="go">./configure</span>
+<span class="go">make</span>
+<span class="go">sudo make install</span>
+
+<span class="go">sudo ldconfig</span>
 </pre></div>
 </div>
-<p>Now, you can install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> via <code class="docutils literal"><span class="pre">pip</span></code> or <code class="docutils literal"><span class="pre">source</span> <span class="pre">code</span></code>:</p>
-</div>
-<div class="section" id="wolfcrypt-pip-installation">
-<h3>wolfcrypt pip installation<a class="headerlink" href="#wolfcrypt-pip-installation" title="Permalink to this headline">¶</a></h3>
-<p>To install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> with <code class="docutils literal"><span class="pre">pip</span></code>:</p>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo -H pip install wolfcrypt
+<p><strong>CentOS</strong></p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">sudo rpm -ivh http://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-6.noarch.rpm</span>
+<span class="go">sudo yum update</span>
+<span class="go">sudo yum install -y git autoconf libtool</span>
+
+<span class="go">git clone git@github.com:wolfssl/wolfssl.git</span>
+<span class="go">cd wolfssl</span>
+<span class="go">./autogen.sh</span>
+<span class="go">./configure</span>
+<span class="go">make</span>
+<span class="go">sudo make install</span>
+
+<span class="go">echo /usr/local/lib &gt; wolfssl.conf</span>
+<span class="go">sudo mv wolfssl.conf /etc/ld.so.conf</span>
+<span class="go">sudo ldconfig</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="wolfcrypt-source-installation">
-<h3>wolfcrypt source installation<a class="headerlink" href="#wolfcrypt-source-installation" title="Permalink to this headline">¶</a></h3>
-<ol class="arabic simple">
-<li>Get the sources:</li>
-</ol>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> git clone git@github.com:wolfssl/wolfssl.git
-<span class="gp">$</span> <span class="nb">cd</span> wolfssl/wrapper/python
+<div class="section" id="installing-wolfcrypt">
+<h3>Installing <code class="docutils literal"><span class="pre">wolfcrypt</span></code> :<a class="headerlink" href="#installing-wolfcrypt" title="Permalink to this headline">¶</a></h3>
+<p><strong>Mac OSX</strong></p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">sudo -H pip install wolfcrypt</span>
 </pre></div>
 </div>
-<p><strong>Before</strong> proceeding with installation, you can test <code class="docutils literal"><span class="pre">wolfcrypt</span></code> locally with
-<code class="docutils literal"><span class="pre">tox</span></code>. If you don&#8217;t want to run the tests, jump to step 4 instead.</p>
-<ol class="arabic simple" start="2">
-<li>Make sure that the testing requirements are installed:</li>
-</ol>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo -H pip install -r requirements-testing.txt
+<p><strong>Ubuntu</strong></p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">sudo apt-get install -y python-dev python-pip libffi-dev</span>
+<span class="go">sudo -H pip install wolfcrypt</span>
 </pre></div>
 </div>
-<ol class="arabic simple" start="3">
-<li>Run <code class="docutils literal"><span class="pre">tox</span></code>:</li>
-</ol>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> tox
-<span class="go">...</span>
-<span class="go">_________________________________ summary _________________________________</span>
-<span class="go">py27: commands succeeded</span>
-<span class="go">SKIPPED: py34: InterpreterNotFound: python3.4</span>
-<span class="go">py35: commands succeeded</span>
-<span class="go">congratulations :)</span>
+<p><strong>CentOS</strong></p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">sudo yum install -y python-devel python-pip libffi-devel</span>
+<span class="go">sudo -H pip install wolfcrypt</span>
 </pre></div>
 </div>
-<p>Note that some tests might be skipped if you don&#8217;t have the proper interpreter.</p>
-<p><strong>Now</strong>, to install <code class="docutils literal"><span class="pre">wolfcrypt</span></code> from sources:</p>
-<ol class="arabic simple" start="4">
-<li>Build and install <code class="docutils literal"><span class="pre">wolfcrypt</span></code></li>
-</ol>
-<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo python setup.py install
-<span class="go">...</span>
-<span class="go">Finished processing dependencies for wolfcrypt...</span>
+</div>
+<div class="section" id="testing-wolfcrypt">
+<h3>Testing <code class="docutils literal"><span class="pre">wolfcrypt</span></code> :<a class="headerlink" href="#testing-wolfcrypt" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">python -c &quot;from wolfcrypt.hashes import Sha; print Sha().hexdigest()&quot;</span>
 </pre></div>
 </div>
+<p>expected output: <strong>da39a3ee5e6b4b0d3255bfef95601890afd80709</strong></p>
 </div>
 </div>
 <div class="section" id="summary">
@@ -287,7 +288,7 @@ licensing terms are also available at <a class="reference external" href="mailto
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1.6',
+            VERSION:'0.1.7',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
