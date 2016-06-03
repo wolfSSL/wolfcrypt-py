@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>wolfcrypt: the wolfSSL Crypto Engine &mdash; wolfcrypt 0.1.7 documentation</title>
+  <title>wolfcrypt: the wolfSSL Crypto Engine &mdash; wolfcrypt 0.1.8 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="wolfcrypt 0.1.7 documentation" href="#"/>
+    <link rel="top" title="wolfcrypt 0.1.8 documentation" href="#"/>
         <link rel="next" title="Symmetric Key Algorithms" href="symmetric.html"/> 
 
   
@@ -59,7 +59,7 @@
             
             
               <div class="version">
-                0.1.7
+                0.1.8
               </div>
             
           
@@ -213,6 +213,29 @@ embedded ssl library.</p>
 </pre></div>
 </div>
 <p>expected output: <strong>da39a3ee5e6b4b0d3255bfef95601890afd80709</strong></p>
+<p>Testing <code class="docutils literal"><span class="pre">wolfcrypt</span></code>&#8216;s source code with <code class="docutils literal"><span class="pre">tox</span></code> :</p>
+<p>To run the unit tests in the source code, you&#8217;ll need <code class="docutils literal"><span class="pre">tox</span></code> and a few other
+requirements. The source code relies at &#8216;WOLFSSL_DIR/wrapper/python&#8217; where
+WOLFSSL_DIR is the path of <code class="docutils literal"><span class="pre">wolfssl</span></code>&#8216;s source code.</p>
+<ol class="arabic simple">
+<li>Make sure that the testing requirements are installed:</li>
+</ol>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> sudo -H pip install -r requirements-testing.txt
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li>Run <code class="docutils literal"><span class="pre">tox</span></code>:</li>
+</ol>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="gp">$</span> tox
+<span class="go">...</span>
+<span class="go">_________________________________ summary _________________________________</span>
+<span class="go">py27: commands succeeded</span>
+<span class="go">SKIPPED: py34: InterpreterNotFound: python3.4</span>
+<span class="go">py35: commands succeeded</span>
+<span class="go">congratulations :)</span>
+</pre></div>
+</div>
+<p>Note that some tests might be skipped if you don&#8217;t have the proper interpreter.</p>
 </div>
 </div>
 <div class="section" id="summary">
@@ -288,7 +311,7 @@ licensing terms are also available at <a class="reference external" href="mailto
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1.7',
+            VERSION:'0.1.8',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
