@@ -106,7 +106,7 @@ def make_flags(prefix):
     flags = []
 
     # extra CC flags
-    flags.append("C_FLAGS=-fpic")
+    flags.append("CFLAGS=-fpic")
 
     # install location
     flags.append("--prefix={}".format(prefix))

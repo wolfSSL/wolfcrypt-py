@@ -82,22 +82,15 @@ all: lib
 
 release: lib ## package and upload a release
 	python setup.py sdist upload
-	python setup.py bdist_wheel upload
+	
+	./build_mac_os_x_wheels.sh upload
 
 dist: lib ## builds source and wheel package
 	python setup.py sdist
-	python setup.py bdist_wheel
-	ls -l dist
-
-docker-build: clean
-	# source dist
-	python setup.py sdist
-
-	# mac os x wheels
+	
 	./build_mac_os_x_wheels.sh
 
-	# linux wheels
-	./build_linux_wheels.sh
+	ls -l dist
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
