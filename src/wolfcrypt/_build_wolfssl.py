@@ -26,10 +26,11 @@ from distutils.util import get_platform
 
 
 def local_path(path):
-    """ Return path relative to this file
+    """ Return path relative to the root of this project
     """
-    current_path = os.path.dirname(__file__)
-    return os.path.abspath(os.path.join(current_path, path))
+    current = os.path.dirname(__file__)
+    gparent = os.path.dirname(os.path.dirname(current))
+    return os.path.abspath(os.path.join(gparent, path))
 
 
 WOLFSSL_GIT_ADDR = "https://github.com/wolfssl/wolfssl.git"
@@ -168,7 +169,8 @@ def make(configure_flags):
 
 
 def build_wolfssl(version="master"):
-    prefix = local_path("lib/wolfssl/{}".format(version))
+    prefix = local_path("lib/wolfssl/{}/{}".format(
+        get_platform(), version))
     libfile = os.path.join(prefix, 'lib/libwolfssl.la')
 
     rebuild = ensure_wolfssl_src(version)

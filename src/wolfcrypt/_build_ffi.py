@@ -21,6 +21,7 @@
 from cffi import FFI
 from wolfcrypt import __wolfssl_version__ as version
 from wolfcrypt._build_wolfssl import local_path
+from distutils.util import get_platform
 
 ffi = FFI()
 
@@ -44,7 +45,8 @@ ffi.set_source(
     #include <wolfssl/wolfcrypt/rsa.h>
     """,
     include_dirs=[local_path("lib/wolfssl/src")],
-    library_dirs=[local_path("lib/wolfssl/{}/lib".format(version))],
+    library_dirs=[local_path("lib/wolfssl/{}/{}/lib".format(
+        get_platform(), version))],
     libraries=["wolfssl"],
 )
 

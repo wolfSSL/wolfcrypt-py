@@ -53,15 +53,13 @@ test_requirements = _parse_requirements('requirements/test.txt')
 # wolfssl C library
 class wolfsslBuilder(Command):
     description = 'Compile wolfSSL C library'
-    user_options = [
-    ]
+    user_options = []
 
     def initialize_options(self):
         """Set default values for options."""
 
     def finalize_options(self):
         """Post-process options."""
-        pass
 
     def run(self):
         build_wolfssl(wolfcrypt.__wolfssl_version__)
@@ -69,7 +67,7 @@ class wolfsslBuilder(Command):
 class cffiBuilder(build_ext, object):
 
     def build_extension(self, ext):
-        """ Compile manually the py_mini_racer extension, bypass setuptools
+        """ Compile manually the wolfcrypt-py extension, bypass setuptools
         """
         self.run_command('build_lib')
 
@@ -107,7 +105,7 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     cmdclass={
-        'build_lib': wolfsslBuilder,
+        'build_lib' : wolfsslBuilder,
         'build_ext' : cffiBuilder
     }
 )
