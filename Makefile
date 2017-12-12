@@ -52,7 +52,6 @@ lint: ## check style with flake8
 
 test: ## run tests quickly with the default Python
 	py.test
-	
 
 test-all: ## run tests on every Python version with tox
 	tox
@@ -74,23 +73,17 @@ docs: ## generate Sphinx HTML documentation, including API docs
 servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
-lib: clean ## complile the c library
-	python setup.py build_lib
-
-all: lib
-	python setup.py build
-
-release: lib ## package and upload a release
-	python setup.py sdist upload
-	
-	./build_mac_os_x_wheels.sh upload
-
-dist: lib ## builds source and wheel package
+dist: clean ## builds source and wheel package
 	python setup.py sdist
 	
 	./build_mac_os_x_wheels.sh
 
+	./build_linux_wheels.sh
+
 	ls -l dist
+
+release: dist ## package and upload a release
+	twine upload dist/*
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
