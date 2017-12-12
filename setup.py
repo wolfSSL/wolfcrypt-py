@@ -23,7 +23,7 @@
 
 import sys
 import pip
-from setuptools import setup, Command
+from setuptools import setup
 from setuptools.command.build_ext import build_ext
 
 sys.path.insert(0, "src")
@@ -46,30 +46,16 @@ def _parse_requirements(filepath):
 
     return [str(i.req) for i in raw]
 
-install_requirements = _parse_requirements('requirements/prod.txt')
-setup_requirements = _parse_requirements('requirements/setup.txt')
-test_requirements = _parse_requirements('requirements/test.txt')
-
-# wolfssl C library
-class wolfsslBuilder(Command):
-    description = 'Compile wolfSSL C library'
-    user_options = []
-
-    def initialize_options(self):
-        """Set default values for options."""
-
-    def finalize_options(self):
-        """Post-process options."""
-
-    def run(self):
-        build_wolfssl(wolfcrypt.__wolfssl_version__)
+install_requirements = _parse_requirements("requirements/prod.txt")
+setup_requirements = _parse_requirements("requirements/setup.txt")
+test_requirements = _parse_requirements("requirements/test.txt")
 
 class cffiBuilder(build_ext, object):
 
     def build_extension(self, ext):
         """ Compile manually the wolfcrypt-py extension, bypass setuptools
         """
-        self.run_command('build_lib')
+        build_wolfssl(wolfcrypt.__wolfssl_version__)
 
         super(cffiBuilder, self).build_extension(ext)
 
@@ -102,10 +88,7 @@ setup(
     ],
     setup_requires=setup_requirements,
     install_requires=install_requirements,
-    test_suite='tests',
+    test_suite="tests",
     tests_require=test_requirements,
-    cmdclass={
-        'build_lib' : wolfsslBuilder,
-        'build_ext' : cffiBuilder
-    }
+    cmdclass={"build_ext" : cffiBuilder}
 )

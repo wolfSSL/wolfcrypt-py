@@ -21,6 +21,6 @@
 __author__ = "wolfSSL Inc."
 __email__ = "info@wolfssl.com"
 __wolfssl_version__ = "v3.12.2-stable"
-__version__ = "0.2.5" #__wolfssl_version__[1:].replace("-stable", "")
+__version__ = "0.2.6" #__wolfssl_version__[1:].replace("-stable", "")
 
 __all__ = ["ciphers", "hashes", "random"]
