@@ -1,7 +1,7 @@
 Licensing
 ---------
 
-wolfSSL’s software is available under two distinct licensing models:
+wolfSSL's software is available under two distinct licensing models:
 open source and standard commercial licensing. Please see the relevant
 section below for information on each type of license.
 

@@ -22,6 +22,7 @@
 import os
 import subprocess
 from contextlib import contextmanager
+from distutils.util import get_platform
 
 
 def local_path(path):
@@ -105,8 +106,8 @@ def make_flags(prefix):
     """
     flags = []
 
-    # extra CC flags
-    flags.append("CFLAGS=-fpic")
+    if get_platform() in ["linux-x86_64", "linux-i686"]:
+        flags.append("CFLAGS=-fpic")
 
     # install location
     flags.append("--prefix={}".format(prefix))
