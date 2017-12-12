@@ -164,7 +164,7 @@ def make(configure_flags):
 
         call("./configure {}".format(configure_flags))
         call("make")
-        call("make install")
+        call("make install-exec")
 
 
 def build_wolfssl(version="master"):
