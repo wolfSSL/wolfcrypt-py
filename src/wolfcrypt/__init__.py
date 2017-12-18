@@ -18,9 +18,26 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
+__title__ = "wolfcrypt"
+__summary__ = "Python module that encapsulates wolfSSL's crypto engine API."
+__uri__ = "https://github.com/wolfssl/wolfcrypt-py"
+
+# When bumping the C library version, reset the POST count to 0
+
+__wolfssl_version__ = "v3.12.2-stable"
+
+# We're using implicit post releases [PEP 440] to bump package version
+# while maintaining the C library version intact for better reference.
+# https://www.python.org/dev/peps/pep-0440/#implicit-post-releases
+#
+# MAJOR.MINOR.BUILD-POST
+
+__version__ = __wolfssl_version__[1:].replace("stable", "0")
+
 __author__ = "wolfSSL Inc."
 __email__ = "info@wolfssl.com"
-__wolfssl_version__ = "v3.12.2-stable"
-__version__ = "0.2.6" #__wolfssl_version__[1:].replace("-stable", "")
+
+__license__ = "GPLv2 or Commercial License"
+__copyright__ = "Copyright (C) 2006-2017 wolfSSL Inc"
 
 __all__ = ["ciphers", "hashes", "random"]

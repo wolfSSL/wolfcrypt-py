@@ -21,15 +21,20 @@
 
 # pylint: disable=wrong-import-position
 
+import os
 import sys
 import pip
 from setuptools import setup
 from setuptools.command.build_ext import build_ext
 
-sys.path.insert(0, "src")
+
+# Adding src folder to the include path in order to import from wolfcrypt
+package_dir = os.path.join(os.path.dirname(__file__), "src")
+sys.path.insert(0, package_dir)
 
 import wolfcrypt
 from wolfcrypt._build_wolfssl import build_wolfssl
+
 
 # long_description
 with open("README.rst") as readme_file:
@@ -39,6 +44,7 @@ with open("LICENSING.rst") as licensing_file:
     long_description = long_description.replace(".. include:: LICENSING.rst\n",
                                                 licensing_file.read())
 
+
 # requirements
 def _parse_requirements(filepath):
     raw = pip.req.parse_requirements(
@@ -46,9 +52,11 @@ def _parse_requirements(filepath):
 
     return [str(i.req) for i in raw]
 
+
 install_requirements = _parse_requirements("requirements/prod.txt")
 setup_requirements = _parse_requirements("requirements/setup.txt")
 test_requirements = _parse_requirements("requirements/test.txt")
+
 
 class cffiBuilder(build_ext, object):
 
@@ -59,20 +67,23 @@ class cffiBuilder(build_ext, object):
 
         super(cffiBuilder, self).build_extension(ext)
 
+
 setup(
-    name="wolfcrypt",
+    name=wolfcrypt.__title__,
     version=wolfcrypt.__version__,
-    description= \
-        u"Python module that encapsulates wolfSSL's crypto engine API.",
+    description=wolfcrypt.__summary__,
     long_description=long_description,
     author=wolfcrypt.__author__,
     author_email=wolfcrypt.__email__,
-    url="https://github.com/wolfssl/wolfcrypt-py",
+    url=wolfcrypt.__uri__,
+    license=wolfcrypt.__license__,
+
     packages=["wolfcrypt"],
-    package_dir={"":"src"},
-    cffi_modules=["./src/wolfcrypt/_build_ffi.py:ffi"],
-    license="GPLv2 or Commercial License",
+    package_dir={"":package_dir},
+
     zip_safe=False,
+    cffi_modules=["./src/wolfcrypt/_build_ffi.py:ffi"],
+
     keywords="wolfssl, wolfcrypt, security, cryptography",
     classifiers=[
         u"License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
@@ -86,6 +97,7 @@ setup(
         u"Topic :: Security :: Cryptography",
         u"Topic :: Software Development"
     ],
+
     setup_requires=setup_requirements,
     install_requires=install_requirements,
     test_suite="tests",
