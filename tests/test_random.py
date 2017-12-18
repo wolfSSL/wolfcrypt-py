@@ -17,22 +17,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-import unittest
-from wolfcrypt.random import *
+
+# pylint: disable=redefined-outer-name
+
+import pytest
+from wolfcrypt.random import Random
 
 
-class TestRandom(unittest.TestCase):
+@pytest.fixture
+def rng():
+    return Random()
 
 
-    def setUp(self):
-        self.random = Random()
+def test_byte(rng):
+    assert len(rng.byte()) == 1
 
 
-    def test_byte(self):
-        assert len(self.random.byte()) == 1
-
-
-    def test_bytes(self):
-        assert len(self.random.bytes(1)) == 1
-        assert len(self.random.bytes(10)) == 10
-        assert len(self.random.bytes(100)) == 100
+def test_bytes(rng):
+    assert len(rng.bytes(1)) == 1
+    assert len(rng.bytes(8)) == 8
+    assert len(rng.bytes(128)) == 128

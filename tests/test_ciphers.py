@@ -17,230 +17,183 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-import unittest
-from wolfcrypt.ciphers import *
-from wolfcrypt.utils   import t2b, h2b
 
-class TestDes3(unittest.TestCase):
-    key    = h2b("0123456789abcdeffedeba987654321089abcdef01234567")
-    IV     = h2b("1234567890abcdef")
-    plain  = t2b("Now is the time for all ")
-    cipher = h2b("43a0297ed184f80e8964843212d508981894157487127db0")
+# pylint: disable=redefined-outer-name
+
+from collections import namedtuple
+import pytest
+from wolfcrypt.utils import t2b, h2b
+from wolfcrypt.ciphers import (
+    Aes, Des3, MODE_ECB, MODE_CBC, RsaPrivate, RsaPublic, WolfCryptError
+)
+
+
+@pytest.fixture
+def vectors():
+    TestVector = namedtuple("TestVector", "key iv plaintext ciphertext")
+    TestVector.__new__.__defaults__ = (None,) * len(TestVector._fields)
+
+    return {
+        Aes : TestVector(
+            key="0123456789abcdef",
+            iv="1234567890abcdef",
+            plaintext=t2b("now is the time "),
+            ciphertext=h2b("959492575f4281532ccc9d4677a233cb")),
+        Des3 : TestVector(
+            key=h2b("0123456789abcdeffedeba987654321089abcdef01234567"),
+            iv=h2b("1234567890abcdef"),
+            plaintext=t2b("Now is the time for all "),
+            ciphertext=h2b("43a0297ed184f80e8964843212d508981894157487127db0")),
+        RsaPublic : TestVector(
+            key=h2b(
+                "30819F300D06092A864886F70D010101050003818D0030818902818100BC"
+                "730EA849F374A2A9EF18A5DA559921F9C8ECB36D48E53535757737ECD161"
+                "905F3ED9E4D5DF94CAC1A9D719DA86C9E84DC4613682FEABAD7E7725BB8D"
+                "11A5BC623AA838CC39A20466B4F7F7F3AADA4D020EBB5E8D6948DC77C928"
+                "0E22E96BA426BA4CE8C1FD4A6F2B1FEF8AAEF69062E5641EEB2B3C67C8DC"
+                "2700F6916865A90203010001")),
+        RsaPrivate : TestVector(
+            key=h2b(
+                "3082025C02010002818100BC730EA849F374A2A9EF18A5DA559921F9C8EC"
+                "B36D48E53535757737ECD161905F3ED9E4D5DF94CAC1A9D719DA86C9E84D"
+                "C4613682FEABAD7E7725BB8D11A5BC623AA838CC39A20466B4F7F7F3AADA"
+                "4D020EBB5E8D6948DC77C9280E22E96BA426BA4CE8C1FD4A6F2B1FEF8AAE"
+                "F69062E5641EEB2B3C67C8DC2700F6916865A902030100010281801397EA"
+                "E8387825A25C04CE0D407C31E5C470CD9B823B5809863B665FDC3190F14F"
+                "D5DB15DDDED73B95933118310E5EA3D6A21A716E81481C4BCFDB8E7A8661"
+                "32DCFB55C1166D279224458BF1B848B14B1DACDEDADD8E2FC291FBA5A96E"
+                "F83A6AF1FD5018EF9FE7C3CA78EA56D3D3725B96DD4E064E3AC3D9BE72B6"
+                "6507074C01024100FA47D47A7C923C55EF81F041302DA3CF8F1CE6872705"
+                "700DDF9835D6F18B382F24B5D084B6794F7129945AF0646AACE772C6ED4D"
+                "59983E673AF3742CF9611769024100C0C1820D0CEBC62FDC92F99D821A31"
+                "E9E9F74BF282871CEE166AD11D188270F3C0B62FF6F3F71DF18623C84EEB"
+                "8F568E8FF5BFF1F72BB5CC3DC657390C1B54410241009D7E05DEEDF4B7B2"
+                "FBFC304B551DE32F0147966905CD0E2E2CBD8363B6AB7CB76DCA5B64A7CE"
+                "BE86DF3B53DE61D21EEBA5F637EDACAB78D94CE755FBD71199C102401898"
+                "1829E61E2739702168AC0A2FA172C121869538C65890A0579CBAE3A7B115"
+                "C8DEF61BC2612376EFB09D1C44BE1343396717C89DCAFBF545648B38822C"
+                "F28102403989E59C195530BAB7488C48140EF49F7E779743E1B419353123"
+                "759C3B44AD691256EE0061641666D37C742B15B4A2FEBF086B1A5D3F9012"
+                "B105863129DBD9E2"))
+    }
 
 
-    def setUp(self):
-        self.des3 = Des3.new(self.key, MODE_CBC, self.IV)
+@pytest.fixture(params=[Aes, Des3])
+def cipher_cls(request):
+    return request.param
 
 
-    def test_raises(self):
-        # invalid key length
-        self.assertRaises(ValueError, Des3.new, "key", MODE_CBC, self.IV)
+def cipher_new(cipher_cls, vectors):
+    return cipher_cls.new(
+        vectors[cipher_cls].key,
+        MODE_CBC,
+        vectors[cipher_cls].iv)
 
-        # invalid mode
-        self.assertRaises(ValueError, Des3.new, self.key, MODE_ECB, self.IV)
 
-        # invalid iv length
-        self.assertRaises(ValueError, Des3.new, self.key, MODE_CBC, "IV")
+@pytest.fixture
+def rsa_private(vectors):
+    return RsaPrivate(vectors[RsaPrivate].key)
 
-        # invalid data length
-        self.assertRaises(ValueError, self.des3.encrypt, "foo")
-        self.assertRaises(ValueError, self.des3.decrypt, "bar")
 
+@pytest.fixture
+def rsa_public(vectors):
+    return RsaPublic(vectors[RsaPublic].key)
 
-    def test_single_encryption(self):
-        assert self.des3.encrypt(self.plain) == self.cipher
 
+def test_block_cipher(cipher_cls, vectors):
+    key = vectors[cipher_cls].key
+    iv = vectors[cipher_cls].iv
+    plaintext = vectors[cipher_cls].plaintext
+    ciphertext = vectors[cipher_cls].ciphertext
 
-    def test_multi_encryption(self):
-        result = t2b("")
-        segments = tuple(self.plain[i:i + Des3.block_size] \
-            for i in range(0, len(self.plain), Des3.block_size))
+    with pytest.raises(ValueError):
+        cipher_cls.new(key[:-1], MODE_CBC, iv) # invalid key length
 
-        for segment in segments:
-            result += self.des3.encrypt(segment)
+    with pytest.raises(ValueError):
+        cipher_cls.new(key, MODE_ECB, iv) # invalid mode
 
-        assert result == self.cipher
+    with pytest.raises(ValueError):
+        cipher_cls.new(key, MODE_CBC, iv[:-1]) # invalid iv length
 
+    # single encryption
+    cipher_obj = cipher_new(cipher_cls, vectors)
 
-    def test_single_decryption(self):
-        assert self.des3.decrypt(self.cipher) == self.plain
+    assert cipher_obj.encrypt(plaintext) == ciphertext
 
+    # many encryptions
+    cipher_obj = cipher_new(cipher_cls, vectors)
+    result = t2b("")
 
-    def test_multi_decryption(self):
-        result = t2b("")
-        segments = tuple(self.cipher[i:i + Des3.block_size] \
-            for i in range(0, len(self.cipher), Des3.block_size))
+    segments = tuple(plaintext[i:i + cipher_obj.block_size] \
+        for i in range(0, len(plaintext), cipher_obj.block_size))
 
-        for segment in segments:
-            result += self.des3.decrypt(segment)
+    for segment in segments:
+        result += cipher_obj.encrypt(segment)
 
-        assert result == self.plain
+    assert result == ciphertext
 
+    # single decryption
+    cipher_obj = cipher_new(cipher_cls, vectors)
 
-class TestAes(unittest.TestCase):
-    key    = "0123456789abcdef"
-    IV     = "1234567890abcdef"
-    plain  = t2b("now is the time ")
-    cipher = h2b("959492575f4281532ccc9d4677a233cb")
+    assert cipher_obj.decrypt(ciphertext) == plaintext
 
+    # many decryptions
+    cipher_obj = cipher_new(cipher_cls, vectors)
+    result = t2b("")
 
-    def setUp(self):
-        self.aes = Aes.new(self.key, MODE_CBC, self.IV)
+    segments = tuple(ciphertext[i:i + cipher_obj.block_size] \
+        for i in range(0, len(ciphertext), cipher_obj.block_size))
 
+    for segment in segments:
+        result += cipher_obj.decrypt(segment)
 
-    def test_raises(self):
-        # invalid key length
-        self.assertRaises(ValueError, Aes.new, "key", MODE_CBC, self.IV)
+    assert result == plaintext
 
-        # invalid mode
-        self.assertRaises(ValueError, Aes.new, self.key, MODE_ECB, self.IV)
+    # invalid data sizes
+    with pytest.raises(ValueError):
+        cipher_obj.encrypt(plaintext[:-1])
 
-        # invalid iv length
-        self.assertRaises(ValueError, Aes.new, self.key, MODE_CBC, "IV")
+    with pytest.raises(ValueError):
+        cipher_obj.decrypt(ciphertext[:-1])
 
-        # invalid data length
-        self.assertRaises(ValueError, self.aes.encrypt, "foo")
-        self.assertRaises(ValueError, self.aes.decrypt, "bar")
 
+def test_new_rsa_raises(vectors):
+    with pytest.raises(WolfCryptError):
+        RsaPrivate(vectors[RsaPrivate].key[:-1]) # invalid key length
 
-    def test_single_encryption(self):
-        assert self.aes.encrypt(self.plain) == self.cipher
+    with pytest.raises(WolfCryptError):
+        RsaPublic(vectors[RsaPublic].key[:-1]) # invalid key length
 
 
-    def test_multi_encryption(self):
-        result = t2b("")
-        segments = tuple(self.plain[i:i + self.aes.block_size] \
-            for i in range(0, len(self.plain), self.aes.block_size))
+def test_rsa_encrypt_decrypt(rsa_private, rsa_public):
+    plaintext = t2b("Everyone gets Friday off.")
 
-        for segment in segments:
-            result += self.aes.encrypt(segment)
+    # normal usage, encrypt with public, decrypt with pirate
+    ciphertext = rsa_public.encrypt(plaintext)
 
-        assert result == self.cipher
+    assert 1024 / 8 == len(ciphertext) == rsa_public.output_size
+    assert plaintext == rsa_private.decrypt(ciphertext)
 
+    # private object holds both private and public info, so it can also encrypt
+    # using the known public key, this isn't an encryption using the private key
+    ciphertext = rsa_private.encrypt(plaintext)
 
-    def test_single_decryption(self):
-        assert self.aes.decrypt(self.cipher) == self.plain
+    assert 1024 / 8 == len(ciphertext) == rsa_private.output_size
+    assert plaintext == rsa_private.decrypt(ciphertext)
 
 
-    def test_multi_decryption(self):
-        result = t2b("")
-        segments = tuple(self.cipher[i:i + self.aes.block_size] \
-            for i in range(0, len(self.cipher), self.aes.block_size))
+def test_rsa_sign_verify(rsa_private, rsa_public):
+    plaintext = t2b("Everyone gets Friday off.")
 
-        for segment in segments:
-            result += self.aes.decrypt(segment)
+    # normal usage, sign with private, verify with public
+    signature = rsa_private.sign(plaintext)
 
-        assert result == self.plain
+    assert 1024 / 8 == len(signature) == rsa_private.output_size
+    assert plaintext == rsa_public.verify(signature)
 
+    # private object holds both private and public info, so it can also verify
+    # using the known public key, this isn't a verification using the private key
+    signature = rsa_private.sign(plaintext)
 
-class TestRsaPrivate(unittest.TestCase):
-    key = "3082025C02010002818100BC730EA849F374A2A9EF18A5DA559921F9C8ECB36D" \
-        + "48E53535757737ECD161905F3ED9E4D5DF94CAC1A9D719DA86C9E84DC4613682" \
-        + "FEABAD7E7725BB8D11A5BC623AA838CC39A20466B4F7F7F3AADA4D020EBB5E8D" \
-        + "6948DC77C9280E22E96BA426BA4CE8C1FD4A6F2B1FEF8AAEF69062E5641EEB2B" \
-        + "3C67C8DC2700F6916865A902030100010281801397EAE8387825A25C04CE0D40" \
-        + "7C31E5C470CD9B823B5809863B665FDC3190F14FD5DB15DDDED73B9593311831" \
-        + "0E5EA3D6A21A716E81481C4BCFDB8E7A866132DCFB55C1166D279224458BF1B8" \
-        + "48B14B1DACDEDADD8E2FC291FBA5A96EF83A6AF1FD5018EF9FE7C3CA78EA56D3" \
-        + "D3725B96DD4E064E3AC3D9BE72B66507074C01024100FA47D47A7C923C55EF81" \
-        + "F041302DA3CF8F1CE6872705700DDF9835D6F18B382F24B5D084B6794F712994" \
-        + "5AF0646AACE772C6ED4D59983E673AF3742CF9611769024100C0C1820D0CEBC6" \
-        + "2FDC92F99D821A31E9E9F74BF282871CEE166AD11D188270F3C0B62FF6F3F71D" \
-        + "F18623C84EEB8F568E8FF5BFF1F72BB5CC3DC657390C1B54410241009D7E05DE" \
-        + "EDF4B7B2FBFC304B551DE32F0147966905CD0E2E2CBD8363B6AB7CB76DCA5B64" \
-        + "A7CEBE86DF3B53DE61D21EEBA5F637EDACAB78D94CE755FBD71199C102401898" \
-        + "1829E61E2739702168AC0A2FA172C121869538C65890A0579CBAE3A7B115C8DE" \
-        + "F61BC2612376EFB09D1C44BE1343396717C89DCAFBF545648B38822CF2810240" \
-        + "3989E59C195530BAB7488C48140EF49F7E779743E1B419353123759C3B44AD69" \
-        + "1256EE0061641666D37C742B15B4A2FEBF086B1A5D3F9012B105863129DBD9E2"
-
-    plain = t2b("Everyone gets Friday off.")
-
-
-    def setUp(self):
-        self.rsa = RsaPrivate(h2b(self.key))
-
-
-    def test_raises(self):
-        # invalid key
-        self.assertRaises(WolfCryptError, RsaPrivate, 'key')
-
-
-    def test_output_size(self):
-        assert self.rsa.output_size == 1024 / 8
-
-
-    def test_encrypt_decrypt(self):
-        cipher = self.rsa.encrypt(self.plain)
-        result = self.rsa.decrypt(cipher)
-
-        assert len(cipher) == self.rsa.output_size == 1024 / 8
-        assert self.plain == result
-
-
-    def test_sign_verify(self):
-        signature = self.rsa.sign(self.plain)
-        result    = self.rsa.verify(signature)
-
-        assert len(signature) == self.rsa.output_size == 1024 / 8
-        assert self.plain == result
-
-
-class TestRsaPublic(unittest.TestCase):
-    prv = "3082025C02010002818100BC730EA849F374A2A9EF18A5DA559921F9C8ECB36D" \
-        + "48E53535757737ECD161905F3ED9E4D5DF94CAC1A9D719DA86C9E84DC4613682" \
-        + "FEABAD7E7725BB8D11A5BC623AA838CC39A20466B4F7F7F3AADA4D020EBB5E8D" \
-        + "6948DC77C9280E22E96BA426BA4CE8C1FD4A6F2B1FEF8AAEF69062E5641EEB2B" \
-        + "3C67C8DC2700F6916865A902030100010281801397EAE8387825A25C04CE0D40" \
-        + "7C31E5C470CD9B823B5809863B665FDC3190F14FD5DB15DDDED73B9593311831" \
-        + "0E5EA3D6A21A716E81481C4BCFDB8E7A866132DCFB55C1166D279224458BF1B8" \
-        + "48B14B1DACDEDADD8E2FC291FBA5A96EF83A6AF1FD5018EF9FE7C3CA78EA56D3" \
-        + "D3725B96DD4E064E3AC3D9BE72B66507074C01024100FA47D47A7C923C55EF81" \
-        + "F041302DA3CF8F1CE6872705700DDF9835D6F18B382F24B5D084B6794F712994" \
-        + "5AF0646AACE772C6ED4D59983E673AF3742CF9611769024100C0C1820D0CEBC6" \
-        + "2FDC92F99D821A31E9E9F74BF282871CEE166AD11D188270F3C0B62FF6F3F71D" \
-        + "F18623C84EEB8F568E8FF5BFF1F72BB5CC3DC657390C1B54410241009D7E05DE" \
-        + "EDF4B7B2FBFC304B551DE32F0147966905CD0E2E2CBD8363B6AB7CB76DCA5B64" \
-        + "A7CEBE86DF3B53DE61D21EEBA5F637EDACAB78D94CE755FBD71199C102401898" \
-        + "1829E61E2739702168AC0A2FA172C121869538C65890A0579CBAE3A7B115C8DE" \
-        + "F61BC2612376EFB09D1C44BE1343396717C89DCAFBF545648B38822CF2810240" \
-        + "3989E59C195530BAB7488C48140EF49F7E779743E1B419353123759C3B44AD69" \
-        + "1256EE0061641666D37C742B15B4A2FEBF086B1A5D3F9012B105863129DBD9E2"
-
-    pub = "30819F300D06092A864886F70D010101050003818D0030818902818100BC730E" \
-        + "A849F374A2A9EF18A5DA559921F9C8ECB36D48E53535757737ECD161905F3ED9" \
-        + "E4D5DF94CAC1A9D719DA86C9E84DC4613682FEABAD7E7725BB8D11A5BC623AA8" \
-        + "38CC39A20466B4F7F7F3AADA4D020EBB5E8D6948DC77C9280E22E96BA426BA4C" \
-        + "E8C1FD4A6F2B1FEF8AAEF69062E5641EEB2B3C67C8DC2700F6916865A90203010001"
-
-    plain = t2b("Everyone gets Friday off.")
-
-
-    def setUp(self):
-        self.private = RsaPrivate(h2b(self.prv))
-        self.public  = RsaPublic(h2b(self.pub))
-
-
-    def test_raises(self):
-        # invalid key
-        self.assertRaises(WolfCryptError, RsaPublic, 'key')
-
-
-    def test_output_size(self):
-        assert self.public.output_size == 1024 / 8
-
-
-    def test_encrypt_decrypt(self):
-        cipher = self.public.encrypt(self.plain)
-        result = self.private.decrypt(cipher)
-
-        assert len(cipher) == self.public.output_size == 1024 / 8
-        assert self.plain == result
-
-
-    def test_sign_verify(self):
-        signature = self.private.sign(self.plain)
-        result    = self.public.verify(signature)
-
-        assert len(signature) == self.public.output_size == 1024 / 8
-        assert self.plain == result
+    assert 1024 / 8 == len(signature) == rsa_private.output_size
+    assert plaintext == rsa_private.verify(signature)
