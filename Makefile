@@ -51,10 +51,14 @@ lint: ## check style with flake8
 	flake8 wolfcrypt tests
 
 test: ## run tests quickly with the default Python
-	py.test
+	py.test tests
+
+check: test ## run tests quickly with the default Python
 
 test-all: ## run tests on every Python version with tox
 	tox
+
+check-all: ## run tests on every Python version with tox
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source wolfcrypt -m pytest
