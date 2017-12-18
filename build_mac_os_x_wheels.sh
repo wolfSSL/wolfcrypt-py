@@ -6,5 +6,12 @@ for PYVERSION in 2.7 3.4 3.5 3.6; do
     . ./venv_${PYVERSION}/bin/activate
     pip install -r requirements/setup.txt
     python setup.py bdist_wheel
+    pip install -r requirements/test.txt
+    set +e
+    pip uninstall -y wolfcrypt
+    set -e
+    pip install wolfcrypt --no-index -f dist
+    rm -rf tests/__pycache__
+    py.test tests
     deactivate
 done
