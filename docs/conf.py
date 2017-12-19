@@ -52,7 +52,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'wolfcrypt'
+project = u'wolfcrypt Python'
 copyright = u'2017, wolfSSL Inc. All rights reserved'
 author = u'wolfSSL'
 

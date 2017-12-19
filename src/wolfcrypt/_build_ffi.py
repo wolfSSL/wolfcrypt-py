@@ -18,10 +18,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
+from distutils.util import get_platform
 from cffi import FFI
 from wolfcrypt import __wolfssl_version__ as version
 from wolfcrypt._build_wolfssl import local_path
-from distutils.util import get_platform
 
 ffi = FFI()
 

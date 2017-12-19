@@ -58,7 +58,7 @@ check: test ## run tests quickly with the default Python
 test-all: ## run tests on every Python version with tox
 	tox
 
-check-all: ## run tests on every Python version with tox
+check-all: test-all ## run tests on every Python version with tox
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source wolfcrypt -m pytest

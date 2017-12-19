@@ -40,4 +40,8 @@ __email__ = "info@wolfssl.com"
 __license__ = "GPLv2 or Commercial License"
 __copyright__ = "Copyright (C) 2006-2017 wolfSSL Inc"
 
-__all__ = ["ciphers", "hashes", "random"]
+__all__ = [
+    "__title__", "__summary__", "__uri__", "__version__",
+    "__author__", "__email__", "__license__", "__copyright__",
+    "ciphers", "hashes", "random"
+]
