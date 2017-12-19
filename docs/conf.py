@@ -53,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'wolfcrypt'
-copyright = u'2016, wolfSSL Inc. All rights reserved'
+copyright = u'2017, wolfSSL Inc. All rights reserved'
 author = u'wolfSSL'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -61,7 +61,7 @@ author = u'wolfSSL'
 # built documents.
 #
 
-base_dir = os.path.join(os.path.dirname(__file__), os.pardir)
+base_dir = os.path.join(os.path.dirname(__file__), os.pardir, "src")
 about = {}
 with open(os.path.join(base_dir, "wolfcrypt", "__about__.py")) as f:
     exec(f.read(), about)
