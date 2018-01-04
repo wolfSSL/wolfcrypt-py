@@ -1,0 +1,21 @@
+sudo: required
+
+branches:
+  only:
+    - master
+
+matrix:
+  include:
+    - dist: trusty
+      language: python
+      services:
+        - docker
+      script:
+        - ./make/manylinux1/build_wheels.sh
+    - os: osx
+      osx_image: xcode8.3
+      script:
+        - ./make/osx/build_wheels.sh
+
+install:
+  - if [ "${TRAVIS_OS_NAME:-}" == "osx" ]; then ./make/osx/install_python.sh; fi

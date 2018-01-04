@@ -80,9 +80,9 @@ servedocs: docs ## compile the docs watching for changes
 dist: clean ## builds source and wheel package
 	python setup.py sdist
 	
-	./build_mac_os_x_wheels.sh
+	./make/osx/build_wheels.sh
 
-	./build_linux_wheels.sh
+	./make/manylinux1/build_wheels.sh
 
 	ls -l dist
 

@@ -7,4 +7,4 @@ docker run \
     -v `pwd`:/wolfcrypt-py \
     -w /wolfcrypt-py \
     wolfssl/manylinux1-x86_64 \
-    bash -c "manylinux1/build_wheels.sh"
+    bash -c "make/manylinux1/build.sh"
