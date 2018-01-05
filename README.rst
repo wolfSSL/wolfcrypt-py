@@ -26,8 +26,8 @@ We provide Python wheels (prebuilt binaries) for OSX 64 bits and Linux 64 bits:
 Testing
 -------
 
-.. code-block:: bash
+.. code-block:: python
 
-    python -c "from wolfcrypt.hashes import Sha; print Sha().hexdigest()"
-
-expected output: **da39a3ee5e6b4b0d3255bfef95601890afd80709**
+    >>> from wolfcrypt.hashes import Sha256
+    >>> Sha256('wolfcrypt').hexdigest()
+    b'96e02e7b1cbcd6f104fe1fdb4652027a5505b68652b70095c6318f9dce0d1844'
