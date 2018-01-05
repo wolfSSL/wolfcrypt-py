@@ -1,6 +1,9 @@
 wolfcrypt: the wolfSSL Crypto Engine
 ====================================
 
+.. image:: https://travis-ci.org/wolfSSL/wolfcrypt-py.svg?branch=master
+    :target: https://travis-ci.org/wolfSSL/wolfcrypt-py
+
 **wolfCrypt Python**, a.k.a. ``wolfcrypt`` is a Python library that encapsulates
 **wolfSSL's wolfCrypt API**.
 
@@ -13,9 +16,6 @@ library <https://wolfssl.com/wolfSSL/Products-wolfssl.html>`_.
 
 Status
 ------
-
-.. image:: https://travis-ci.org/wolfSSL/wolfcrypt-py.svg?branch=master
-    :target: https://travis-ci.org/wolfSSL/wolfcrypt-py
 
 Installation
 ------------
