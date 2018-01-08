@@ -26,6 +26,7 @@ Classes
 
 .. autoclass:: Aes
 
+.. autoclass:: Des3
 
 Example
 -------
