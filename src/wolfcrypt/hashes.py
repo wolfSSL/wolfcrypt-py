@@ -17,11 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-from wolfcrypt._ffi  import ffi as _ffi
-from wolfcrypt._ffi  import lib as _lib
+
+from wolfcrypt._ffi import ffi as _ffi
+from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import t2b, b2h
 
-from wolfcrypt.exceptions import *
+from wolfcrypt.exceptions import WolfCryptError
+
 
 class _Hash(object):
     """
@@ -37,7 +39,6 @@ class _Hash(object):
         if (string):
             self.update(string)
 
-
     @classmethod
     def new(cls, string=None):
         """
@@ -47,7 +48,6 @@ class _Hash(object):
         obj.update(string) was called.
         """
         return cls(string)
-
 
     def copy(self):
         """
@@ -62,7 +62,6 @@ class _Hash(object):
 
         return copy
 
-
     def update(self, string):
         """
         Hashes **string** into the current state of the hashing
@@ -74,7 +73,6 @@ class _Hash(object):
         ret = self._update(string)
         if ret < 0:
             raise WolfCryptError("Hash update error (%d)" % ret)
-
 
     def digest(self):
         """
@@ -96,7 +94,6 @@ class _Hash(object):
 
         return _ffi.buffer(result, self.digest_size)[:]
 
-
     def hexdigest(self):
         """
         Returns the hash value of this hashing object as a string
@@ -113,18 +110,15 @@ class Sha(_Hash):
 
     It produces an [ **160-bit | 20 bytes** ] message digest.
     """
-    digest_size  = 20
+    digest_size = 20
     _native_type = "wc_Sha *"
     _native_size = _ffi.sizeof("wc_Sha")
-
 
     def _init(self):
         return _lib.wc_InitSha(self._native_object)
 
-
     def _update(self, data):
         return _lib.wc_ShaUpdate(self._native_object, data, len(data))
-
 
     def _final(self, obj, ret):
         return _lib.wc_ShaFinal(obj, ret)
@@ -137,18 +131,15 @@ class Sha256(_Hash):
 
     It produces a [ **256-bit | 32 bytes** ] message digest.
     """
-    digest_size  = 32
+    digest_size = 32
     _native_type = "wc_Sha256 *"
     _native_size = _ffi.sizeof("wc_Sha256")
-
 
     def _init(self):
         return _lib.wc_InitSha256(self._native_object)
 
-
     def _update(self, data):
         return _lib.wc_Sha256Update(self._native_object, data, len(data))
-
 
     def _final(self, obj, ret):
         return _lib.wc_Sha256Final(obj, ret)
@@ -161,18 +152,15 @@ class Sha384(_Hash):
 
     It produces a [ **384-bit | 48 bytes** ] message digest.
     """
-    digest_size  = 48
+    digest_size = 48
     _native_type = "wc_Sha384 *"
     _native_size = _ffi.sizeof("wc_Sha384")
-
 
     def _init(self):
         return _lib.wc_InitSha384(self._native_object)
 
-
     def _update(self, data):
         return _lib.wc_Sha384Update(self._native_object, data, len(data))
-
 
     def _final(self, obj, ret):
         return _lib.wc_Sha384Final(obj, ret)
@@ -185,18 +173,15 @@ class Sha512(_Hash):
 
     It produces a [ **512-bit | 64 bytes** ] message digest.
     """
-    digest_size  = 64
+    digest_size = 64
     _native_type = "wc_Sha512 *"
     _native_size = _ffi.sizeof("wc_Sha512")
-
 
     def _init(self):
         return _lib.wc_InitSha512(self._native_object)
 
-
     def _update(self, data):
         return _lib.wc_Sha512Update(self._native_object, data, len(data))
-
 
     def _final(self, obj, ret):
         return _lib.wc_Sha512Final(obj, ret)
@@ -204,7 +189,7 @@ class Sha512(_Hash):
 
 # Hmac types
 
-_TYPE_SHA    = 1
+_TYPE_SHA = 1
 _TYPE_SHA256 = 2
 _TYPE_SHA384 = 5
 _TYPE_SHA512 = 4
@@ -216,10 +201,9 @@ class _Hmac(_Hash):
     A **PEP 247: Cryptographic Hash Functions** compliant
     **Keyed Hash Function Interface**.
     """
-    digest_size  = None
+    digest_size = None
     _native_type = "Hmac *"
     _native_size = _ffi.sizeof("Hmac")
-
 
     def __init__(self, key, string=None):
         key = t2b(key)
@@ -232,8 +216,6 @@ class _Hmac(_Hash):
         if (string):
             self.update(string)
 
-
-
     @classmethod
     def new(cls, key, string=None):
         """
@@ -245,14 +227,11 @@ class _Hmac(_Hash):
         """
         return cls(key, string)
 
-
     def _init(self, type, key):
         return _lib.wc_HmacSetKey(self._native_object, type, key, len(key))
 
-
     def _update(self, data):
         return _lib.wc_HmacUpdate(self._native_object, data, len(data))
-
 
     def _final(self, obj, ret):
         return _lib.wc_HmacFinal(obj, ret)

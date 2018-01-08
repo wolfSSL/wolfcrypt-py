@@ -34,25 +34,28 @@ def vectors():
     TestVector.__new__.__defaults__ = (None,) * len(TestVector._fields)
 
     return {
-        Aes : TestVector(
+        Aes: TestVector(
             key="0123456789abcdef",
             iv="1234567890abcdef",
             plaintext=t2b("now is the time "),
-            ciphertext=h2b("959492575f4281532ccc9d4677a233cb")),
-        Des3 : TestVector(
+            ciphertext=h2b("959492575f4281532ccc9d4677a233cb")
+        ),
+        Des3: TestVector(
             key=h2b("0123456789abcdeffedeba987654321089abcdef01234567"),
             iv=h2b("1234567890abcdef"),
             plaintext=t2b("Now is the time for all "),
-            ciphertext=h2b("43a0297ed184f80e8964843212d508981894157487127db0")),
-        RsaPublic : TestVector(
+            ciphertext=h2b("43a0297ed184f80e8964843212d508981894157487127db0")
+        ),
+        RsaPublic: TestVector(
             key=h2b(
                 "30819F300D06092A864886F70D010101050003818D0030818902818100BC"
                 "730EA849F374A2A9EF18A5DA559921F9C8ECB36D48E53535757737ECD161"
                 "905F3ED9E4D5DF94CAC1A9D719DA86C9E84DC4613682FEABAD7E7725BB8D"
                 "11A5BC623AA838CC39A20466B4F7F7F3AADA4D020EBB5E8D6948DC77C928"
                 "0E22E96BA426BA4CE8C1FD4A6F2B1FEF8AAEF69062E5641EEB2B3C67C8DC"
-                "2700F6916865A90203010001")),
-        RsaPrivate : TestVector(
+                "2700F6916865A90203010001")
+        ),
+        RsaPrivate: TestVector(
             key=h2b(
                 "3082025C02010002818100BC730EA849F374A2A9EF18A5DA559921F9C8EC"
                 "B36D48E53535757737ECD161905F3ED9E4D5DF94CAC1A9D719DA86C9E84D"
@@ -74,7 +77,8 @@ def vectors():
                 "C8DEF61BC2612376EFB09D1C44BE1343396717C89DCAFBF545648B38822C"
                 "F28102403989E59C195530BAB7488C48140EF49F7E779743E1B419353123"
                 "759C3B44AD691256EE0061641666D37C742B15B4A2FEBF086B1A5D3F9012"
-                "B105863129DBD9E2"))
+                "B105863129DBD9E2")
+        )
     }
 
 
@@ -107,13 +111,13 @@ def test_block_cipher(cipher_cls, vectors):
     ciphertext = vectors[cipher_cls].ciphertext
 
     with pytest.raises(ValueError):
-        cipher_cls.new(key[:-1], MODE_CBC, iv) # invalid key length
+        cipher_cls.new(key[:-1], MODE_CBC, iv)  # invalid key length
 
     with pytest.raises(ValueError):
-        cipher_cls.new(key, MODE_ECB, iv) # invalid mode
+        cipher_cls.new(key, MODE_ECB, iv)       # invalid mode
 
     with pytest.raises(ValueError):
-        cipher_cls.new(key, MODE_CBC, iv[:-1]) # invalid iv length
+        cipher_cls.new(key, MODE_CBC, iv[:-1])  # invalid iv length
 
     # single encryption
     cipher_obj = cipher_new(cipher_cls, vectors)
@@ -124,8 +128,8 @@ def test_block_cipher(cipher_cls, vectors):
     cipher_obj = cipher_new(cipher_cls, vectors)
     result = t2b("")
 
-    segments = tuple(plaintext[i:i + cipher_obj.block_size] \
-        for i in range(0, len(plaintext), cipher_obj.block_size))
+    segments = tuple(plaintext[i:i + cipher_obj.block_size]
+                     for i in range(0, len(plaintext), cipher_obj.block_size))
 
     for segment in segments:
         result += cipher_obj.encrypt(segment)
@@ -141,8 +145,8 @@ def test_block_cipher(cipher_cls, vectors):
     cipher_obj = cipher_new(cipher_cls, vectors)
     result = t2b("")
 
-    segments = tuple(ciphertext[i:i + cipher_obj.block_size] \
-        for i in range(0, len(ciphertext), cipher_obj.block_size))
+    segments = tuple(ciphertext[i:i + cipher_obj.block_size]
+                     for i in range(0, len(ciphertext), cipher_obj.block_size))
 
     for segment in segments:
         result += cipher_obj.decrypt(segment)
@@ -159,10 +163,10 @@ def test_block_cipher(cipher_cls, vectors):
 
 def test_new_rsa_raises(vectors):
     with pytest.raises(WolfCryptError):
-        RsaPrivate(vectors[RsaPrivate].key[:-1]) # invalid key length
+        RsaPrivate(vectors[RsaPrivate].key[:-1])  # invalid key length
 
     with pytest.raises(WolfCryptError):
-        RsaPublic(vectors[RsaPublic].key[:-1]) # invalid key length
+        RsaPublic(vectors[RsaPublic].key[:-1])    # invalid key length
 
 
 def test_rsa_encrypt_decrypt(rsa_private, rsa_public):
@@ -175,7 +179,7 @@ def test_rsa_encrypt_decrypt(rsa_private, rsa_public):
     assert plaintext == rsa_private.decrypt(ciphertext)
 
     # private object holds both private and public info, so it can also encrypt
-    # using the known public key, this isn't an encryption using the private key
+    # using the known public key.
     ciphertext = rsa_private.encrypt(plaintext)
 
     assert 1024 / 8 == len(ciphertext) == rsa_private.output_size
@@ -192,7 +196,7 @@ def test_rsa_sign_verify(rsa_private, rsa_public):
     assert plaintext == rsa_public.verify(signature)
 
     # private object holds both private and public info, so it can also verify
-    # using the known public key, this isn't a verification using the private key
+    # using the known public key.
     signature = rsa_private.sign(plaintext)
 
     assert 1024 / 8 == len(signature) == rsa_private.output_size

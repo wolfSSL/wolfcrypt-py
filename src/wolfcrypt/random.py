@@ -17,11 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-from wolfcrypt._ffi  import ffi as _ffi
-from wolfcrypt._ffi  import lib as _lib
-from wolfcrypt.utils import t2b
 
-from wolfcrypt.exceptions import *
+from wolfcrypt._ffi import ffi as _ffi
+from wolfcrypt._ffi import lib as _lib
+
+from wolfcrypt.exceptions import WolfCryptError
 
 
 class Random(object):
@@ -36,7 +36,6 @@ class Random(object):
             self.native_object = None
             raise WolfCryptError("RNG init error (%d)" % ret)
 
-
     def __del__(self):
         if self.native_object:
             try:
@@ -44,7 +43,6 @@ class Random(object):
             except AttributeError:
                 # Can occur during interpreter shutdown
                 pass
-
 
     def byte(self):
         """
@@ -57,7 +55,6 @@ class Random(object):
             raise WolfCryptError("RNG generate byte error (%d)" % ret)
 
         return _ffi.buffer(result, 1)[:]
-
 
     def bytes(self, length):
         """

@@ -17,25 +17,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-from wolfcrypt._ffi   import ffi as _ffi
-from wolfcrypt._ffi   import lib as _lib
-from wolfcrypt.utils  import t2b
+
+from wolfcrypt._ffi import ffi as _ffi
+from wolfcrypt._ffi import lib as _lib
+from wolfcrypt.utils import t2b
 from wolfcrypt.random import Random
 
-from wolfcrypt.exceptions import *
+from wolfcrypt.exceptions import WolfCryptError
 
 
 # key direction flags
-_ENCRYPTION  = 0
-_DECRYPTION  = 1
+_ENCRYPTION = 0
+_DECRYPTION = 1
 
 
 # feedback modes
-MODE_ECB = 1 # Electronic Code Book
-MODE_CBC = 2 # Cipher Block Chaining
-MODE_CFB = 3 # Cipher Feedback
-MODE_OFB = 5 # Output Feedback
-MODE_CTR = 6 # Counter
+MODE_ECB = 1  # Electronic Code Book
+MODE_CBC = 2  # Cipher Block Chaining
+MODE_CFB = 3  # Cipher Feedback
+MODE_OFB = 5  # Output Feedback
+MODE_CTR = 6  # Counter
 
 _FEEDBACK_MODES = [MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR]
 
@@ -78,7 +79,6 @@ class _Cipher(object):
         else:
             self._IV = _ffi.new('byte[%d]' % self.block_size)
 
-
     @classmethod
     def new(cls, key, mode, IV=None, **kwargs):
         """
@@ -92,7 +92,6 @@ class _Cipher(object):
         being raised.
         """
         return cls(key, mode, IV)
-
 
     def encrypt(self, string):
         """
@@ -120,7 +119,6 @@ class _Cipher(object):
             raise WolfCryptError("Encryption error (%d)" % ret)
 
         return _ffi.buffer(result)[:]
-
 
     def decrypt(self, string):
         """
@@ -155,11 +153,10 @@ class Aes(_Cipher):
     The **Advanced Encryption Standard** (AES), a.k.a. Rijndael, is
     a symmetric-key cipher standardized by **NIST**.
     """
-    block_size   = 16
-    key_size     = None # 16, 24, 32
-    _key_sizes   = [16, 24, 32]
+    block_size = 16
+    key_size = None  # 16, 24, 32
+    _key_sizes = [16, 24, 32]
     _native_type = "Aes *"
-
 
     def _set_key(self, direction):
         if direction == _ENCRYPTION:
@@ -169,13 +166,13 @@ class Aes(_Cipher):
             return _lib.wc_AesSetKey(
                 self._dec, self._key, len(self._key), self._IV, _DECRYPTION)
 
-
     def _encrypt(self, destination, source):
-        return _lib.wc_AesCbcEncrypt(self._enc, destination, source,len(source))
-
+        return _lib.wc_AesCbcEncrypt(self._enc, destination,
+                                     source, len(source))
 
     def _decrypt(self, destination, source):
-        return _lib.wc_AesCbcDecrypt(self._dec, destination, source,len(source))
+        return _lib.wc_AesCbcDecrypt(self._dec, destination,
+                                     source, len(source))
 
 
 class Des3(_Cipher):
@@ -185,24 +182,25 @@ class Des3(_Cipher):
     cipher, which applies the **Data Encryption Standard** (DES)
     cipher algorithm three times to each data block.
     """
-    block_size   = 8
-    key_size     = 24
+    block_size = 8
+    key_size = 24
     _native_type = "Des3 *"
-
 
     def _set_key(self, direction):
         if direction == _ENCRYPTION:
-            return _lib.wc_Des3_SetKey(self._enc,self._key,self._IV,_ENCRYPTION)
+            return _lib.wc_Des3_SetKey(self._enc, self._key,
+                                       self._IV, _ENCRYPTION)
         else:
-            return _lib.wc_Des3_SetKey(self._dec,self._key,self._IV,_DECRYPTION)
-
+            return _lib.wc_Des3_SetKey(self._dec, self._key,
+                                       self._IV, _DECRYPTION)
 
     def _encrypt(self, destination, source):
-        return _lib.wc_Des3_CbcEncrypt(self._enc,destination,source,len(source))
-
+        return _lib.wc_Des3_CbcEncrypt(self._enc, destination,
+                                       source, len(source))
 
     def _decrypt(self, destination, source):
-        return _lib.wc_Des3_CbcDecrypt(self._dec,destination,source,len(source))
+        return _lib.wc_Des3_CbcDecrypt(self._dec, destination,
+                                       source, len(source))
 
 
 class _Rsa(object):
@@ -219,7 +217,6 @@ class _Rsa(object):
         if ret < 0:
             raise WolfCryptError("Key initialization error (%d)" % ret)
 
-
     def __del__(self):
         if self.native_object:
             _lib.wc_FreeRsaKey(self.native_object)
@@ -234,14 +231,14 @@ class RsaPublic(_Rsa):
         idx = _ffi.new("word32*")
         idx[0] = 0
 
-        ret = _lib.wc_RsaPublicKeyDecode(key, idx, self.native_object, len(key))
+        ret = _lib.wc_RsaPublicKeyDecode(key, idx,
+                                         self.native_object, len(key))
         if ret < 0:
             raise WolfCryptError("Invalid key error (%d)" % ret)
 
         self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
         if self.output_size <= 0:
             raise WolfCryptError("Invalid key error (%d)" % self.output_size)
-
 
     def encrypt(self, plaintext):
         """
@@ -265,7 +262,6 @@ class RsaPublic(_Rsa):
             raise WolfCryptError("Encryption error (%d)" % ret)
 
         return _ffi.buffer(ciphertext)[:]
-
 
     def verify(self, signature):
         """
@@ -298,14 +294,14 @@ class RsaPrivate(RsaPublic):
         idx = _ffi.new("word32*")
         idx[0] = 0
 
-        ret = _lib.wc_RsaPrivateKeyDecode(key, idx, self.native_object,len(key))
+        ret = _lib.wc_RsaPrivateKeyDecode(key, idx,
+                                          self.native_object, len(key))
         if ret < 0:
             raise WolfCryptError("Invalid key error (%d)" % ret)
 
         self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
         if self.output_size <= 0:
             raise WolfCryptError("Invalid key error (%d)" % self.output_size)
-
 
     def decrypt(self, ciphertext):
         """
@@ -327,7 +323,6 @@ class RsaPrivate(RsaPublic):
             raise WolfCryptError("Decryption error (%d)" % ret)
 
         return _ffi.buffer(plaintext, ret)[:]
-
 
     def sign(self, plaintext):
         """

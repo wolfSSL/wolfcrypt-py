@@ -87,7 +87,7 @@ def checkout_version(version):
 
             call("git checkout --force {}".format(version))
 
-            return True # rebuild needed
+            return True  # rebuild needed
 
     return False
 
