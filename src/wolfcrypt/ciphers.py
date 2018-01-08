@@ -18,6 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
+# pylint: disable=no-member,no-name-in-module
+
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import t2b
@@ -63,7 +65,7 @@ class _Cipher(object):
             if len(key) not in self._key_sizes:
                 raise ValueError("key must be %s in length" % self._key_sizes)
         else:
-            if not len(key):
+            if not key:
                 raise ValueError("key must not be 0 in length")
 
         if IV is not None and len(IV) != self.block_size:
@@ -80,7 +82,7 @@ class _Cipher(object):
             self._IV = _ffi.new('byte[%d]' % self.block_size)
 
     @classmethod
-    def new(cls, key, mode, IV=None, **kwargs):
+    def new(cls, key, mode, IV=None, **kwargs):  # pylint: disable=W0613
         """
         Returns a ciphering object, using the secret key contained in
         the string **key**, and using the feedback mode **mode**, which
@@ -162,9 +164,9 @@ class Aes(_Cipher):
         if direction == _ENCRYPTION:
             return _lib.wc_AesSetKey(
                 self._enc, self._key, len(self._key), self._IV, _ENCRYPTION)
-        else:
-            return _lib.wc_AesSetKey(
-                self._dec, self._key, len(self._key), self._IV, _DECRYPTION)
+
+        return _lib.wc_AesSetKey(
+            self._dec, self._key, len(self._key), self._IV, _DECRYPTION)
 
     def _encrypt(self, destination, source):
         return _lib.wc_AesCbcEncrypt(self._enc, destination,
@@ -190,9 +192,9 @@ class Des3(_Cipher):
         if direction == _ENCRYPTION:
             return _lib.wc_Des3_SetKey(self._enc, self._key,
                                        self._IV, _ENCRYPTION)
-        else:
-            return _lib.wc_Des3_SetKey(self._dec, self._key,
-                                       self._IV, _DECRYPTION)
+
+        return _lib.wc_Des3_SetKey(self._dec, self._key,
+                                   self._IV, _DECRYPTION)
 
     def _encrypt(self, destination, source):
         return _lib.wc_Des3_CbcEncrypt(self._enc, destination,
@@ -203,7 +205,7 @@ class Des3(_Cipher):
                                        source, len(source))
 
 
-class _Rsa(object):
+class _Rsa(object):  # pylint: disable=too-few-public-methods
     RSA_MIN_PAD_SIZE = 11
 
     def __init__(self):
@@ -226,7 +228,7 @@ class RsaPublic(_Rsa):
     def __init__(self, key):
         key = t2b(key)
 
-        _Rsa.__init__(self)
+        super(RsaPublic, self).__init__()
 
         idx = _ffi.new("word32*")
         idx[0] = 0
@@ -289,7 +291,7 @@ class RsaPrivate(RsaPublic):
     def __init__(self, key):
         key = t2b(key)
 
-        _Rsa.__init__(self)
+        super(RsaPrivate, self).__init__()
 
         idx = _ffi.new("word32*")
         idx[0] = 0

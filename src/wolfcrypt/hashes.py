@@ -18,6 +18,8 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
+# pylint: disable=no-member,no-name-in-module, no-self-use
+
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import t2b, b2h
@@ -36,7 +38,7 @@ class _Hash(object):
         if ret < 0:
             raise WolfCryptError("Hash init error (%d)" % ret)
 
-        if (string):
+        if string:
             self.update(string)
 
     @classmethod
@@ -56,7 +58,7 @@ class _Hash(object):
         """
         copy = self.new("")
 
-        _ffi.memmove(copy._native_object,
+        _ffi.memmove(copy._native_object,  # pylint: disable=protected-access
                      self._native_object,
                      self._native_size)
 
@@ -205,7 +207,7 @@ class _Hmac(_Hash):
     _native_type = "Hmac *"
     _native_size = _ffi.sizeof("Hmac")
 
-    def __init__(self, key, string=None):
+    def __init__(self, key, string=None):  # pylint: disable=W0231
         key = t2b(key)
 
         self._native_object = _ffi.new(self._native_type)
@@ -213,11 +215,11 @@ class _Hmac(_Hash):
         if ret < 0:
             raise WolfCryptError("Hmac init error (%d)" % ret)
 
-        if (string):
+        if string:
             self.update(string)
 
     @classmethod
-    def new(cls, key, string=None):
+    def new(cls, key, string=None):  # pylint: disable=W0221
         """
         Creates a new hashing object and returns it. **key** is
         a required parameter containing a string giving the key
@@ -227,8 +229,8 @@ class _Hmac(_Hash):
         """
         return cls(key, string)
 
-    def _init(self, type, key):
-        return _lib.wc_HmacSetKey(self._native_object, type, key, len(key))
+    def _init(self, hmac, key):
+        return _lib.wc_HmacSetKey(self._native_object, hmac, key, len(key))
 
     def _update(self, data):
         return _lib.wc_HmacUpdate(self._native_object, data, len(data))
