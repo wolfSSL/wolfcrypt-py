@@ -8,9 +8,11 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Message Digests &mdash; wolfcrypt 0.1.9 documentation</title>
+  <title>Message Digests &mdash; wolfcrypt Python 3.13.0-1 documentation</title>
   
 
+  
+  
   
   
 
@@ -33,7 +35,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="wolfcrypt 0.1.9 documentation" href="index.html"/>
+    <link rel="top" title="wolfcrypt Python 3.13.0-1 documentation" href="index.html"/>
         <link rel="next" title="Message Authentication Codes" href="mac.html"/>
         <link rel="prev" title="Asymmetric Key Algorithms" href="asymmetric.html"/> 
 
@@ -44,6 +46,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -53,7 +56,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home"> wolfcrypt
+            <a href="index.html" class="icon icon-home"> wolfcrypt Python
           
 
           
@@ -63,7 +66,7 @@
             
             
               <div class="version">
-                0.1.9
+                3.13.0-1
               </div>
             
           
@@ -84,7 +87,10 @@
           
             
             
-                <ul class="current">
+              
+            
+            
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="symmetric.html">Symmetric Key Algorithms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="asymmetric.html">Asymmetric Key Algorithms</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Message Digests</a><ul>
@@ -111,8 +117,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="index.html">wolfcrypt</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">wolfcrypt Python</a>
+        
       </nav>
 
 
@@ -121,23 +129,40 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="index.html">Docs</a> &raquo;</li>
-      
-    <li>Message Digests</li>
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Message Digests</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="_sources/digest.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -166,7 +191,7 @@ interface:</p>
 <em class="property">classmethod </em><code class="descname">new</code><span class="sig-paren">(</span><em>string=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#_Hash.new"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes._Hash.new" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a new hashing object and returns it. The optional
 <strong>string</strong> parameter, if supplied, will be immediately
-hashed into the object&#8217;s starting state, as if
+hashed into the object’s starting state, as if
 obj.update(string) was called.</p>
 </dd></dl>
 
@@ -174,7 +199,7 @@ obj.update(string) was called.</p>
 <dt id="wolfcrypt.hashes._Hash.copy">
 <code class="descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#_Hash.copy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes._Hash.copy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a separate copy of this hashing object. An update
-to this copy won&#8217;t affect the original object.</p>
+to this copy won’t affect the original object.</p>
 </dd></dl>
 
 <dl class="method">
@@ -182,7 +207,7 @@ to this copy won&#8217;t affect the original object.</p>
 <code class="descname">update</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#_Hash.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes._Hash.update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Hashes <strong>string</strong> into the current state of the hashing
 object. update() can be called any number of times during
-a hashing object&#8217;s lifetime.</p>
+a hashing object’s lifetime.</p>
 </dd></dl>
 
 <dl class="method">
@@ -199,8 +224,8 @@ after calling this function.</p>
 <code class="descname">hexdigest</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#_Hash.hexdigest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes._Hash.hexdigest" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the hash value of this hashing object as a string
 containing hexadecimal digits. Lowercase letters are used
-for the digits &#8216;a&#8217; through &#8216;f&#8217;. Like the .digest() method,
-this method doesn&#8217;t alter the object.</p>
+for the digits ‘a’ through ‘f’. Like the .digest() method,
+this method doesn’t alter the object.</p>
 </dd></dl>
 
 </dd></dl>
@@ -254,21 +279,21 @@ are strongly suggested to use SHA-2 over SHA-1.</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">wolfcrypt.hashes</span> <span class="k">import</span> <span class="n">Sha256</span>
 <span class="go">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">s</span> <span class="o">=</span> <span class="n">Sha256</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;wolf&#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;crypt&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;wolf&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;crypt&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
 <span class="go">b&#39;\x96\xe0.{\x1c\xbc\xd6\xf1\x04\xfe\x1f\xdbFR\x02zU\x05\xb6\x86R\xb7\x00\x95\xc61\x8f\x9d\xce\r\x18D&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 <span class="go">b&#39;96e02e7b1cbcd6f104fe1fdb4652027a5505b68652b70095c6318f9dce0d1844&#39;</span>
 <span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;rocks&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;rocks&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">s</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 <span class="go">b&#39;e1a50df419d65715c48316bdc6a6f7f0485f4b26c1b107228faf17988b61c83f&#39;</span>
 <span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">Sha256</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;wolfcryptrocks&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Sha256</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;wolfcryptrocks&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 <span class="go">b&#39;e1a50df419d65715c48316bdc6a6f7f0485f4b26c1b107228faf17988b61c83f&#39;</span>
 <span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">Sha256</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;wolfcryptrocks&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Sha256</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;wolfcryptrocks&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 <span class="go">b&#39;e1a50df419d65715c48316bdc6a6f7f0485f4b26c1b107228faf17988b61c83f&#39;</span>
 </pre></div>
 </div>
@@ -277,15 +302,18 @@ are strongly suggested to use SHA-2 over SHA-1.</p>
 
 
            </div>
+           <div class="articleComments">
+            
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="mac.html" class="btn btn-neutral float-right" title="Message Authentication Codes" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="mac.html" class="btn btn-neutral float-right" title="Message Authentication Codes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="asymmetric.html" class="btn btn-neutral" title="Asymmetric Key Algorithms" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="asymmetric.html" class="btn btn-neutral" title="Asymmetric Key Algorithms" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -294,7 +322,7 @@ are strongly suggested to use SHA-2 over SHA-1.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, wolfSSL Inc. All rights reserved.
+        &copy; Copyright 2018, wolfSSL Inc. All rights reserved.
 
     </p>
   </div>
@@ -316,10 +344,11 @@ are strongly suggested to use SHA-2 over SHA-1.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1.9',
+            VERSION:'3.13.0-1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="_static/jquery.js"></script>

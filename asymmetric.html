@@ -8,9 +8,11 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Asymmetric Key Algorithms &mdash; wolfcrypt 0.1.9 documentation</title>
+  <title>Asymmetric Key Algorithms &mdash; wolfcrypt Python 3.13.0-1 documentation</title>
   
 
+  
+  
   
   
 
@@ -33,7 +35,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="wolfcrypt 0.1.9 documentation" href="index.html"/>
+    <link rel="top" title="wolfcrypt Python 3.13.0-1 documentation" href="index.html"/>
         <link rel="next" title="Message Digests" href="digest.html"/>
         <link rel="prev" title="Symmetric Key Algorithms" href="symmetric.html"/> 
 
@@ -44,6 +46,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -53,7 +56,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home"> wolfcrypt
+            <a href="index.html" class="icon icon-home"> wolfcrypt Python
           
 
           
@@ -63,7 +66,7 @@
             
             
               <div class="version">
-                0.1.9
+                3.13.0-1
               </div>
             
           
@@ -84,7 +87,10 @@
           
             
             
-                <ul class="current">
+              
+            
+            
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="symmetric.html">Symmetric Key Algorithms</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Asymmetric Key Algorithms</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#asymmetric-key-encryption-classes">Asymmetric Key Encryption Classes</a></li>
@@ -106,8 +112,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="index.html">wolfcrypt</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">wolfcrypt Python</a>
+        
       </nav>
 
 
@@ -116,23 +124,40 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="index.html">Docs</a> &raquo;</li>
-      
-    <li>Asymmetric Key Algorithms</li>
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Asymmetric Key Algorithms</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="_sources/asymmetric.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -153,7 +178,7 @@ one for data decryption and signature verification.</p>
 <dt id="wolfcrypt.ciphers.RsaPublic.encrypt">
 <code class="descname">encrypt</code><span class="sig-paren">(</span><em>plaintext</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPublic.encrypt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPublic.encrypt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Encrypts <strong>plaintext</strong>, using the public key data in the
-object. The plaintext&#8217;s length must not be greater than:</p>
+object. The plaintext’s length must not be greater than:</p>
 <blockquote>
 <div><strong>self.output_size - self.RSA_MIN_PAD_SIZE</strong></div></blockquote>
 <p>Returns a string containing the ciphertext.</p>
@@ -163,7 +188,7 @@ object. The plaintext&#8217;s length must not be greater than:</p>
 <dt id="wolfcrypt.ciphers.RsaPublic.verify">
 <code class="descname">verify</code><span class="sig-paren">(</span><em>signature</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPublic.verify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPublic.verify" title="Permalink to this definition">¶</a></dt>
 <dd><p>Verifies <strong>signature</strong>, using the public key data in the
-object. The signature&#8217;s length must be equal to:</p>
+object. The signature’s length must be equal to:</p>
 <blockquote>
 <div><strong>self.output_size</strong></div></blockquote>
 <p>Returns a string containing the plaintext.</p>
@@ -178,7 +203,7 @@ object. The signature&#8217;s length must be equal to:</p>
 <dt id="wolfcrypt.ciphers.RsaPrivate.decrypt">
 <code class="descname">decrypt</code><span class="sig-paren">(</span><em>ciphertext</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPrivate.decrypt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate.decrypt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Decrypts <strong>ciphertext</strong>, using the private key data in the
-object. The ciphertext&#8217;s length must be equal to:</p>
+object. The ciphertext’s length must be equal to:</p>
 <blockquote>
 <div><strong>self.output_size</strong></div></blockquote>
 <p>Returns a string containing the plaintext.</p>
@@ -188,7 +213,7 @@ object. The ciphertext&#8217;s length must be equal to:</p>
 <dt id="wolfcrypt.ciphers.RsaPrivate.encrypt">
 <code class="descname">encrypt</code><span class="sig-paren">(</span><em>plaintext</em><span class="sig-paren">)</span><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate.encrypt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Encrypts <strong>plaintext</strong>, using the public key data in the
-object. The plaintext&#8217;s length must not be greater than:</p>
+object. The plaintext’s length must not be greater than:</p>
 <blockquote>
 <div><strong>self.output_size - self.RSA_MIN_PAD_SIZE</strong></div></blockquote>
 <p>Returns a string containing the ciphertext.</p>
@@ -198,7 +223,7 @@ object. The plaintext&#8217;s length must not be greater than:</p>
 <dt id="wolfcrypt.ciphers.RsaPrivate.verify">
 <code class="descname">verify</code><span class="sig-paren">(</span><em>signature</em><span class="sig-paren">)</span><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate.verify" title="Permalink to this definition">¶</a></dt>
 <dd><p>Verifies <strong>signature</strong>, using the public key data in the
-object. The signature&#8217;s length must be equal to:</p>
+object. The signature’s length must be equal to:</p>
 <blockquote>
 <div><strong>self.output_size</strong></div></blockquote>
 <p>Returns a string containing the plaintext.</p>
@@ -208,7 +233,7 @@ object. The signature&#8217;s length must be equal to:</p>
 <dt id="wolfcrypt.ciphers.RsaPrivate.sign">
 <code class="descname">sign</code><span class="sig-paren">(</span><em>plaintext</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPrivate.sign"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate.sign" title="Permalink to this definition">¶</a></dt>
 <dd><p>Signs <strong>plaintext</strong>, using the private key data in the object.
-The plaintext&#8217;s length must not be greater than:</p>
+The plaintext’s length must not be greater than:</p>
 <blockquote>
 <div><strong>self.output_size - self.RSA_MIN_PAD_SIZE</strong></div></blockquote>
 <p>Returns a string containing the signature.</p>
@@ -252,7 +277,7 @@ The plaintext&#8217;s length must not be greater than:</p>
 <span class="go">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">pub</span> <span class="o">=</span> <span class="n">RsaPublic</span><span class="p">(</span><span class="n">h2b</span><span class="p">(</span><span class="n">public</span><span class="p">))</span>
 <span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">plaintext</span> <span class="o">=</span> <span class="n">b</span><span class="s2">&quot;Everyone gets Friday off.&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plaintext</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;Everyone gets Friday off.&quot;</span>
 <span class="go">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ciphertext</span> <span class="o">=</span> <span class="n">pub</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">plaintext</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ciphertext</span> 
@@ -274,15 +299,18 @@ The plaintext&#8217;s length must not be greater than:</p>
 
 
            </div>
+           <div class="articleComments">
+            
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="digest.html" class="btn btn-neutral float-right" title="Message Digests" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="digest.html" class="btn btn-neutral float-right" title="Message Digests" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="symmetric.html" class="btn btn-neutral" title="Symmetric Key Algorithms" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="symmetric.html" class="btn btn-neutral" title="Symmetric Key Algorithms" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -291,7 +319,7 @@ The plaintext&#8217;s length must not be greater than:</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, wolfSSL Inc. All rights reserved.
+        &copy; Copyright 2018, wolfSSL Inc. All rights reserved.
 
     </p>
   </div>
@@ -313,10 +341,11 @@ The plaintext&#8217;s length must not be greater than:</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1.9',
+            VERSION:'3.13.0-1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="_static/jquery.js"></script>

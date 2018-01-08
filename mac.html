@@ -8,9 +8,11 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Message Authentication Codes &mdash; wolfcrypt 0.1.9 documentation</title>
+  <title>Message Authentication Codes &mdash; wolfcrypt Python 3.13.0-1 documentation</title>
   
 
+  
+  
   
   
 
@@ -33,7 +35,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="wolfcrypt 0.1.9 documentation" href="index.html"/>
+    <link rel="top" title="wolfcrypt Python 3.13.0-1 documentation" href="index.html"/>
         <link rel="next" title="Random Number Generation" href="random.html"/>
         <link rel="prev" title="Message Digests" href="digest.html"/> 
 
@@ -44,6 +46,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -53,7 +56,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home"> wolfcrypt
+            <a href="index.html" class="icon icon-home"> wolfcrypt Python
           
 
           
@@ -63,7 +66,7 @@
             
             
               <div class="version">
-                0.1.9
+                3.13.0-1
               </div>
             
           
@@ -84,7 +87,10 @@
           
             
             
-                <ul class="current">
+              
+            
+            
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="symmetric.html">Symmetric Key Algorithms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="asymmetric.html">Asymmetric Key Algorithms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="digest.html">Message Digests</a></li>
@@ -111,8 +117,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="index.html">wolfcrypt</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">wolfcrypt Python</a>
+        
       </nav>
 
 
@@ -121,23 +129,40 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="index.html">Docs</a> &raquo;</li>
-      
-    <li>Message Authentication Codes</li>
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Message Authentication Codes</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="_sources/mac.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -169,7 +194,7 @@ interface:</p>
 <dd><p>Creates a new hashing object and returns it. <strong>key</strong> is
 a required parameter containing a string giving the key
 to use. The optional <strong>string</strong> parameter, if supplied,
-will be immediately hashed into the object&#8217;s starting
+will be immediately hashed into the object’s starting
 state, as if obj.update(string) was called.</p>
 </dd></dl>
 
@@ -177,7 +202,7 @@ state, as if obj.update(string) was called.</p>
 <dt id="wolfcrypt.hashes._Hmac.copy">
 <code class="descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#wolfcrypt.hashes._Hmac.copy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a separate copy of this hashing object. An update
-to this copy won&#8217;t affect the original object.</p>
+to this copy won’t affect the original object.</p>
 </dd></dl>
 
 <dl class="method">
@@ -194,8 +219,8 @@ after calling this function.</p>
 <code class="descname">hexdigest</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#wolfcrypt.hashes._Hmac.hexdigest" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the hash value of this hashing object as a string
 containing hexadecimal digits. Lowercase letters are used
-for the digits &#8216;a&#8217; through &#8216;f&#8217;. Like the .digest() method,
-this method doesn&#8217;t alter the object.</p>
+for the digits ‘a’ through ‘f’. Like the .digest() method,
+this method doesn’t alter the object.</p>
 </dd></dl>
 
 <dl class="method">
@@ -203,7 +228,7 @@ this method doesn&#8217;t alter the object.</p>
 <code class="descname">update</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="headerlink" href="#wolfcrypt.hashes._Hmac.update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Hashes <strong>string</strong> into the current state of the hashing
 object. update() can be called any number of times during
-a hashing object&#8217;s lifetime.</p>
+a hashing object’s lifetime.</p>
 </dd></dl>
 
 </dd></dl>
@@ -219,7 +244,7 @@ are strongly suggested to use SHA-2 over SHA-1.</p>
 <dl class="class">
 <dt id="wolfcrypt.hashes.HmacSha">
 <em class="property">class </em><code class="descclassname">wolfcrypt.hashes.</code><code class="descname">HmacSha</code><span class="sig-paren">(</span><em>key</em>, <em>string=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#HmacSha"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes.HmacSha" title="Permalink to this definition">¶</a></dt>
-<dd><p>A HMAC function using <strong>SHA-1</strong> as it&#8217;s cryptographic
+<dd><p>A HMAC function using <strong>SHA-1</strong> as it’s cryptographic
 hash function.</p>
 <p>It produces a [ <strong>512-bit | 64 bytes</strong> ] message digest.</p>
 </dd></dl>
@@ -230,7 +255,7 @@ hash function.</p>
 <dl class="class">
 <dt id="wolfcrypt.hashes.HmacSha256">
 <em class="property">class </em><code class="descclassname">wolfcrypt.hashes.</code><code class="descname">HmacSha256</code><span class="sig-paren">(</span><em>key</em>, <em>string=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#HmacSha256"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes.HmacSha256" title="Permalink to this definition">¶</a></dt>
-<dd><p>A HMAC function using <strong>SHA-256</strong> as it&#8217;s cryptographic
+<dd><p>A HMAC function using <strong>SHA-256</strong> as it’s cryptographic
 hash function.</p>
 <p>It produces a [ <strong>512-bit | 64 bytes</strong> ] message digest.</p>
 </dd></dl>
@@ -238,7 +263,7 @@ hash function.</p>
 <dl class="class">
 <dt id="wolfcrypt.hashes.HmacSha384">
 <em class="property">class </em><code class="descclassname">wolfcrypt.hashes.</code><code class="descname">HmacSha384</code><span class="sig-paren">(</span><em>key</em>, <em>string=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#HmacSha384"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes.HmacSha384" title="Permalink to this definition">¶</a></dt>
-<dd><p>A HMAC function using <strong>SHA-384</strong> as it&#8217;s cryptographic
+<dd><p>A HMAC function using <strong>SHA-384</strong> as it’s cryptographic
 hash function.</p>
 <p>It produces a [ <strong>512-bit | 64 bytes</strong> ] message digest.</p>
 </dd></dl>
@@ -246,7 +271,7 @@ hash function.</p>
 <dl class="class">
 <dt id="wolfcrypt.hashes.HmacSha512">
 <em class="property">class </em><code class="descclassname">wolfcrypt.hashes.</code><code class="descname">HmacSha512</code><span class="sig-paren">(</span><em>key</em>, <em>string=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/hashes.html#HmacSha512"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.hashes.HmacSha512" title="Permalink to this definition">¶</a></dt>
-<dd><p>A HMAC function using <strong>SHA-512</strong> as it&#8217;s cryptographic
+<dd><p>A HMAC function using <strong>SHA-512</strong> as it’s cryptographic
 hash function.</p>
 <p>It produces a [ <strong>512-bit | 64 bytes</strong> ] message digest.</p>
 </dd></dl>
@@ -281,15 +306,18 @@ hash function.</p>
 
 
            </div>
+           <div class="articleComments">
+            
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="random.html" class="btn btn-neutral float-right" title="Random Number Generation" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="random.html" class="btn btn-neutral float-right" title="Random Number Generation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="digest.html" class="btn btn-neutral" title="Message Digests" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="digest.html" class="btn btn-neutral" title="Message Digests" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -298,7 +326,7 @@ hash function.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, wolfSSL Inc. All rights reserved.
+        &copy; Copyright 2018, wolfSSL Inc. All rights reserved.
 
     </p>
   </div>
@@ -320,10 +348,11 @@ hash function.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1.9',
+            VERSION:'3.13.0-1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="_static/jquery.js"></script>

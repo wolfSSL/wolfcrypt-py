@@ -8,9 +8,11 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>wolfcrypt.ciphers &mdash; wolfcrypt 0.1.9 documentation</title>
+  <title>wolfcrypt.ciphers &mdash; wolfcrypt Python 3.13.0-1 documentation</title>
   
 
+  
+  
   
   
 
@@ -33,7 +35,7 @@
         <link rel="index" title="Index"
               href="../../genindex.html"/>
         <link rel="search" title="Search" href="../../search.html"/>
-    <link rel="top" title="wolfcrypt 0.1.9 documentation" href="../../index.html"/>
+    <link rel="top" title="wolfcrypt Python 3.13.0-1 documentation" href="../../index.html"/>
         <link rel="up" title="Module code" href="../index.html"/> 
 
   
@@ -43,6 +45,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -52,7 +55,7 @@
           
 
           
-            <a href="../../index.html" class="icon icon-home"> wolfcrypt
+            <a href="../../index.html" class="icon icon-home"> wolfcrypt Python
           
 
           
@@ -62,7 +65,7 @@
             
             
               <div class="version">
-                0.1.9
+                3.13.0-1
               </div>
             
           
@@ -83,7 +86,10 @@
           
             
             
-                <ul>
+              
+            
+            
+              <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../symmetric.html">Symmetric Key Algorithms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../asymmetric.html">Asymmetric Key Algorithms</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../digest.html">Message Digests</a></li>
@@ -101,8 +107,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../../index.html">wolfcrypt</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">wolfcrypt Python</a>
+        
       </nav>
 
 
@@ -115,19 +123,36 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="../../index.html">Docs</a> &raquo;</li>
-      
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
           <li><a href="../index.html">Module code</a> &raquo;</li>
-      
-    <li>wolfcrypt.ciphers</li>
+        
+      <li>wolfcrypt.ciphers</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -136,7 +161,7 @@
   <h1>Source code for wolfcrypt.ciphers</h1><div class="highlight"><pre>
 <span></span><span class="c1"># ciphers.py</span>
 <span class="c1">#</span>
-<span class="c1"># Copyright (C) 2006-2016 wolfSSL Inc.</span>
+<span class="c1"># Copyright (C) 2006-2018 wolfSSL Inc.</span>
 <span class="c1">#</span>
 <span class="c1"># This file is part of wolfSSL. (formerly known as CyaSSL)</span>
 <span class="c1">#</span>
@@ -153,25 +178,28 @@
 <span class="c1"># You should have received a copy of the GNU General Public License</span>
 <span class="c1"># along with this program; if not, write to the Free Software</span>
 <span class="c1"># Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA</span>
-<span class="kn">from</span> <span class="nn">wolfcrypt._ffi</span>   <span class="k">import</span> <span class="n">ffi</span> <span class="k">as</span> <span class="n">_ffi</span>
-<span class="kn">from</span> <span class="nn">wolfcrypt._ffi</span>   <span class="k">import</span> <span class="n">lib</span> <span class="k">as</span> <span class="n">_lib</span>
-<span class="kn">from</span> <span class="nn">wolfcrypt.utils</span>  <span class="k">import</span> <span class="n">t2b</span>
+
+<span class="c1"># pylint: disable=no-member,no-name-in-module</span>
+
+<span class="kn">from</span> <span class="nn">wolfcrypt._ffi</span> <span class="k">import</span> <span class="n">ffi</span> <span class="k">as</span> <span class="n">_ffi</span>
+<span class="kn">from</span> <span class="nn">wolfcrypt._ffi</span> <span class="k">import</span> <span class="n">lib</span> <span class="k">as</span> <span class="n">_lib</span>
+<span class="kn">from</span> <span class="nn">wolfcrypt.utils</span> <span class="k">import</span> <span class="n">t2b</span>
 <span class="kn">from</span> <span class="nn">wolfcrypt.random</span> <span class="k">import</span> <span class="n">Random</span>
 
-<span class="kn">from</span> <span class="nn">wolfcrypt.exceptions</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">wolfcrypt.exceptions</span> <span class="k">import</span> <span class="n">WolfCryptError</span>
 
 
 <span class="c1"># key direction flags</span>
-<span class="n">_ENCRYPTION</span>  <span class="o">=</span> <span class="mi">0</span>
-<span class="n">_DECRYPTION</span>  <span class="o">=</span> <span class="mi">1</span>
+<span class="n">_ENCRYPTION</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">_DECRYPTION</span> <span class="o">=</span> <span class="mi">1</span>
 
 
 <span class="c1"># feedback modes</span>
-<span class="n">MODE_ECB</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1"># Electronic Code Book</span>
-<span class="n">MODE_CBC</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># Cipher Block Chaining</span>
-<span class="n">MODE_CFB</span> <span class="o">=</span> <span class="mi">3</span> <span class="c1"># Cipher Feedback</span>
-<span class="n">MODE_OFB</span> <span class="o">=</span> <span class="mi">5</span> <span class="c1"># Output Feedback</span>
-<span class="n">MODE_CTR</span> <span class="o">=</span> <span class="mi">6</span> <span class="c1"># Counter</span>
+<span class="n">MODE_ECB</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># Electronic Code Book</span>
+<span class="n">MODE_CBC</span> <span class="o">=</span> <span class="mi">2</span>  <span class="c1"># Cipher Block Chaining</span>
+<span class="n">MODE_CFB</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># Cipher Feedback</span>
+<span class="n">MODE_OFB</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1"># Output Feedback</span>
+<span class="n">MODE_CTR</span> <span class="o">=</span> <span class="mi">6</span>  <span class="c1"># Counter</span>
 
 <span class="n">_FEEDBACK_MODES</span> <span class="o">=</span> <span class="p">[</span><span class="n">MODE_ECB</span><span class="p">,</span> <span class="n">MODE_CBC</span><span class="p">,</span> <span class="n">MODE_CFB</span><span class="p">,</span> <span class="n">MODE_OFB</span><span class="p">,</span> <span class="n">MODE_CTR</span><span class="p">]</span>
 
@@ -198,7 +226,7 @@
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key_sizes</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;key must be </span><span class="si">%s</span><span class="s2"> in length&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key_sizes</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;key must not be 0 in length&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">IV</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">IV</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">:</span>
@@ -212,11 +240,10 @@
         <span class="k">if</span> <span class="n">IV</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_IV</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="n">IV</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_IV</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_IV</span> <span class="o">=</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;byte[</span><span class="si">%d</span><span class="s1">]&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">)</span>
 
-
-    <span class="nd">@classmethod</span>
-<div class="viewcode-block" id="_Cipher.new"><a class="viewcode-back" href="../../symmetric.html#wolfcrypt.ciphers._Cipher.new">[docs]</a>    <span class="k">def</span> <span class="nf">new</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">IV</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="_Cipher.new"><a class="viewcode-back" href="../../symmetric.html#wolfcrypt.ciphers._Cipher.new">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">new</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">IV</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>  <span class="c1"># pylint: disable=W0613</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a ciphering object, using the secret key contained in</span>
 <span class="sd">        the string **key**, and using the feedback mode **mode**, which</span>
@@ -227,8 +254,7 @@
 <span class="sd">        providing a value of **IV** will result in a ValueError exception</span>
 <span class="sd">        being raised.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">IV</span><span class="p">)</span></div>
-
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">IV</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="_Cipher.encrypt"><a class="viewcode-back" href="../../symmetric.html#wolfcrypt.ciphers._Cipher.encrypt">[docs]</a>    <span class="k">def</span> <span class="nf">encrypt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -250,13 +276,12 @@
             <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Invalid key error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
-        <span class="n">result</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">string</span><span class="p">))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;byte[</span><span class="si">%d</span><span class="s1">]&#39;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">string</span><span class="p">))</span>
         <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_encrypt</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">string</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Encryption error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">result</span></div>
-
+        <span class="k">return</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">result</span><span class="p">)[:]</span></div>
 
 <div class="viewcode-block" id="_Cipher.decrypt"><a class="viewcode-back" href="../../symmetric.html#wolfcrypt.ciphers._Cipher.decrypt">[docs]</a>    <span class="k">def</span> <span class="nf">decrypt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -278,12 +303,12 @@
             <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Invalid key error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
-        <span class="n">result</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">string</span><span class="p">))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;byte[</span><span class="si">%d</span><span class="s1">]&#39;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">string</span><span class="p">))</span>
         <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_decrypt</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">string</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Decryption error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">result</span></div></div>
+        <span class="k">return</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">result</span><span class="p">)[:]</span></div></div>
 
 
 <div class="viewcode-block" id="Aes"><a class="viewcode-back" href="../../symmetric.html#wolfcrypt.ciphers.Aes">[docs]</a><span class="k">class</span> <span class="nc">Aes</span><span class="p">(</span><span class="n">_Cipher</span><span class="p">):</span>
@@ -291,30 +316,57 @@
 <span class="sd">    The **Advanced Encryption Standard** (AES), a.k.a. Rijndael, is</span>
 <span class="sd">    a symmetric-key cipher standardized by **NIST**.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">block_size</span>   <span class="o">=</span> <span class="mi">16</span>
-    <span class="n">key_size</span>     <span class="o">=</span> <span class="kc">None</span> <span class="c1"># 16, 24, 32</span>
-    <span class="n">_key_sizes</span>   <span class="o">=</span> <span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">32</span><span class="p">]</span>
+    <span class="n">block_size</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">key_size</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># 16, 24, 32</span>
+    <span class="n">_key_sizes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">32</span><span class="p">]</span>
     <span class="n">_native_type</span> <span class="o">=</span> <span class="s2">&quot;Aes *&quot;</span>
-
 
     <span class="k">def</span> <span class="nf">_set_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="n">_ENCRYPTION</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_AesSetKey</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_enc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_IV</span><span class="p">,</span> <span class="n">_ENCRYPTION</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_AesSetKey</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_dec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_IV</span><span class="p">,</span> <span class="n">_DECRYPTION</span><span class="p">)</span>
 
+        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_AesSetKey</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_IV</span><span class="p">,</span> <span class="n">_DECRYPTION</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_encrypt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span> <span class="n">source</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_AesCbcEncrypt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_enc</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="p">))</span>
-
+        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_AesCbcEncrypt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_enc</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span>
+                                     <span class="n">source</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">_decrypt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span> <span class="n">source</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_AesCbcDecrypt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dec</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="p">))</span></div>
+        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_AesCbcDecrypt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dec</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span>
+                                     <span class="n">source</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="p">))</span></div>
 
 
-<span class="k">class</span> <span class="nc">_Rsa</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="Des3"><a class="viewcode-back" href="../../symmetric.html#wolfcrypt.ciphers.Des3">[docs]</a><span class="k">class</span> <span class="nc">Des3</span><span class="p">(</span><span class="n">_Cipher</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    **Triple DES** (3DES) is the common name for the **Triple Data</span>
+<span class="sd">    Encryption Algorithm** (TDEA or Triple DEA) symmetric-key block</span>
+<span class="sd">    cipher, which applies the **Data Encryption Standard** (DES)</span>
+<span class="sd">    cipher algorithm three times to each data block.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">block_size</span> <span class="o">=</span> <span class="mi">8</span>
+    <span class="n">key_size</span> <span class="o">=</span> <span class="mi">24</span>
+    <span class="n">_native_type</span> <span class="o">=</span> <span class="s2">&quot;Des3 *&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_set_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">direction</span> <span class="o">==</span> <span class="n">_ENCRYPTION</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Des3_SetKey</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_enc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">,</span>
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">_IV</span><span class="p">,</span> <span class="n">_ENCRYPTION</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Des3_SetKey</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">,</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">_IV</span><span class="p">,</span> <span class="n">_DECRYPTION</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_encrypt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span> <span class="n">source</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Des3_CbcEncrypt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_enc</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span>
+                                       <span class="n">source</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_decrypt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span> <span class="n">source</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Des3_CbcDecrypt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dec</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span>
+                                       <span class="n">source</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="p">))</span></div>
+
+
+<span class="k">class</span> <span class="nc">_Rsa</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>  <span class="c1"># pylint: disable=too-few-public-methods</span>
     <span class="n">RSA_MIN_PAD_SIZE</span> <span class="o">=</span> <span class="mi">11</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -328,7 +380,6 @@
         <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Key initialization error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
-
     <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">:</span>
             <span class="n">_lib</span><span class="o">.</span><span class="n">wc_FreeRsaKey</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">)</span>
@@ -338,19 +389,19 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
         <span class="n">key</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
-        <span class="n">_Rsa</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">_Rsa</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
         <span class="n">idx</span> <span class="o">=</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;word32*&quot;</span><span class="p">)</span>
         <span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
-        <span class="n">ret</span> <span class="o">=</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_RsaPublicKeyDecode</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_RsaPublicKeyDecode</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Invalid key error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span> <span class="o">=</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_RsaEncryptSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Invalid key error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">)</span>
-
 
 <div class="viewcode-block" id="RsaPublic.encrypt"><a class="viewcode-back" href="../../asymmetric.html#wolfcrypt.ciphers.RsaPublic.encrypt">[docs]</a>    <span class="k">def</span> <span class="nf">encrypt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plaintext</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -363,18 +414,17 @@
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">plaintext</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="n">plaintext</span><span class="p">)</span>
-        <span class="n">ciphertext</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">)</span>
+        <span class="n">ciphertext</span> <span class="o">=</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;byte[</span><span class="si">%d</span><span class="s1">]&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">)</span>
 
         <span class="n">ret</span> <span class="o">=</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_RsaPublicEncrypt</span><span class="p">(</span><span class="n">plaintext</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">plaintext</span><span class="p">),</span>
-                                       <span class="n">ciphertext</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ciphertext</span><span class="p">),</span>
+                                       <span class="n">ciphertext</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">,</span>
                                        <span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">,</span>
                                        <span class="bp">self</span><span class="o">.</span><span class="n">_random</span><span class="o">.</span><span class="n">native_object</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">ret</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Encryption error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">ciphertext</span></div>
-
+        <span class="k">return</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">ciphertext</span><span class="p">)[:]</span></div>
 
 <div class="viewcode-block" id="RsaPublic.verify"><a class="viewcode-back" href="../../asymmetric.html#wolfcrypt.ciphers.RsaPublic.verify">[docs]</a>    <span class="k">def</span> <span class="nf">verify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signature</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -386,35 +436,35 @@
 <span class="sd">        Returns a string containing the plaintext.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">signature</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="n">signature</span><span class="p">)</span>
-        <span class="n">plaintext</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">)</span>
+        <span class="n">plaintext</span> <span class="o">=</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;byte[</span><span class="si">%d</span><span class="s1">]&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">)</span>
 
         <span class="n">ret</span> <span class="o">=</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_RsaSSL_Verify</span><span class="p">(</span><span class="n">signature</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">signature</span><span class="p">),</span>
-                                    <span class="n">plaintext</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">plaintext</span><span class="p">),</span>
+                                    <span class="n">plaintext</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">,</span>
                                     <span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Verify error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">plaintext</span><span class="p">[:</span><span class="n">ret</span><span class="p">]</span></div></div>
+        <span class="k">return</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">plaintext</span><span class="p">,</span> <span class="n">ret</span><span class="p">)[:]</span></div></div>
 
 
 <div class="viewcode-block" id="RsaPrivate"><a class="viewcode-back" href="../../asymmetric.html#wolfcrypt.ciphers.RsaPrivate">[docs]</a><span class="k">class</span> <span class="nc">RsaPrivate</span><span class="p">(</span><span class="n">RsaPublic</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>  <span class="c1"># pylint: disable=super-init-not-called</span>
         <span class="n">key</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
-        <span class="n">_Rsa</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">_Rsa</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>  <span class="c1"># pylint: disable=non-parent-init-called</span>
 
         <span class="n">idx</span> <span class="o">=</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s2">&quot;word32*&quot;</span><span class="p">)</span>
         <span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
 
-        <span class="n">ret</span> <span class="o">=</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_RsaPrivateKeyDecode</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_RsaPrivateKeyDecode</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Invalid key error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span> <span class="o">=</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_RsaEncryptSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Invalid key error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">)</span>
-
 
 <div class="viewcode-block" id="RsaPrivate.decrypt"><a class="viewcode-back" href="../../asymmetric.html#wolfcrypt.ciphers.RsaPrivate.decrypt">[docs]</a>    <span class="k">def</span> <span class="nf">decrypt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ciphertext</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -426,17 +476,16 @@
 <span class="sd">        Returns a string containing the plaintext.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ciphertext</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="n">ciphertext</span><span class="p">)</span>
-        <span class="n">plaintext</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">)</span>
+        <span class="n">plaintext</span> <span class="o">=</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;byte[</span><span class="si">%d</span><span class="s1">]&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">)</span>
 
         <span class="n">ret</span> <span class="o">=</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_RsaPrivateDecrypt</span><span class="p">(</span><span class="n">ciphertext</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ciphertext</span><span class="p">),</span>
-                                        <span class="n">plaintext</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">plaintext</span><span class="p">),</span>
+                                        <span class="n">plaintext</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">,</span>
                                         <span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Decryption error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">plaintext</span><span class="p">[:</span><span class="n">ret</span><span class="p">]</span></div>
-
+        <span class="k">return</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">plaintext</span><span class="p">,</span> <span class="n">ret</span><span class="p">)[:]</span></div>
 
 <div class="viewcode-block" id="RsaPrivate.sign"><a class="viewcode-back" href="../../asymmetric.html#wolfcrypt.ciphers.RsaPrivate.sign">[docs]</a>    <span class="k">def</span> <span class="nf">sign</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plaintext</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -448,19 +497,22 @@
 <span class="sd">        Returns a string containing the signature.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">plaintext</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="n">plaintext</span><span class="p">)</span>
-        <span class="n">signature</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">)</span>
+        <span class="n">signature</span> <span class="o">=</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;byte[</span><span class="si">%d</span><span class="s1">]&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">)</span>
 
         <span class="n">ret</span> <span class="o">=</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_RsaSSL_Sign</span><span class="p">(</span><span class="n">plaintext</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">plaintext</span><span class="p">),</span>
-                                  <span class="n">signature</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">signature</span><span class="p">),</span>
+                                  <span class="n">signature</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">,</span>
                                   <span class="bp">self</span><span class="o">.</span><span class="n">native_object</span><span class="p">,</span>
                                   <span class="bp">self</span><span class="o">.</span><span class="n">_random</span><span class="o">.</span><span class="n">native_object</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">ret</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Signature error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">signature</span></div></div>
+        <span class="k">return</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">signature</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_size</span><span class="p">)[:]</span></div></div>
 </pre></div>
 
+           </div>
+           <div class="articleComments">
+            
            </div>
           </div>
           <footer>
@@ -470,7 +522,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, wolfSSL Inc. All rights reserved.
+        &copy; Copyright 2018, wolfSSL Inc. All rights reserved.
 
     </p>
   </div>
@@ -492,10 +544,11 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'0.1.9',
+            VERSION:'3.13.0-1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="../../_static/jquery.js"></script>

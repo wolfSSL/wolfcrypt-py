@@ -8,9 +8,11 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Symmetric Key Algorithms &mdash; wolfcrypt 0.1.9 documentation</title>
+  <title>Symmetric Key Algorithms &mdash; wolfcrypt Python 3.13.0-1 documentation</title>
   
 
+  
+  
   
   
 
@@ -33,7 +35,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="wolfcrypt 0.1.9 documentation" href="index.html"/>
+    <link rel="top" title="wolfcrypt Python 3.13.0-1 documentation" href="index.html"/>
         <link rel="next" title="Asymmetric Key Algorithms" href="asymmetric.html"/>
         <link rel="prev" title="wolfcrypt: the wolfSSL Crypto Engine" href="index.html"/> 
 
@@ -44,6 +46,7 @@
 
 <body class="wy-body-for-nav" role="document">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -53,7 +56,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home"> wolfcrypt
+            <a href="index.html" class="icon icon-home"> wolfcrypt Python
           
 
           
@@ -63,7 +66,7 @@
             
             
               <div class="version">
-                0.1.9
+                3.13.0-1
               </div>
             
           
@@ -84,7 +87,10 @@
           
             
             
-                <ul class="current">
+              
+            
+            
+              <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Symmetric Key Algorithms</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#symmetric-key-encryption-classes">Symmetric Key Encryption Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#interface">Interface</a></li>
@@ -110,8 +116,10 @@
 
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="index.html">wolfcrypt</a>
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">wolfcrypt Python</a>
+        
       </nav>
 
 
@@ -120,23 +128,40 @@
         <div class="rst-content">
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="index.html">Docs</a> &raquo;</li>
-      
-    <li>Symmetric Key Algorithms</li>
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Symmetric Key Algorithms</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="_sources/symmetric.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -176,7 +201,7 @@ being raised.</p>
 <code class="descname">encrypt</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#_Cipher.encrypt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers._Cipher.encrypt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Encrypts a non-empty string, using the key-dependent data in
 the object, and with the appropriate feedback mode. The
-string&#8217;s length must be an exact multiple of the algorithm&#8217;s
+string’s length must be an exact multiple of the algorithm’s
 block size or, in CFB mode, of the segment size. Returns a
 string containing the ciphertext.</p>
 </dd></dl>
@@ -185,8 +210,8 @@ string containing the ciphertext.</p>
 <dt id="wolfcrypt.ciphers._Cipher.decrypt">
 <code class="descname">decrypt</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#_Cipher.decrypt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers._Cipher.decrypt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Decrypts <strong>string</strong>, using the key-dependent data in the
-object and with the appropriate feedback mode. The string&#8217;s
-length must be an exact multiple of the algorithm&#8217;s block
+object and with the appropriate feedback mode. The string’s
+length must be an exact multiple of the algorithm’s block
 size or, in CFB mode, of the segment size.  Returns a string
 containing the plaintext.</p>
 </dd></dl>
@@ -203,13 +228,22 @@ containing the plaintext.</p>
 a symmetric-key cipher standardized by <strong>NIST</strong>.</p>
 </dd></dl>
 
+<dl class="class">
+<dt id="wolfcrypt.ciphers.Des3">
+<em class="property">class </em><code class="descclassname">wolfcrypt.ciphers.</code><code class="descname">Des3</code><span class="sig-paren">(</span><em>key</em>, <em>mode</em>, <em>IV=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#Des3"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.Des3" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Triple DES</strong> (3DES) is the common name for the <strong>Triple Data
+Encryption Algorithm</strong> (TDEA or Triple DEA) symmetric-key block
+cipher, which applies the <strong>Data Encryption Standard</strong> (DES)
+cipher algorithm three times to each data block.</p>
+</dd></dl>
+
 </div>
 </div>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">wolfcrypt.ciphers</span> <span class="k">import</span> <span class="n">Aes</span><span class="p">,</span> <span class="n">MODE_CBC</span>
 <span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">cipher</span> <span class="o">=</span> <span class="n">Aes</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;0123456789abcdef&#39;</span><span class="p">,</span> <span class="n">MODE_CBC</span><span class="p">,</span> <span class="n">b</span><span class="s1">&#39;1234567890abcdef&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cipher</span> <span class="o">=</span> <span class="n">Aes</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;0123456789abcdef&#39;</span><span class="p">,</span> <span class="n">MODE_CBC</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;1234567890abcdef&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ciphertext</span> <span class="o">=</span> <span class="n">cipher</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="s1">&#39;now is the time &#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ciphertext</span>
 <span class="go">b&#39;\x95\x94\x92W_B\x81S,\xcc\x9dFw\xa23\xcb&#39;</span>
@@ -222,15 +256,18 @@ a symmetric-key cipher standardized by <strong>NIST</strong>.</p>
 
 
            </div>
+           <div class="articleComments">
+            
+           </div>
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="asymmetric.html" class="btn btn-neutral float-right" title="Asymmetric Key Algorithms" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="asymmetric.html" class="btn btn-neutral float-right" title="Asymmetric Key Algorithms" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="index.html" class="btn btn-neutral" title="wolfcrypt: the wolfSSL Crypto Engine" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="index.html" class="btn btn-neutral" title="wolfcrypt: the wolfSSL Crypto Engine" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -239,7 +276,7 @@ a symmetric-key cipher standardized by <strong>NIST</strong>.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2016, wolfSSL Inc. All rights reserved.
+        &copy; Copyright 2018, wolfSSL Inc. All rights reserved.
 
     </p>
   </div>
@@ -261,10 +298,11 @@ a symmetric-key cipher standardized by <strong>NIST</strong>.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.1.9',
+            VERSION:'3.13.0-1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="_static/jquery.js"></script>
