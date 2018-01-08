@@ -228,7 +228,7 @@ class RsaPublic(_Rsa):
     def __init__(self, key):
         key = t2b(key)
 
-        super(RsaPublic, self).__init__()
+        _Rsa.__init__(self)
 
         idx = _ffi.new("word32*")
         idx[0] = 0
@@ -288,10 +288,10 @@ class RsaPublic(_Rsa):
 
 
 class RsaPrivate(RsaPublic):
-    def __init__(self, key):
+    def __init__(self, key):  # pylint: disable=super-init-not-called
         key = t2b(key)
 
-        super(RsaPrivate, self).__init__()
+        _Rsa.__init__(self)  # pylint: disable=non-parent-init-called
 
         idx = _ffi.new("word32*")
         idx[0] = 0
