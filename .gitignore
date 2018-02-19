@@ -41,6 +41,7 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+.pytest_cache
 nosetests.xml
 coverage.xml
 *,cover
@@ -67,3 +68,6 @@ venv_2.7
 venv_3.4
 venv_3.5
 venv_3.6
+
+# code editor preferences
+.vscode
