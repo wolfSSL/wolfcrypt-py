@@ -43,6 +43,7 @@ ffi.set_source(
     #include <wolfssl/wolfcrypt/random.h>
 
     #include <wolfssl/wolfcrypt/rsa.h>
+    #include <wolfssl/wolfcrypt/ecc.h>
     """,
     include_dirs=[local_path("lib/wolfssl/src")],
     library_dirs=[local_path("lib/wolfssl/{}/{}/lib".format(
@@ -130,6 +131,26 @@ ffi.cdef(
 
     int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
     int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
+
+    typedef struct {...; } ecc_key;
+
+    int wc_ecc_init(ecc_key* ecc);
+    void wc_ecc_free(ecc_key* ecc);
+
+    int wc_ecc_make_key(WC_RNG* rng, int keysize, ecc_key* key);
+    int wc_ecc_size(ecc_key* key);
+    int wc_ecc_sig_size(ecc_key* key);
+
+    int wc_EccPrivateKeyDecode(const byte*, word32*, ecc_key*, word32);
+    int wc_EccPublicKeyDecode(const byte*, word32*, ecc_key*, word32);
+
+    int wc_ecc_sign_hash(const byte* in, word32 inlen,
+                         byte* out, word32 *outlen,
+                         WC_RNG* rng, ecc_key* key);
+    int wc_ecc_verify_hash(const byte* sig, word32 siglen,
+                           const byte* hash, word32 hashlen,
+                           int* stat, ecc_key* key);
+
     """
 )
 

@@ -136,9 +136,9 @@ def make_flags(prefix):
 
     # asymmetric ciphers
     flags.append("--enable-rsa")
+    flags.append("--enable-ecc")
 
     flags.append("--disable-dh")
-    flags.append("--disable-ecc")
 
     # disabling other configs enabled by default
     flags.append("--disable-filesystem")
