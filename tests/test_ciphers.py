@@ -24,7 +24,8 @@ from collections import namedtuple
 import pytest
 from wolfcrypt.utils import t2b, h2b
 from wolfcrypt.ciphers import (
-    Aes, Des3, MODE_ECB, MODE_CBC, RsaPrivate, RsaPublic, WolfCryptError
+    Aes, Des3, MODE_ECB, MODE_CBC, RsaPrivate, RsaPublic,
+    EccPrivate, EccPublic, WolfCryptError
 )
 
 
@@ -78,6 +79,23 @@ def vectors():
                 "F28102403989E59C195530BAB7488C48140EF49F7E779743E1B419353123"
                 "759C3B44AD691256EE0061641666D37C742B15B4A2FEBF086B1A5D3F9012"
                 "B105863129DBD9E2")
+        ),
+        EccPublic: TestVector(
+            key=h2b(
+                "3059301306072A8648CE3D020106082A8648CE3D0301070342000455BFF4"
+                "0F44509A3DCE9BB7F0C54DF5707BD4EC248E1980EC5A4CA22403622C9BDA"
+                "EFA2351243847616C6569506CC01A9BDF6751A42F7BDA9B236225FC75D7F"
+                "B4"
+            )
+        ),
+        EccPrivate: TestVector(
+            key=h2b(
+                "30770201010420F8CF926BBD1E28F1A8ABA1234F3274188850AD7EC7EC92"
+                "F88F974DAF568965C7A00A06082A8648CE3D030107A1440342000455BFF4"
+                "0F44509A3DCE9BB7F0C54DF5707BD4EC248E1980EC5A4CA22403622C9BDA"
+                "EFA2351243847616C6569506CC01A9BDF6751A42F7BDA9B236225FC75D7F"
+                "B4"
+            )
         )
     }
 
@@ -92,16 +110,6 @@ def cipher_new(cipher_cls, vectors):
         vectors[cipher_cls].key,
         MODE_CBC,
         vectors[cipher_cls].iv)
-
-
-@pytest.fixture
-def rsa_private(vectors):
-    return RsaPrivate(vectors[RsaPrivate].key)
-
-
-@pytest.fixture
-def rsa_public(vectors):
-    return RsaPublic(vectors[RsaPublic].key)
 
 
 def test_block_cipher(cipher_cls, vectors):
@@ -161,6 +169,16 @@ def test_block_cipher(cipher_cls, vectors):
         cipher_obj.decrypt(ciphertext[:-1])
 
 
+@pytest.fixture
+def rsa_private(vectors):
+    return RsaPrivate(vectors[RsaPrivate].key)
+
+
+@pytest.fixture
+def rsa_public(vectors):
+    return RsaPublic(vectors[RsaPublic].key)
+
+
 def test_new_rsa_raises(vectors):
     with pytest.raises(WolfCryptError):
         RsaPrivate(vectors[RsaPrivate].key[:-1])  # invalid key length
@@ -201,3 +219,69 @@ def test_rsa_sign_verify(rsa_private, rsa_public):
 
     assert 1024 / 8 == len(signature) == rsa_private.output_size
     assert plaintext == rsa_private.verify(signature)
+
+
+@pytest.fixture
+def ecc_private(vectors):
+    return EccPrivate(vectors[EccPrivate].key)
+
+
+@pytest.fixture
+def ecc_public(vectors):
+    return EccPublic(vectors[EccPublic].key)
+
+
+def test_new_ecc_raises(vectors):
+    with pytest.raises(WolfCryptError):
+        EccPrivate(vectors[EccPrivate].key[:-1])  # invalid key length
+
+    with pytest.raises(WolfCryptError):
+        EccPublic(vectors[EccPublic].key[:-1])    # invalid key length
+
+    with pytest.raises(WolfCryptError):
+        EccPrivate(vectors[EccPublic].key)        # invalid key type
+
+    with pytest.raises(WolfCryptError):
+        EccPublic(vectors[EccPrivate].key)        # invalid key type
+
+
+def test_key_encoding(vectors):
+    priv = EccPrivate()
+    pub = EccPublic()
+
+    priv.decode_key(vectors[EccPrivate].key)
+    pub.decode_key(vectors[EccPublic].key)
+
+    assert priv.encode_key() == vectors[EccPrivate].key
+    assert pub.encode_key() == vectors[EccPublic].key
+
+
+def test_x963(ecc_private, ecc_public):
+    assert ecc_private.export_x963() == ecc_public.export_x963()
+
+def test_ecc_sign_verify(ecc_private, ecc_public):
+    plaintext = "Everyone gets Friday off."
+
+    # normal usage, sign with private, verify with public
+    signature = ecc_private.sign(plaintext)
+
+    assert len(signature) <= ecc_private.max_signature_size
+    assert ecc_public.verify(signature, plaintext)
+
+    # private object holds both private and public info, so it can also verify
+    # using the known public key.
+    assert ecc_private.verify(signature, plaintext)
+
+    ecc_x963 = EccPublic()
+    ecc_x963.import_x963(ecc_public.export_x963())
+    assert ecc_x963.verify(signature, plaintext)
+
+    ecc_x963 = EccPublic()
+    ecc_x963.import_x963(ecc_private.export_x963())
+    assert ecc_x963.verify(signature, plaintext)
+
+def test_ecc_make_shared_secret():
+    a = EccPrivate.make_key(32)
+    b = EccPrivate.make_key(32)
+
+    assert a.shared_secret(b) == b.shared_secret(a)

@@ -347,3 +347,170 @@ class RsaPrivate(RsaPublic):
             raise WolfCryptError("Signature error (%d)" % ret)
 
         return _ffi.buffer(signature, self.output_size)[:]
+
+
+class _Ecc(object):  # pylint: disable=too-few-public-methods
+    def __init__(self):
+        self.native_object = _ffi.new("ecc_key *")
+        ret = _lib.wc_ecc_init(self.native_object)
+        if ret < 0:
+            raise WolfCryptError("Invalid key error (%d)" % ret)
+
+    def __del__(self):
+        if self.native_object:
+            _lib.wc_ecc_free(self.native_object)
+
+    @property
+    def size(self):
+        return _lib.wc_ecc_size(self.native_object)
+
+    @property
+    def max_signature_size(self):
+        return _lib.wc_ecc_sig_size(self.native_object)
+
+
+class EccPublic(_Ecc):
+    def __init__(self, key=None):
+        _Ecc.__init__(self)
+
+        if key:
+            self.decode_key(key)
+
+    def decode_key(self, key):
+        key = t2b(key)
+
+        idx = _ffi.new("word32*")
+        idx[0] = 0
+
+        ret = _lib.wc_EccPublicKeyDecode(key, idx,
+                                         self.native_object, len(key))
+        if ret < 0:
+            raise WolfCryptError("Key decode error (%d)" % ret)
+        if self.size <= 0:
+            raise WolfCryptError("Key decode error (%d)" % self.size)
+        if self.max_signature_size <= 0:
+            raise WolfCryptError(
+                "Key decode error (%d)" % self.max_signature_size)
+
+    def encode_key(self, with_curve=True):
+        key = _ffi.new("byte[%d]" % (self.size * 4))
+
+        ret = _lib.wc_EccPublicKeyToDer(self.native_object, key, len(key),
+                                        with_curve)
+        if ret <= 0:
+            raise WolfCryptError("Key encode error (%d)" % ret)
+
+        return _ffi.buffer(key, ret)[:]
+
+    def import_x963(self, x963):
+        ret = _lib.wc_ecc_import_x963(x963, len(x963), self.native_object)
+        if ret != 0:
+            raise WolfCryptError("x963 import error (%d)" % ret)
+
+    def export_x963(self):
+        x963 = _ffi.new("byte[%d]" % (self.size * 4))
+        x963_size = _ffi.new("word32[1]")
+        x963_size[0] = self.size * 4
+
+        ret = _lib.wc_ecc_export_x963(self.native_object, x963, x963_size)
+        if ret != 0:
+            raise WolfCryptError("x963 export error (%d)" % ret) 
+
+        return _ffi.buffer(x963, x963_size[0])[:]
+
+    def verify(self, signature, data):
+        """
+        Verifies **signature**, using the public key data in the
+        object. The signature's length must be equal to:
+
+            **self.output_size**
+
+        Returns a string containing the plaintext.
+        """
+        data = t2b(data)
+        status = _ffi.new("int[1]")
+
+        ret = _lib.wc_ecc_verify_hash(signature, len(signature),
+                                      data, len(data),
+                                      status, self.native_object)
+
+        if ret < 0:
+            raise WolfCryptError("Verify error (%d)" % ret)
+
+        return status[0] == 1
+
+
+class EccPrivate(EccPublic):
+    @classmethod
+    def make_key(cls, size, rng=Random()):
+        ecc = cls()
+
+        ret = _lib.wc_ecc_make_key(rng.native_object, size, ecc.native_object)
+        if ret < 0:
+            raise WolfCryptError("Key generation error (%d)" % ret)
+
+        return ecc
+
+    def decode_key(self, key):
+        key = t2b(key)
+
+        idx = _ffi.new("word32*")
+        idx[0] = 0
+
+        ret = _lib.wc_EccPrivateKeyDecode(key, idx,
+                                          self.native_object, len(key))
+        if ret < 0:
+            raise WolfCryptError("Key decode error (%d)" % ret)
+        if self.size <= 0:
+            raise WolfCryptError("Key decode error (%d)" % self.size)
+        if self.max_signature_size <= 0:
+            raise WolfCryptError(
+                "Key decode error (%d)" % self.max_signature_size)
+
+    def encode_key(self):
+        key = _ffi.new("byte[%d]" % (self.size * 4))
+
+        ret = _lib.wc_EccKeyToDer(self.native_object, key, len(key))
+        if ret <= 0:
+            raise WolfCryptError("Key encode error (%d)" % ret)
+
+        return _ffi.buffer(key, ret)[:]
+
+    def shared_secret(self, peer):
+        shared_secret = _ffi.new("byte[%d]" % self.max_signature_size)
+        secret_size = _ffi.new("word32[1]")
+        secret_size[0] = self.max_signature_size
+
+        ret = _lib.wc_ecc_shared_secret(self.native_object,
+                                        peer.native_object,
+                                        shared_secret, secret_size)
+
+        if ret != 0:
+            raise WolfCryptError("Shared secret error (%d)" % ret)
+
+        return _ffi.buffer(shared_secret, secret_size[0])[:]
+
+    def sign(self, plaintext, rng=Random()):
+        """
+        Signs **plaintext**, using the private key data in the object.
+        The plaintext's length must not be greater than:
+
+            **self.output_size - self.RSA_MIN_PAD_SIZE**
+
+        Returns a string containing the signature.
+        """
+        plaintext = t2b(plaintext)
+        signature = _ffi.new("byte[%d]" % self.max_signature_size)
+
+        signature_size = _ffi.new("word32[1]")
+        signature_size[0] = self.max_signature_size
+
+        ret = _lib.wc_ecc_sign_hash(plaintext, len(plaintext),
+                                    signature, signature_size,
+                                    rng.native_object,
+                                    self.native_object)
+
+        if ret != 0:
+            raise WolfCryptError("Signature error (%d)" % ret)
+
+        return _ffi.buffer(signature, signature_size[0])[:]
