@@ -79,7 +79,7 @@ class _Cipher(object):
         if IV:
             self._IV = t2b(IV)
         else:
-            self._IV = _ffi.new('byte[%d]' % self.block_size)
+            self._IV = _ffi.new("byte[%d]" % self.block_size)
 
     @classmethod
     def new(cls, key, mode, IV=None, **kwargs):  # pylint: disable=W0613
@@ -115,7 +115,7 @@ class _Cipher(object):
             if ret < 0:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
-        result = _ffi.new('byte[%d]' % len(string))
+        result = _ffi.new("byte[%d]" % len(string))
         ret = self._encrypt(result, string)
         if ret < 0:
             raise WolfCryptError("Encryption error (%d)" % ret)
@@ -142,7 +142,7 @@ class _Cipher(object):
             if ret < 0:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
-        result = _ffi.new('byte[%d]' % len(string))
+        result = _ffi.new("byte[%d]" % len(string))
         ret = self._decrypt(result, string)
         if ret < 0:
             raise WolfCryptError("Decryption error (%d)" % ret)
@@ -253,7 +253,7 @@ class RsaPublic(_Rsa):
         """
 
         plaintext = t2b(plaintext)
-        ciphertext = _ffi.new('byte[%d]' % self.output_size)
+        ciphertext = _ffi.new("byte[%d]" % self.output_size)
 
         ret = _lib.wc_RsaPublicEncrypt(plaintext, len(plaintext),
                                        ciphertext, self.output_size,
@@ -275,7 +275,7 @@ class RsaPublic(_Rsa):
         Returns a string containing the plaintext.
         """
         signature = t2b(signature)
-        plaintext = _ffi.new('byte[%d]' % self.output_size)
+        plaintext = _ffi.new("byte[%d]" % self.output_size)
 
         ret = _lib.wc_RsaSSL_Verify(signature, len(signature),
                                     plaintext, self.output_size,
@@ -315,7 +315,7 @@ class RsaPrivate(RsaPublic):
         Returns a string containing the plaintext.
         """
         ciphertext = t2b(ciphertext)
-        plaintext = _ffi.new('byte[%d]' % self.output_size)
+        plaintext = _ffi.new("byte[%d]" % self.output_size)
 
         ret = _lib.wc_RsaPrivateDecrypt(ciphertext, len(ciphertext),
                                         plaintext, self.output_size,
@@ -336,7 +336,7 @@ class RsaPrivate(RsaPublic):
         Returns a string containing the signature.
         """
         plaintext = t2b(plaintext)
-        signature = _ffi.new('byte[%d]' % self.output_size)
+        signature = _ffi.new("byte[%d]" % self.output_size)
 
         ret = _lib.wc_RsaSSL_Sign(plaintext, len(plaintext),
                                   signature, self.output_size,
