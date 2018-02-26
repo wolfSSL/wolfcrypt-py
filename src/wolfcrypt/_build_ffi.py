@@ -142,7 +142,17 @@ ffi.cdef(
     int wc_ecc_sig_size(ecc_key* key);
 
     int wc_EccPrivateKeyDecode(const byte*, word32*, ecc_key*, word32);
+    int wc_EccKeyToDer(ecc_key*, byte* output, word32 inLen);
+
     int wc_EccPublicKeyDecode(const byte*, word32*, ecc_key*, word32);
+    int wc_EccPublicKeyToDer(ecc_key*, byte* output,
+                             word32 inLen, int with_AlgCurve);
+
+    int wc_ecc_export_x963(ecc_key*, byte* out, word32* outLen);
+    int wc_ecc_import_x963(const byte* in, word32 inLen, ecc_key* key);
+
+    int wc_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
+                             byte* out, word32* outlen);
 
     int wc_ecc_sign_hash(const byte* in, word32 inlen,
                          byte* out, word32 *outlen,
