@@ -64,8 +64,7 @@ class _Cipher(object):
         elif self._key_sizes:
             if len(key) not in self._key_sizes:
                 raise ValueError("key must be %s in length" % self._key_sizes)
-        else:
-            if not key:
+        elif not key:  # pragma: no cover
                 raise ValueError("key must not be 0 in length")
 
         if IV is not None and len(IV) != self.block_size:
@@ -78,7 +77,7 @@ class _Cipher(object):
 
         if IV:
             self._IV = t2b(IV)
-        else:
+        else:  # pragma: no cover
             self._IV = _ffi.new("byte[%d]" % self.block_size)
 
     @classmethod
@@ -112,12 +111,12 @@ class _Cipher(object):
         if self._enc is None:
             self._enc = _ffi.new(self._native_type)
             ret = self._set_key(_ENCRYPTION)
-            if ret < 0:
+            if ret < 0:  # pragma: no cover
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
         result = _ffi.new("byte[%d]" % len(string))
         ret = self._encrypt(result, string)
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("Encryption error (%d)" % ret)
 
         return _ffi.buffer(result)[:]
@@ -139,12 +138,12 @@ class _Cipher(object):
         if self._dec is None:
             self._dec = _ffi.new(self._native_type)
             ret = self._set_key(_DECRYPTION)
-            if ret < 0:
+            if ret < 0:  # pragma: no cover
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
         result = _ffi.new("byte[%d]" % len(string))
         ret = self._decrypt(result, string)
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("Decryption error (%d)" % ret)
 
         return _ffi.buffer(result)[:]
@@ -211,12 +210,12 @@ class _Rsa(object):  # pylint: disable=too-few-public-methods
     def __init__(self):
         self.native_object = _ffi.new("RsaKey *")
         ret = _lib.wc_InitRsaKey(self.native_object, _ffi.NULL)
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("Invalid key error (%d)" % ret)
 
         self._random = Random()
         ret = _lib.wc_RsaSetRNG(self.native_object, self._random.native_object)
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("Key initialization error (%d)" % ret)
 
     def __del__(self):
@@ -239,7 +238,7 @@ class RsaPublic(_Rsa):
             raise WolfCryptError("Invalid key error (%d)" % ret)
 
         self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
-        if self.output_size <= 0:
+        if self.output_size <= 0:  # pragma: no cover
             raise WolfCryptError("Invalid key error (%d)" % self.output_size)
 
     def encrypt(self, plaintext):
@@ -260,7 +259,7 @@ class RsaPublic(_Rsa):
                                        self.native_object,
                                        self._random.native_object)
 
-        if ret != self.output_size:
+        if ret != self.output_size:  # pragma: no cover
             raise WolfCryptError("Encryption error (%d)" % ret)
 
         return _ffi.buffer(ciphertext)[:]
@@ -281,7 +280,7 @@ class RsaPublic(_Rsa):
                                     plaintext, self.output_size,
                                     self.native_object)
 
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("Verify error (%d)" % ret)
 
         return _ffi.buffer(plaintext, ret)[:]
@@ -302,7 +301,7 @@ class RsaPrivate(RsaPublic):
             raise WolfCryptError("Invalid key error (%d)" % ret)
 
         self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
-        if self.output_size <= 0:
+        if self.output_size <= 0:  # pragma: no cover
             raise WolfCryptError("Invalid key error (%d)" % self.output_size)
 
     def decrypt(self, ciphertext):
@@ -321,7 +320,7 @@ class RsaPrivate(RsaPublic):
                                         plaintext, self.output_size,
                                         self.native_object)
 
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("Decryption error (%d)" % ret)
 
         return _ffi.buffer(plaintext, ret)[:]
@@ -343,7 +342,7 @@ class RsaPrivate(RsaPublic):
                                   self.native_object,
                                   self._random.native_object)
 
-        if ret != self.output_size:
+        if ret != self.output_size:  # pragma: no cover
             raise WolfCryptError("Signature error (%d)" % ret)
 
         return _ffi.buffer(signature, self.output_size)[:]
@@ -353,7 +352,7 @@ class _Ecc(object):  # pylint: disable=too-few-public-methods
     def __init__(self):
         self.native_object = _ffi.new("ecc_key *")
         ret = _lib.wc_ecc_init(self.native_object)
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("Invalid key error (%d)" % ret)
 
     def __del__(self):
@@ -386,9 +385,9 @@ class EccPublic(_Ecc):
                                          self.native_object, len(key))
         if ret < 0:
             raise WolfCryptError("Key decode error (%d)" % ret)
-        if self.size <= 0:
+        if self.size <= 0:  # pragma: no cover
             raise WolfCryptError("Key decode error (%d)" % self.size)
-        if self.max_signature_size <= 0:
+        if self.max_signature_size <= 0:  # pragma: no cover
             raise WolfCryptError(
                 "Key decode error (%d)" % self.max_signature_size)
 
@@ -397,7 +396,7 @@ class EccPublic(_Ecc):
 
         ret = _lib.wc_EccPublicKeyToDer(self.native_object, key, len(key),
                                         with_curve)
-        if ret <= 0:
+        if ret <= 0:  # pragma: no cover
             raise WolfCryptError("Key encode error (%d)" % ret)
 
         return _ffi.buffer(key, ret)[:]
@@ -413,7 +412,7 @@ class EccPublic(_Ecc):
         x963_size[0] = self.size * 4
 
         ret = _lib.wc_ecc_export_x963(self.native_object, x963, x963_size)
-        if ret != 0:
+        if ret != 0:  # pragma: no cover
             raise WolfCryptError("x963 export error (%d)" % ret) 
 
         return _ffi.buffer(x963, x963_size[0])[:]
@@ -461,9 +460,9 @@ class EccPrivate(EccPublic):
                                           self.native_object, len(key))
         if ret < 0:
             raise WolfCryptError("Key decode error (%d)" % ret)
-        if self.size <= 0:
+        if self.size <= 0:  # pragma: no cover
             raise WolfCryptError("Key decode error (%d)" % self.size)
-        if self.max_signature_size <= 0:
+        if self.max_signature_size <= 0:  # pragma: no cover
             raise WolfCryptError(
                 "Key decode error (%d)" % self.max_signature_size)
 
@@ -471,7 +470,7 @@ class EccPrivate(EccPublic):
         key = _ffi.new("byte[%d]" % (self.size * 4))
 
         ret = _lib.wc_EccKeyToDer(self.native_object, key, len(key))
-        if ret <= 0:
+        if ret <= 0:  # pragma: no cover
             raise WolfCryptError("Key encode error (%d)" % ret)
 
         return _ffi.buffer(key, ret)[:]
@@ -485,7 +484,7 @@ class EccPrivate(EccPublic):
                                         peer.native_object,
                                         shared_secret, secret_size)
 
-        if ret != 0:
+        if ret != 0:  # pragma: no cover
             raise WolfCryptError("Shared secret error (%d)" % ret)
 
         return _ffi.buffer(shared_secret, secret_size[0])[:]
@@ -510,7 +509,7 @@ class EccPrivate(EccPublic):
                                     rng.native_object,
                                     self.native_object)
 
-        if ret != 0:
+        if ret != 0:  # pragma: no cover
             raise WolfCryptError("Signature error (%d)" % ret)
 
         return _ffi.buffer(signature, signature_size[0])[:]

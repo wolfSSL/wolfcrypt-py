@@ -35,7 +35,7 @@ class _Hash(object):
     def __init__(self, string=None):
         self._native_object = _ffi.new(self._native_type)
         ret = self._init()
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("Hash init error (%d)" % ret)
 
         if string:
@@ -73,7 +73,7 @@ class _Hash(object):
         string = t2b(string)
 
         ret = self._update(string)
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("Hash update error (%d)" % ret)
 
     def digest(self):
@@ -91,7 +91,7 @@ class _Hash(object):
             _ffi.memmove(obj, self._native_object, self._native_size)
 
             ret = self._final(obj, result)
-            if ret < 0:
+            if ret < 0:  # pragma: no cover
                 raise WolfCryptError("Hash finalize error (%d)" % ret)
 
         return _ffi.buffer(result, self.digest_size)[:]
@@ -212,7 +212,7 @@ class _Hmac(_Hash):
 
         self._native_object = _ffi.new(self._native_type)
         ret = self._init(self._type, key)
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("Hmac init error (%d)" % ret)
 
         if string:

@@ -34,7 +34,7 @@ class Random(object):
         self.native_object = _ffi.new("WC_RNG *")
 
         ret = _lib.wc_InitRng(self.native_object)
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             self.native_object = None
             raise WolfCryptError("RNG init error (%d)" % ret)
 
@@ -42,7 +42,7 @@ class Random(object):
         if self.native_object:
             try:
                 _lib.wc_FreeRng(self.native_object)
-            except AttributeError:
+            except AttributeError:  # pragma: no cover
                 # Can occur during interpreter shutdown
                 pass
 
@@ -53,7 +53,7 @@ class Random(object):
         result = _ffi.new('byte[1]')
 
         ret = _lib.wc_RNG_GenerateByte(self.native_object, result)
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("RNG generate byte error (%d)" % ret)
 
         return _ffi.buffer(result, 1)[:]
@@ -65,7 +65,7 @@ class Random(object):
         result = _ffi.new('byte[%d]' % length)
 
         ret = _lib.wc_RNG_GenerateBlock(self.native_object, result, length)
-        if ret < 0:
+        if ret < 0:  # pragma: no cover
             raise WolfCryptError("RNG generate block error (%d)" % ret)
 
         return _ffi.buffer(result, length)[:]

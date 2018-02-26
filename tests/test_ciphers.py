@@ -122,7 +122,13 @@ def test_block_cipher(cipher_cls, vectors):
         cipher_cls.new(key[:-1], MODE_CBC, iv)  # invalid key length
 
     with pytest.raises(ValueError):
-        cipher_cls.new(key, MODE_ECB, iv)       # invalid mode
+        cipher_cls.new(key, -1, iv)             # invalid mode
+
+    with pytest.raises(ValueError):
+        cipher_cls.new(key, MODE_ECB, iv)       # unsuported mode
+
+    with pytest.raises(ValueError):
+        cipher_cls.new(key, MODE_CBC, None)     # invalid iv
 
     with pytest.raises(ValueError):
         cipher_cls.new(key, MODE_CBC, iv[:-1])  # invalid iv length
@@ -244,6 +250,9 @@ def test_new_ecc_raises(vectors):
     with pytest.raises(WolfCryptError):
         EccPublic(vectors[EccPrivate].key)        # invalid key type
 
+    with pytest.raises(WolfCryptError):           # invalid key size
+        EccPrivate.make_key(1024)
+
 
 def test_key_encoding(vectors):
     priv = EccPrivate()
@@ -259,6 +268,7 @@ def test_key_encoding(vectors):
 def test_x963(ecc_private, ecc_public):
     assert ecc_private.export_x963() == ecc_public.export_x963()
 
+
 def test_ecc_sign_verify(ecc_private, ecc_public):
     plaintext = "Everyone gets Friday off."
 
@@ -267,6 +277,10 @@ def test_ecc_sign_verify(ecc_private, ecc_public):
 
     assert len(signature) <= ecc_private.max_signature_size
     assert ecc_public.verify(signature, plaintext)
+
+    # invalid signature
+    with pytest.raises(WolfCryptError):
+        ecc_public.verify(signature[:-1], plaintext)
 
     # private object holds both private and public info, so it can also verify
     # using the known public key.
@@ -280,8 +294,21 @@ def test_ecc_sign_verify(ecc_private, ecc_public):
     ecc_x963.import_x963(ecc_private.export_x963())
     assert ecc_x963.verify(signature, plaintext)
 
+    ecc_x963 = EccPublic()
+    with pytest.raises(WolfCryptError):
+        ecc_x963.import_x963(ecc_public.export_x963()[:-1])
+
+
 def test_ecc_make_shared_secret():
     a = EccPrivate.make_key(32)
-    b = EccPrivate.make_key(32)
+    a_pub = EccPublic()
+    a_pub.import_x963(a.export_x963())
 
-    assert a.shared_secret(b) == b.shared_secret(a)
+    b = EccPrivate.make_key(32)
+    b_pub = EccPublic()
+    b_pub.import_x963(b.export_x963())
+
+    assert a.shared_secret(b) == \
+           b.shared_secret(a) == \
+           a.shared_secret(b_pub) == \
+           b.shared_secret(a_pub)
