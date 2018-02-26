@@ -1,0 +1,5 @@
+[run]
+omit =
+  */_build_ffi.py
+  */_build_wolfssl.py
+  */_ffi.py
