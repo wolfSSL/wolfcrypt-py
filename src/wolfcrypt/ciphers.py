@@ -60,15 +60,18 @@ class _Cipher(object):
 
         if self.key_size:
             if self.key_size != len(key):
-                raise ValueError("key must be %d in length" % self.key_size)
+                raise ValueError("key must be %d in length, not %d" %
+                                 (self.key_size, len(key)))
         elif self._key_sizes:
             if len(key) not in self._key_sizes:
-                raise ValueError("key must be %s in length" % self._key_sizes)
+                raise ValueError("key must be %s in length, not %d" %
+                                 (self._key_sizes, len(key)))
         elif not key:  # pragma: no cover
                 raise ValueError("key must not be 0 in length")
 
         if IV is not None and len(IV) != self.block_size:
-            raise ValueError("IV must be %d in length" % self.block_size)
+            raise ValueError("IV must be %d in length, not %d" %
+                             (self.block_size, len(IV)))
 
         self._native_object = _ffi.new(self._native_type)
         self._enc = None
@@ -97,10 +100,12 @@ class _Cipher(object):
     def encrypt(self, string):
         """
         Encrypts a non-empty string, using the key-dependent data in
-        the object, and with the appropriate feedback mode. The
-        string's length must be an exact multiple of the algorithm's
-        block size or, in CFB mode, of the segment size. Returns a
-        string containing the ciphertext.
+        the object, and with the appropriate feedback mode.
+        
+        The string's length must be an exact multiple of the algorithm's
+        block size or, in CFB mode, of the segment size.
+        
+        Returns a string containing the ciphertext.
         """
         string = t2b(string)
 
@@ -124,10 +129,12 @@ class _Cipher(object):
     def decrypt(self, string):
         """
         Decrypts **string**, using the key-dependent data in the
-        object and with the appropriate feedback mode. The string's
-        length must be an exact multiple of the algorithm's block
-        size or, in CFB mode, of the segment size.  Returns a string
-        containing the plaintext.
+        object and with the appropriate feedback mode.
+        
+        The string's length must be an exact multiple of the algorithm's
+        block size or, in CFB mode, of the segment size.
+        
+        Returns a string containing the plaintext.
         """
         string = t2b(string)
 
@@ -376,6 +383,9 @@ class EccPublic(_Ecc):
             self.decode_key(key)
 
     def decode_key(self, key):
+        """
+        Decodes an ECC public key from an ASN sequence.
+        """
         key = t2b(key)
 
         idx = _ffi.new("word32*")
@@ -392,6 +402,11 @@ class EccPublic(_Ecc):
                 "Key decode error (%d)" % self.max_signature_size)
 
     def encode_key(self, with_curve=True):
+        """
+        Encodes the ECC public key in an ASN sequence.
+
+        Returns the encoded key.
+        """
         key = _ffi.new("byte[%d]" % (self.size * 4))
 
         ret = _lib.wc_EccPublicKeyToDer(self.native_object, key, len(key),
@@ -402,11 +417,19 @@ class EccPublic(_Ecc):
         return _ffi.buffer(key, ret)[:]
 
     def import_x963(self, x963):
+        """
+        Imports an ECC public key in ANSI X9.63 format.
+        """
         ret = _lib.wc_ecc_import_x963(x963, len(x963), self.native_object)
         if ret != 0:
             raise WolfCryptError("x963 import error (%d)" % ret)
 
     def export_x963(self):
+        """
+        Exports the public key data of the object in ANSI X9.63 format.
+
+        Returns the exported key.
+        """
         x963 = _ffi.new("byte[%d]" % (self.size * 4))
         x963_size = _ffi.new("word32[1]")
         x963_size[0] = self.size * 4
@@ -419,12 +442,9 @@ class EccPublic(_Ecc):
 
     def verify(self, signature, data):
         """
-        Verifies **signature**, using the public key data in the
-        object. The signature's length must be equal to:
+        Verifies **signature**, using the public key data in the object.
 
-            **self.output_size**
-
-        Returns a string containing the plaintext.
+        Returns **True** in case of a valid signature, otherwise **False**.
         """
         data = t2b(data)
         status = _ffi.new("int[1]")
@@ -442,6 +462,9 @@ class EccPublic(_Ecc):
 class EccPrivate(EccPublic):
     @classmethod
     def make_key(cls, size, rng=Random()):
+        """
+        Generates a new key pair of desired length **size**.
+        """
         ecc = cls()
 
         ret = _lib.wc_ecc_make_key(rng.native_object, size, ecc.native_object)
@@ -451,6 +474,9 @@ class EccPrivate(EccPublic):
         return ecc
 
     def decode_key(self, key):
+        """
+        Decodes an ECC private key from an ASN sequence.
+        """
         key = t2b(key)
 
         idx = _ffi.new("word32*")
@@ -467,6 +493,11 @@ class EccPrivate(EccPublic):
                 "Key decode error (%d)" % self.max_signature_size)
 
     def encode_key(self):
+        """
+        Encodes the ECC private key in an ASN sequence.
+
+        Returns the encoded key.
+        """
         key = _ffi.new("byte[%d]" % (self.size * 4))
 
         ret = _lib.wc_EccKeyToDer(self.native_object, key, len(key))
@@ -476,6 +507,12 @@ class EccPrivate(EccPublic):
         return _ffi.buffer(key, ret)[:]
 
     def shared_secret(self, peer):
+        """
+        Generates a new secret key using the private key data in the object
+        and the peer's public key.
+
+        Returns the shared secret.
+        """
         shared_secret = _ffi.new("byte[%d]" % self.max_signature_size)
         secret_size = _ffi.new("word32[1]")
         secret_size[0] = self.max_signature_size
@@ -492,11 +529,8 @@ class EccPrivate(EccPublic):
     def sign(self, plaintext, rng=Random()):
         """
         Signs **plaintext**, using the private key data in the object.
-        The plaintext's length must not be greater than:
 
-            **self.output_size - self.RSA_MIN_PAD_SIZE**
-
-        Returns a string containing the signature.
+        Returns the signature.
         """
         plaintext = t2b(plaintext)
         signature = _ffi.new("byte[%d]" % self.max_signature_size)

@@ -9,8 +9,8 @@ one for data decryption and signature verification.
 
 ``wolfcrypt`` provides access to the following **Asymmetric Key Ciphers**:
 
-Asymmetric Key Encryption Classes
----------------------------------
+RSA
+---
 
 .. autoclass:: RsaPublic
     :members:
@@ -20,9 +20,8 @@ Asymmetric Key Encryption Classes
     :members:
     :inherited-members:
 
-
 Example
--------
+~~~~~~~
 
     >>> from wolfcrypt.ciphers import RsaPrivate, RsaPublic
     >>> from wolfcrypt.utils import h2b
@@ -72,3 +71,14 @@ Example
     >>>
     >>> pub.verify(signature)
     b'Everyone gets Friday off.'
+
+ECC
+---
+
+.. autoclass:: EccPublic
+    :members:
+    :inherited-members:
+
+.. autoclass:: EccPrivate
+    :members:
+    :inherited-members:
