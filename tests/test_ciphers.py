@@ -308,7 +308,7 @@ def test_ecc_make_shared_secret():
     b_pub = EccPublic()
     b_pub.import_x963(b.export_x963())
 
-    assert a.shared_secret(b) == \
-           b.shared_secret(a) == \
-           a.shared_secret(b_pub) == \
-           b.shared_secret(a_pub)
+    assert a.shared_secret(b) \
+        == b.shared_secret(a) \
+        == a.shared_secret(b_pub) \
+        == b.shared_secret(a_pub)

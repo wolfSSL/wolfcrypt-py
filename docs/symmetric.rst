@@ -7,17 +7,25 @@ Symmetric Key Algorithms
 cryptographic key** for both encryption and decryption of data.
 This operation is also known as **Symmetric Key Encryption**.
 
-``wolfcrypt`` provides access to the following **Symmetric Key Ciphers**:
+Symmetric Key Encryption Classes
+--------------------------------
+
+Interface
+~~~~~~~~~
+
+All **Symmetric Key Ciphers** available in this module implements the following
+interface:
+
+.. autoclass:: _Cipher
+    :members:
 
 AES
----
+~~~
 
 .. autoclass:: Aes
     :members:
-    :inherited-members:
 
-Example
-~~~~~~~
+**Example:**
 
 .. doctest::
 
@@ -31,14 +39,12 @@ Example
     b'now is the time '
 
 Triple DES
-----------
+~~~~~~~~~~
 
 .. autoclass:: Des3
     :members:
-    :inherited-members:
 
-Example
-~~~~~~~
+**Example:**
 
 .. doctest::
 

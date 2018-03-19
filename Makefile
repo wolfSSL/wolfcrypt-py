@@ -49,6 +49,7 @@ clean-test: ## remove test and coverage artifacts
 
 lint: ## check style with flake8
 	flake8 src tests
+	pylint src tests/*
 
 test: install ## run tests quickly with the default Python
 	py.test tests

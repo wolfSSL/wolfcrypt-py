@@ -20,8 +20,7 @@ RSA
     :members:
     :inherited-members:
 
-Example
-~~~~~~~
+**Example:**
 
     >>> from wolfcrypt.ciphers import RsaPrivate, RsaPublic
     >>> from wolfcrypt.utils import h2b

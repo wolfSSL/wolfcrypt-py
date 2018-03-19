@@ -67,7 +67,7 @@ class _Cipher(object):
                 raise ValueError("key must be %s in length, not %d" %
                                  (self._key_sizes, len(key)))
         elif not key:  # pragma: no cover
-                raise ValueError("key must not be 0 in length")
+            raise ValueError("key must not be 0 in length")
 
         if IV is not None and len(IV) != self.block_size:
             raise ValueError("IV must be %d in length, not %d" %
@@ -101,10 +101,10 @@ class _Cipher(object):
         """
         Encrypts a non-empty string, using the key-dependent data in
         the object, and with the appropriate feedback mode.
-        
+
         The string's length must be an exact multiple of the algorithm's
         block size or, in CFB mode, of the segment size.
-        
+
         Returns a string containing the ciphertext.
         """
         string = t2b(string)
@@ -130,10 +130,10 @@ class _Cipher(object):
         """
         Decrypts **string**, using the key-dependent data in the
         object and with the appropriate feedback mode.
-        
+
         The string's length must be an exact multiple of the algorithm's
         block size or, in CFB mode, of the segment size.
-        
+
         Returns a string containing the plaintext.
         """
         string = t2b(string)
@@ -436,7 +436,7 @@ class EccPublic(_Ecc):
 
         ret = _lib.wc_ecc_export_x963(self.native_object, x963, x963_size)
         if ret != 0:  # pragma: no cover
-            raise WolfCryptError("x963 export error (%d)" % ret) 
+            raise WolfCryptError("x963 export error (%d)" % ret)
 
         return _ffi.buffer(x963, x963_size[0])[:]
 
