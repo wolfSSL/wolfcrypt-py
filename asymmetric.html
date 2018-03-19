@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Asymmetric Key Algorithms &mdash; wolfcrypt Python 3.13.0-1 documentation</title>
+  <title>Asymmetric Key Algorithms &mdash; wolfcrypt Python 3.14.0-1 documentation</title>
   
 
   
@@ -35,7 +35,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="wolfcrypt Python 3.13.0-1 documentation" href="index.html"/>
+    <link rel="top" title="wolfcrypt Python 3.14.0-1 documentation" href="index.html"/>
         <link rel="next" title="Message Digests" href="digest.html"/>
         <link rel="prev" title="Symmetric Key Algorithms" href="symmetric.html"/> 
 
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                3.13.0-1
+                3.14.0-1
               </div>
             
           
@@ -93,8 +93,8 @@
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="symmetric.html">Symmetric Key Algorithms</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Asymmetric Key Algorithms</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#asymmetric-key-encryption-classes">Asymmetric Key Encryption Classes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#rsa">RSA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ecc">ECC</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="digest.html">Message Digests</a></li>
@@ -168,9 +168,9 @@
 <p><strong>Asymmetric key algorithms</strong> are encryption algorithms that use <strong>a pair
 of cryptographic keys</strong>, one for data encryption and signing and the other
 one for data decryption and signature verification.</p>
-<p><code class="docutils literal"><span class="pre">wolfcrypt</span></code> provides access to the following <strong>Asymmetric Key Ciphers</strong>:</p>
-<div class="section" id="asymmetric-key-encryption-classes">
-<h2>Asymmetric Key Encryption Classes<a class="headerlink" href="#asymmetric-key-encryption-classes" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">wolfcrypt</span></code> provides access to the following <strong>Asymmetric Key Ciphers</strong>:</p>
+<div class="section" id="rsa">
+<h2>RSA<a class="headerlink" href="#rsa" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="wolfcrypt.ciphers.RsaPublic">
 <em class="property">class </em><code class="descclassname">wolfcrypt.ciphers.</code><code class="descname">RsaPublic</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPublic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPublic" title="Permalink to this definition">¶</a></dt>
@@ -210,6 +210,16 @@ object. The ciphertext’s length must be equal to:</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="wolfcrypt.ciphers.RsaPrivate.sign">
+<code class="descname">sign</code><span class="sig-paren">(</span><em>plaintext</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPrivate.sign"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate.sign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Signs <strong>plaintext</strong>, using the private key data in the object.
+The plaintext’s length must not be greater than:</p>
+<blockquote>
+<div><strong>self.output_size - self.RSA_MIN_PAD_SIZE</strong></div></blockquote>
+<p>Returns a string containing the signature.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="wolfcrypt.ciphers.RsaPrivate.encrypt">
 <code class="descname">encrypt</code><span class="sig-paren">(</span><em>plaintext</em><span class="sig-paren">)</span><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate.encrypt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Encrypts <strong>plaintext</strong>, using the public key data in the
@@ -229,22 +239,10 @@ object. The signature’s length must be equal to:</p>
 <p>Returns a string containing the plaintext.</p>
 </dd></dl>
 
-<dl class="method">
-<dt id="wolfcrypt.ciphers.RsaPrivate.sign">
-<code class="descname">sign</code><span class="sig-paren">(</span><em>plaintext</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#RsaPrivate.sign"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.RsaPrivate.sign" title="Permalink to this definition">¶</a></dt>
-<dd><p>Signs <strong>plaintext</strong>, using the private key data in the object.
-The plaintext’s length must not be greater than:</p>
-<blockquote>
-<div><strong>self.output_size - self.RSA_MIN_PAD_SIZE</strong></div></blockquote>
-<p>Returns a string containing the signature.</p>
 </dd></dl>
 
-</dd></dl>
-
-</div>
-<div class="section" id="example">
-<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">wolfcrypt.ciphers</span> <span class="k">import</span> <span class="n">RsaPrivate</span><span class="p">,</span> <span class="n">RsaPublic</span>
+<p><strong>Example:</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">wolfcrypt.ciphers</span> <span class="k">import</span> <span class="n">RsaPrivate</span><span class="p">,</span> <span class="n">RsaPublic</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">wolfcrypt.utils</span> <span class="k">import</span> <span class="n">h2b</span>
 <span class="go">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">private</span> <span class="o">=</span> <span class="s2">&quot;3082025C02010002818100BC730EA849F374A2A9EF18A5DA559921F9C8ECB36D&quot;</span> \
@@ -295,6 +293,106 @@ The plaintext’s length must not be greater than:</p>
 </pre></div>
 </div>
 </div>
+<div class="section" id="ecc">
+<h2>ECC<a class="headerlink" href="#ecc" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="wolfcrypt.ciphers.EccPublic">
+<em class="property">class </em><code class="descclassname">wolfcrypt.ciphers.</code><code class="descname">EccPublic</code><span class="sig-paren">(</span><em>key=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPublic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPublic" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="wolfcrypt.ciphers.EccPublic.decode_key">
+<code class="descname">decode_key</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPublic.decode_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPublic.decode_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decodes an ECC public key from an ASN sequence.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.EccPublic.encode_key">
+<code class="descname">encode_key</code><span class="sig-paren">(</span><em>with_curve=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPublic.encode_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPublic.encode_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encodes the ECC public key in an ASN sequence.</p>
+<p>Returns the encoded key.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.EccPublic.import_x963">
+<code class="descname">import_x963</code><span class="sig-paren">(</span><em>x963</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPublic.import_x963"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPublic.import_x963" title="Permalink to this definition">¶</a></dt>
+<dd><p>Imports an ECC public key in ANSI X9.63 format.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.EccPublic.export_x963">
+<code class="descname">export_x963</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPublic.export_x963"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPublic.export_x963" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exports the public key data of the object in ANSI X9.63 format.</p>
+<p>Returns the exported key.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.EccPublic.verify">
+<code class="descname">verify</code><span class="sig-paren">(</span><em>signature</em>, <em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPublic.verify"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPublic.verify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verifies <strong>signature</strong>, using the public key data in the object.</p>
+<p>Returns <strong>True</strong> in case of a valid signature, otherwise <strong>False</strong>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="wolfcrypt.ciphers.EccPrivate">
+<em class="property">class </em><code class="descclassname">wolfcrypt.ciphers.</code><code class="descname">EccPrivate</code><span class="sig-paren">(</span><em>key=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPrivate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPrivate" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="classmethod">
+<dt id="wolfcrypt.ciphers.EccPrivate.make_key">
+<em class="property">classmethod </em><code class="descname">make_key</code><span class="sig-paren">(</span><em>size</em>, <em>rng=&lt;wolfcrypt.random.Random object&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPrivate.make_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPrivate.make_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a new key pair of desired length <strong>size</strong>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.EccPrivate.decode_key">
+<code class="descname">decode_key</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPrivate.decode_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPrivate.decode_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decodes an ECC private key from an ASN sequence.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.EccPrivate.encode_key">
+<code class="descname">encode_key</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPrivate.encode_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPrivate.encode_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encodes the ECC private key in an ASN sequence.</p>
+<p>Returns the encoded key.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.EccPrivate.shared_secret">
+<code class="descname">shared_secret</code><span class="sig-paren">(</span><em>peer</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPrivate.shared_secret"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPrivate.shared_secret" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a new secret key using the private key data in the object
+and the peer’s public key.</p>
+<p>Returns the shared secret.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.EccPrivate.export_x963">
+<code class="descname">export_x963</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#wolfcrypt.ciphers.EccPrivate.export_x963" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exports the public key data of the object in ANSI X9.63 format.</p>
+<p>Returns the exported key.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.EccPrivate.import_x963">
+<code class="descname">import_x963</code><span class="sig-paren">(</span><em>x963</em><span class="sig-paren">)</span><a class="headerlink" href="#wolfcrypt.ciphers.EccPrivate.import_x963" title="Permalink to this definition">¶</a></dt>
+<dd><p>Imports an ECC public key in ANSI X9.63 format.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.EccPrivate.sign">
+<code class="descname">sign</code><span class="sig-paren">(</span><em>plaintext</em>, <em>rng=&lt;wolfcrypt.random.Random object&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#EccPrivate.sign"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.EccPrivate.sign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Signs <strong>plaintext</strong>, using the private key data in the object.</p>
+<p>Returns the signature.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wolfcrypt.ciphers.EccPrivate.verify">
+<code class="descname">verify</code><span class="sig-paren">(</span><em>signature</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#wolfcrypt.ciphers.EccPrivate.verify" title="Permalink to this definition">¶</a></dt>
+<dd><p>Verifies <strong>signature</strong>, using the public key data in the object.</p>
+<p>Returns <strong>True</strong> in case of a valid signature, otherwise <strong>False</strong>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
 </div>
 
 
@@ -341,7 +439,7 @@ The plaintext’s length must not be greater than:</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'3.13.0-1',
+            VERSION:'3.14.0-1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

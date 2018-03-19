@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Symmetric Key Algorithms &mdash; wolfcrypt Python 3.13.0-1 documentation</title>
+  <title>Symmetric Key Algorithms &mdash; wolfcrypt Python 3.14.0-1 documentation</title>
   
 
   
@@ -35,7 +35,7 @@
         <link rel="index" title="Index"
               href="genindex.html"/>
         <link rel="search" title="Search" href="search.html"/>
-    <link rel="top" title="wolfcrypt Python 3.13.0-1 documentation" href="index.html"/>
+    <link rel="top" title="wolfcrypt Python 3.14.0-1 documentation" href="index.html"/>
         <link rel="next" title="Asymmetric Key Algorithms" href="asymmetric.html"/>
         <link rel="prev" title="wolfcrypt: the wolfSSL Crypto Engine" href="index.html"/> 
 
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                3.13.0-1
+                3.14.0-1
               </div>
             
           
@@ -94,10 +94,10 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Symmetric Key Algorithms</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#symmetric-key-encryption-classes">Symmetric Key Encryption Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#interface">Interface</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#classes">Classes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#aes">AES</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#triple-des">Triple DES</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="asymmetric.html">Asymmetric Key Algorithms</a></li>
@@ -170,9 +170,8 @@
   <div class="section" id="module-wolfcrypt.ciphers">
 <span id="symmetric-key-algorithms"></span><h1>Symmetric Key Algorithms<a class="headerlink" href="#module-wolfcrypt.ciphers" title="Permalink to this headline">¶</a></h1>
 <p><strong>Symmetric key algorithms</strong> are encryption algorithms that use the <strong>same
-cryptographic keys</strong> for both encryption and decryption of data.
+cryptographic key</strong> for both encryption and decryption of data.
 This operation is also known as <strong>Symmetric Key Encryption</strong>.</p>
-<p><code class="docutils literal"><span class="pre">wolfcrypt</span></code> provides access to the following <strong>Symmetric Key Ciphers</strong>:</p>
 <div class="section" id="symmetric-key-encryption-classes">
 <h2>Symmetric Key Encryption Classes<a class="headerlink" href="#symmetric-key-encryption-classes" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="interface">
@@ -200,27 +199,27 @@ being raised.</p>
 <dt id="wolfcrypt.ciphers._Cipher.encrypt">
 <code class="descname">encrypt</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#_Cipher.encrypt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers._Cipher.encrypt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Encrypts a non-empty string, using the key-dependent data in
-the object, and with the appropriate feedback mode. The
-string’s length must be an exact multiple of the algorithm’s
-block size or, in CFB mode, of the segment size. Returns a
-string containing the ciphertext.</p>
+the object, and with the appropriate feedback mode.</p>
+<p>The string’s length must be an exact multiple of the algorithm’s
+block size or, in CFB mode, of the segment size.</p>
+<p>Returns a string containing the ciphertext.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="wolfcrypt.ciphers._Cipher.decrypt">
 <code class="descname">decrypt</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#_Cipher.decrypt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers._Cipher.decrypt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Decrypts <strong>string</strong>, using the key-dependent data in the
-object and with the appropriate feedback mode. The string’s
-length must be an exact multiple of the algorithm’s block
-size or, in CFB mode, of the segment size.  Returns a string
-containing the plaintext.</p>
+object and with the appropriate feedback mode.</p>
+<p>The string’s length must be an exact multiple of the algorithm’s
+block size or, in CFB mode, of the segment size.</p>
+<p>Returns a string containing the plaintext.</p>
 </dd></dl>
 
 </dd></dl>
 
 </div>
-<div class="section" id="classes">
-<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="aes">
+<h3>AES<a class="headerlink" href="#aes" title="Permalink to this headline">¶</a></h3>
 <dl class="class">
 <dt id="wolfcrypt.ciphers.Aes">
 <em class="property">class </em><code class="descclassname">wolfcrypt.ciphers.</code><code class="descname">Aes</code><span class="sig-paren">(</span><em>key</em>, <em>mode</em>, <em>IV=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#Aes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.Aes" title="Permalink to this definition">¶</a></dt>
@@ -228,6 +227,20 @@ containing the plaintext.</p>
 a symmetric-key cipher standardized by <strong>NIST</strong>.</p>
 </dd></dl>
 
+<p><strong>Example:</strong></p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">wolfcrypt.ciphers</span> <span class="kn">import</span> <span class="n">Aes</span><span class="p">,</span> <span class="n">MODE_CBC</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cipher</span> <span class="o">=</span> <span class="n">Aes</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;0123456789abcdef&#39;</span><span class="p">,</span> <span class="n">MODE_CBC</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;1234567890abcdef&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ciphertext</span> <span class="o">=</span> <span class="n">cipher</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="s1">&#39;now is the time &#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ciphertext</span>
+<span class="go">b&#39;\x95\x94\x92W_B\x81S,\xcc\x9dFw\xa23\xcb&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cipher</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">ciphertext</span><span class="p">)</span>
+<span class="go">b&#39;now is the time &#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="triple-des">
+<h3>Triple DES<a class="headerlink" href="#triple-des" title="Permalink to this headline">¶</a></h3>
 <dl class="class">
 <dt id="wolfcrypt.ciphers.Des3">
 <em class="property">class </em><code class="descclassname">wolfcrypt.ciphers.</code><code class="descname">Des3</code><span class="sig-paren">(</span><em>key</em>, <em>mode</em>, <em>IV=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wolfcrypt/ciphers.html#Des3"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wolfcrypt.ciphers.Des3" title="Permalink to this definition">¶</a></dt>
@@ -237,19 +250,17 @@ cipher, which applies the <strong>Data Encryption Standard</strong> (DES)
 cipher algorithm three times to each data block.</p>
 </dd></dl>
 
-</div>
-</div>
-<div class="section" id="example">
-<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">wolfcrypt.ciphers</span> <span class="k">import</span> <span class="n">Aes</span><span class="p">,</span> <span class="n">MODE_CBC</span>
+<p><strong>Example:</strong></p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">wolfcrypt.ciphers</span> <span class="kn">import</span> <span class="n">Des3</span><span class="p">,</span> <span class="n">MODE_CBC</span>
 <span class="go">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">cipher</span> <span class="o">=</span> <span class="n">Aes</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;0123456789abcdef&#39;</span><span class="p">,</span> <span class="n">MODE_CBC</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;1234567890abcdef&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cipher</span> <span class="o">=</span> <span class="n">Des3</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;0123456789abcdeffedeba98&#39;</span><span class="p">,</span> <span class="n">MODE_CBC</span><span class="p">,</span> <span class="sa">b</span><span class="s1">&#39;12345678&#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ciphertext</span> <span class="o">=</span> <span class="n">cipher</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="s1">&#39;now is the time &#39;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">ciphertext</span>
-<span class="go">b&#39;\x95\x94\x92W_B\x81S,\xcc\x9dFw\xa23\xcb&#39;</span>
+<span class="go">b&#39;l\x04\xd0$\xe8\x0c1\xd6\x1b\x07}V\xa6ty\xe8&#39;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">cipher</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">ciphertext</span><span class="p">)</span>
 <span class="go">b&#39;now is the time &#39;</span>
 </pre></div>
+</div>
 </div>
 </div>
 </div>
@@ -298,7 +309,7 @@ cipher algorithm three times to each data block.</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'3.13.0-1',
+            VERSION:'3.14.0-1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,

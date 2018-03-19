@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>wolfcrypt.hashes &mdash; wolfcrypt Python 3.13.0-1 documentation</title>
+  <title>wolfcrypt.hashes &mdash; wolfcrypt Python 3.14.0-1 documentation</title>
   
 
   
@@ -35,7 +35,7 @@
         <link rel="index" title="Index"
               href="../../genindex.html"/>
         <link rel="search" title="Search" href="../../search.html"/>
-    <link rel="top" title="wolfcrypt Python 3.13.0-1 documentation" href="../../index.html"/>
+    <link rel="top" title="wolfcrypt Python 3.14.0-1 documentation" href="../../index.html"/>
         <link rel="up" title="Module code" href="../index.html"/> 
 
   
@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                3.13.0-1
+                3.14.0-1
               </div>
             
           
@@ -196,7 +196,7 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_native_object</span> <span class="o">=</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_native_type</span><span class="p">)</span>
         <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_init</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Hash init error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">string</span><span class="p">:</span>
@@ -209,8 +209,8 @@
 <span class="sd">        **string** parameter, if supplied, will be immediately</span>
 <span class="sd">        hashed into the object&#39;s starting state, as if</span>
 <span class="sd">        obj.update(string) was called.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">string</span><span class="p">)</span></div>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
 
 <div class="viewcode-block" id="_Hash.copy"><a class="viewcode-back" href="../../digest.html#wolfcrypt.hashes._Hash.copy">[docs]</a>    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -222,8 +222,8 @@
         <span class="n">_ffi</span><span class="o">.</span><span class="n">memmove</span><span class="p">(</span><span class="n">copy</span><span class="o">.</span><span class="n">_native_object</span><span class="p">,</span>  <span class="c1"># pylint: disable=protected-access</span>
                      <span class="bp">self</span><span class="o">.</span><span class="n">_native_object</span><span class="p">,</span>
                      <span class="bp">self</span><span class="o">.</span><span class="n">_native_size</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">copy</span></div>
+</div>
+        <span class="k">return</span> <span class="n">copy</span>
 
 <div class="viewcode-block" id="_Hash.update"><a class="viewcode-back" href="../../digest.html#wolfcrypt.hashes._Hash.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -234,8 +234,8 @@
         <span class="n">string</span> <span class="o">=</span> <span class="n">t2b</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
 
         <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="n">string</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Hash update error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span></div>
+            <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Hash update error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
 <div class="viewcode-block" id="_Hash.digest"><a class="viewcode-back" href="../../digest.html#wolfcrypt.hashes._Hash.digest">[docs]</a>    <span class="k">def</span> <span class="nf">digest</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -252,10 +252,10 @@
             <span class="n">_ffi</span><span class="o">.</span><span class="n">memmove</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_native_object</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_native_size</span><span class="p">)</span>
 
             <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_final</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
                 <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Hash finalize error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">digest_size</span><span class="p">)[:]</span></div>
+</div>
+        <span class="k">return</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">digest_size</span><span class="p">)[:]</span>
 
 <div class="viewcode-block" id="_Hash.hexdigest"><a class="viewcode-back" href="../../digest.html#wolfcrypt.hashes._Hash.hexdigest">[docs]</a>    <span class="k">def</span> <span class="nf">hexdigest</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -263,8 +263,8 @@
 <span class="sd">        containing hexadecimal digits. Lowercase letters are used</span>
 <span class="sd">        for the digits &#39;a&#39; through &#39;f&#39;. Like the .digest() method,</span>
 <span class="sd">        this method doesn&#39;t alter the object.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">b2h</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">digest</span><span class="p">())</span></div></div>
+<span class="sd">        &quot;&quot;&quot;</span></div></div>
+        <span class="k">return</span> <span class="n">b2h</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">digest</span><span class="p">())</span>
 
 
 <div class="viewcode-block" id="Sha"><a class="viewcode-back" href="../../digest.html#wolfcrypt.hashes.Sha">[docs]</a><span class="k">class</span> <span class="nc">Sha</span><span class="p">(</span><span class="n">_Hash</span><span class="p">):</span>
@@ -283,8 +283,8 @@
     <span class="k">def</span> <span class="nf">_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_ShaUpdate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_native_object</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
 
-    <span class="k">def</span> <span class="nf">_final</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_ShaFinal</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">_final</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span></div>
+        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_ShaFinal</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Sha256"><a class="viewcode-back" href="../../digest.html#wolfcrypt.hashes.Sha256">[docs]</a><span class="k">class</span> <span class="nc">Sha256</span><span class="p">(</span><span class="n">_Hash</span><span class="p">):</span>
@@ -304,8 +304,8 @@
     <span class="k">def</span> <span class="nf">_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Sha256Update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_native_object</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
 
-    <span class="k">def</span> <span class="nf">_final</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Sha256Final</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">_final</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span></div>
+        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Sha256Final</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Sha384"><a class="viewcode-back" href="../../digest.html#wolfcrypt.hashes.Sha384">[docs]</a><span class="k">class</span> <span class="nc">Sha384</span><span class="p">(</span><span class="n">_Hash</span><span class="p">):</span>
@@ -325,8 +325,8 @@
     <span class="k">def</span> <span class="nf">_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Sha384Update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_native_object</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
 
-    <span class="k">def</span> <span class="nf">_final</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Sha384Final</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">_final</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span></div>
+        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Sha384Final</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Sha512"><a class="viewcode-back" href="../../digest.html#wolfcrypt.hashes.Sha512">[docs]</a><span class="k">class</span> <span class="nc">Sha512</span><span class="p">(</span><span class="n">_Hash</span><span class="p">):</span>
@@ -346,8 +346,8 @@
     <span class="k">def</span> <span class="nf">_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Sha512Update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_native_object</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
 
-    <span class="k">def</span> <span class="nf">_final</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Sha512Final</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">_final</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span></div>
+        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_Sha512Final</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
 
 
 <span class="c1"># Hmac types</span>
@@ -373,7 +373,7 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_native_object</span> <span class="o">=</span> <span class="n">_ffi</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_native_type</span><span class="p">)</span>
         <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_init</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_type</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
             <span class="k">raise</span> <span class="n">WolfCryptError</span><span class="p">(</span><span class="s2">&quot;Hmac init error (</span><span class="si">%d</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">ret</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">string</span><span class="p">:</span>
@@ -387,8 +387,8 @@
 <span class="sd">        to use. The optional **string** parameter, if supplied,</span>
 <span class="sd">        will be immediately hashed into the object&#39;s starting</span>
 <span class="sd">        state, as if obj.update(string) was called.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">string</span><span class="p">)</span></div>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">string</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hmac</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_HmacSetKey</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_native_object</span><span class="p">,</span> <span class="n">hmac</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
@@ -396,8 +396,8 @@
     <span class="k">def</span> <span class="nf">_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_HmacUpdate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_native_object</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
 
-    <span class="k">def</span> <span class="nf">_final</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_HmacFinal</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span></div>
+    <span class="k">def</span> <span class="nf">_final</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">):</span></div>
+        <span class="k">return</span> <span class="n">_lib</span><span class="o">.</span><span class="n">wc_HmacFinal</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="HmacSha"><a class="viewcode-back" href="../../mac.html#wolfcrypt.hashes.HmacSha">[docs]</a><span class="k">class</span> <span class="nc">HmacSha</span><span class="p">(</span><span class="n">_Hmac</span><span class="p">):</span>
@@ -407,8 +407,8 @@
 
 <span class="sd">    It produces a [ **512-bit | 64 bytes** ] message digest.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">_type</span> <span class="o">=</span> <span class="n">_TYPE_SHA</span>
-    <span class="n">digest_size</span> <span class="o">=</span> <span class="n">Sha</span><span class="o">.</span><span class="n">digest_size</span></div>
+    <span class="n">_type</span> <span class="o">=</span> <span class="n">_TYPE_SHA</span></div>
+    <span class="n">digest_size</span> <span class="o">=</span> <span class="n">Sha</span><span class="o">.</span><span class="n">digest_size</span>
 
 
 <div class="viewcode-block" id="HmacSha256"><a class="viewcode-back" href="../../mac.html#wolfcrypt.hashes.HmacSha256">[docs]</a><span class="k">class</span> <span class="nc">HmacSha256</span><span class="p">(</span><span class="n">_Hmac</span><span class="p">):</span>
@@ -418,8 +418,8 @@
 
 <span class="sd">    It produces a [ **512-bit | 64 bytes** ] message digest.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">_type</span> <span class="o">=</span> <span class="n">_TYPE_SHA256</span>
-    <span class="n">digest_size</span> <span class="o">=</span> <span class="n">Sha256</span><span class="o">.</span><span class="n">digest_size</span></div>
+    <span class="n">_type</span> <span class="o">=</span> <span class="n">_TYPE_SHA256</span></div>
+    <span class="n">digest_size</span> <span class="o">=</span> <span class="n">Sha256</span><span class="o">.</span><span class="n">digest_size</span>
 
 
 <div class="viewcode-block" id="HmacSha384"><a class="viewcode-back" href="../../mac.html#wolfcrypt.hashes.HmacSha384">[docs]</a><span class="k">class</span> <span class="nc">HmacSha384</span><span class="p">(</span><span class="n">_Hmac</span><span class="p">):</span>
@@ -429,8 +429,8 @@
 
 <span class="sd">    It produces a [ **512-bit | 64 bytes** ] message digest.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">_type</span> <span class="o">=</span> <span class="n">_TYPE_SHA384</span>
-    <span class="n">digest_size</span> <span class="o">=</span> <span class="n">Sha384</span><span class="o">.</span><span class="n">digest_size</span></div>
+    <span class="n">_type</span> <span class="o">=</span> <span class="n">_TYPE_SHA384</span></div>
+    <span class="n">digest_size</span> <span class="o">=</span> <span class="n">Sha384</span><span class="o">.</span><span class="n">digest_size</span>
 
 
 <div class="viewcode-block" id="HmacSha512"><a class="viewcode-back" href="../../mac.html#wolfcrypt.hashes.HmacSha512">[docs]</a><span class="k">class</span> <span class="nc">HmacSha512</span><span class="p">(</span><span class="n">_Hmac</span><span class="p">):</span>
@@ -440,8 +440,8 @@
 
 <span class="sd">    It produces a [ **512-bit | 64 bytes** ] message digest.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">_type</span> <span class="o">=</span> <span class="n">_TYPE_SHA512</span>
-    <span class="n">digest_size</span> <span class="o">=</span> <span class="n">Sha512</span><span class="o">.</span><span class="n">digest_size</span></div>
+    <span class="n">_type</span> <span class="o">=</span> <span class="n">_TYPE_SHA512</span></div>
+    <span class="n">digest_size</span> <span class="o">=</span> <span class="n">Sha512</span><span class="o">.</span><span class="n">digest_size</span>
 </pre></div>
 
            </div>
@@ -478,7 +478,7 @@
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../../',
-            VERSION:'3.13.0-1',
+            VERSION:'3.14.0-1',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true,
