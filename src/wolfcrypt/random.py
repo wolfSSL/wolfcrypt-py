@@ -30,6 +30,7 @@ class Random(object):
     """
     A Cryptographically Secure Pseudo Random Number Generator - CSPRNG
     """
+
     def __init__(self):
         self.native_object = _ffi.new("WC_RNG *")
 
@@ -38,13 +39,12 @@ class Random(object):
             self.native_object = None
             raise WolfCryptError("RNG init error (%d)" % ret)
 
+    # making sure _lib.wc_FreeRng outlives WC_RNG instances
+    _delete = _lib.wc_FreeRng
+
     def __del__(self):
         if self.native_object:
-            try:
-                _lib.wc_FreeRng(self.native_object)
-            except AttributeError:  # pragma: no cover
-                # Can occur during interpreter shutdown
-                pass
+            self._delete(self.native_object)
 
     def byte(self):
         """

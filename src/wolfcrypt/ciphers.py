@@ -225,9 +225,12 @@ class _Rsa(object):  # pylint: disable=too-few-public-methods
         if ret < 0:  # pragma: no cover
             raise WolfCryptError("Key initialization error (%d)" % ret)
 
+    # making sure _lib.wc_FreeRsaKey outlives RsaKey instances
+    _delete = _lib.wc_FreeRsaKey
+
     def __del__(self):
         if self.native_object:
-            _lib.wc_FreeRsaKey(self.native_object)
+            self._delete(self.native_object)
 
 
 class RsaPublic(_Rsa):
@@ -362,9 +365,12 @@ class _Ecc(object):  # pylint: disable=too-few-public-methods
         if ret < 0:  # pragma: no cover
             raise WolfCryptError("Invalid key error (%d)" % ret)
 
+    # making sure _lib.wc_ecc_free outlives ecc_key instances
+    _delete = _lib.wc_ecc_free
+
     def __del__(self):
         if self.native_object:
-            _lib.wc_ecc_free(self.native_object)
+            self._delete(self.native_object)
 
     @property
     def size(self):
