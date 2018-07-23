@@ -63,11 +63,8 @@ target/
 # pyenv python configuration file
 .python-version
 
-# pyenv dist build
-venv_2.7
-venv_3.4
-venv_3.5
-venv_3.6
+# macos `make dist` venvs
+venv_*
 
 # code editor preferences
 .vscode

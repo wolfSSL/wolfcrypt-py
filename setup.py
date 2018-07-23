@@ -85,6 +85,7 @@ setup(
         u"Topic :: Software Development"
     ],
 
+    setup_requires=["cffi"],
     install_requires=["cffi"],
     cmdclass={"build_ext" : cffiBuilder}
 )
