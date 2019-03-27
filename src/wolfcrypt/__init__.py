@@ -24,7 +24,7 @@ __uri__ = "https://github.com/wolfssl/wolfcrypt-py"
 
 # When bumping the C library version, reset the POST count to 0
 
-__wolfssl_version__ = "v3.14.2"
+__wolfssl_version__ = "v4.0.0"
 
 # We're using implicit post releases [PEP 440] to bump package version
 # while maintaining the C library version intact for better reference.
