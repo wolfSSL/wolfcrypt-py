@@ -144,8 +144,6 @@ def make_flags(prefix):
     flags.append("--disable-dh")
 
     # disabling other configs enabled by default
-    flags.append("--disable-filesystem")
-    flags.append("--disable-hashdrbg")
     flags.append("--disable-oldtls")
     flags.append("--disable-oldnames")
     flags.append("--disable-extended-master")
