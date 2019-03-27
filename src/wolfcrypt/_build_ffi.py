@@ -44,6 +44,9 @@ ffi.set_source(
 
     #include <wolfssl/wolfcrypt/rsa.h>
     #include <wolfssl/wolfcrypt/ecc.h>
+    #include <wolfssl/wolfcrypt/ed25519.h>
+    #include <wolfssl/wolfcrypt/curve25519.h>
+
     """,
     include_dirs=[local_path("lib/wolfssl/src")],
     library_dirs=[local_path("lib/wolfssl/{}/{}/lib".format(
@@ -160,6 +163,36 @@ ffi.cdef(
     int wc_ecc_verify_hash(const byte* sig, word32 siglen,
                            const byte* hash, word32 hashlen,
                            int* stat, ecc_key* key);
+
+    typedef struct {...; } ed25519_key;
+    
+    int wc_ed25519_init(ed25519_key* ed25519);
+    void wc_ed25519_free(ed25519_key* ed25519);
+
+    int wc_ed25519_make_key(WC_RNG* rng, int keysize, ed25519_key* key);
+    int wc_ed25519_size(ed25519_key* key);
+    int wc_ed25519_sig_size(ed25519_key* key);
+    int wc_ed25519_sign_msg(const byte* in, word32 inlen, byte* out,
+                        word32 *outlen, ed25519_key* key);
+    int wc_ed25519_verify_msg(const byte* sig, word32 siglen, const byte* msg,
+                          word32 msglen, int* stat, ed25519_key* key);
+    int wc_Ed25519PrivateKeyDecode(const byte*, word32*, ed25519_key*, word32);
+    int wc_Ed25519KeyToDer(ed25519_key*, byte* output, word32 inLen);
+
+    int wc_Ed25519PublicKeyDecode(const byte*, word32*, ed25519_key*, word32);
+    int wc_Ed25519PublicKeyToDer(ed25519_key*, byte* output,
+                             word32 inLen, int with_AlgCurve);
+
+    int wc_ed25519_import_public(const byte* in, word32 inLen, ed25519_key* key);
+    int wc_ed25519_import_private_only(const byte* priv, word32 privSz, ed25519_key* key);
+    int wc_ed25519_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed25519_key* key);
+    int wc_ed25519_export_public(ed25519_key*, byte* out, word32* outLen);
+    int wc_ed25519_export_private_only(ed25519_key* key, byte* out, word32* outLen);
+    int wc_ed25519_export_private(ed25519_key* key, byte* out, word32* outLen);
+    int wc_ed25519_export_key(ed25519_key* key, byte* priv, word32 *privSz, byte* pub, word32 *pubSz);
+    int wc_ed25519_check_key(ed25519_key* key);
+    int wc_ed25519_pub_size(ed25519_key* key);
+    int wc_ed25519_priv_size(ed25519_key* key);
 
     """
 )

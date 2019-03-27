@@ -137,6 +137,9 @@ def make_flags(prefix):
     # asymmetric ciphers
     flags.append("--enable-rsa")
     flags.append("--enable-ecc")
+    flags.append("--enable-ed25519")
+    flags.append("--enable-curve25519")
+    flags.append("--enable-keygen")
 
     flags.append("--disable-dh")
 
