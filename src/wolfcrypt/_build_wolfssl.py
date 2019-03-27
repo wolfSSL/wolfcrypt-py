@@ -127,7 +127,10 @@ def make_flags(prefix):
 
     # hashes and MACs
     flags.append("--enable-sha")
+    flags.append("--enable-sha256")
+    flags.append("--enable-sha384")
     flags.append("--enable-sha512")
+    flags.append("--enable-hkdf")
 
     flags.append("--disable-md5")
     flags.append("--disable-sha224")

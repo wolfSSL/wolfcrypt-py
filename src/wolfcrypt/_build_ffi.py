@@ -90,6 +90,7 @@ ffi.cdef(
 
     typedef struct { ...; } Hmac;
 
+    int wc_HmacInit(Hmac* hmac, void* heap, int devId);
     int wc_HmacSetKey(Hmac*, int, const byte*, word32);
     int wc_HmacUpdate(Hmac*, const byte*, word32);
     int wc_HmacFinal(Hmac*, byte*);
