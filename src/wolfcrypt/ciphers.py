@@ -702,7 +702,7 @@ class Ed25519Private(Ed25519Public):
 
         return _ffi.buffer(key, size[0])[:]
 
-    def sign(self, plaintext, rng=Random()):
+    def sign(self, plaintext):
         """
         Signs **plaintext**, using the private key data in the object.
 
