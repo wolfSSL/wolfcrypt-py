@@ -32,7 +32,7 @@ __wolfssl_version__ = "v4.0.0-stable"
 #
 # MAJOR.MINOR.BUILD-POST
 
-__version__ = __wolfssl_version__[1:] + "-1" # post
+__version__ = "4.0.0-0"
 
 __author__ = "wolfSSL Inc."
 __email__ = "info@wolfssl.com"
