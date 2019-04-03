@@ -127,7 +127,9 @@ def make_flags(prefix):
 
     # hashes and MACs
     flags.append("--enable-sha")
+    flags.append("--enable-sha384")
     flags.append("--enable-sha512")
+    flags.append("--enable-hkdf")
 
     flags.append("--disable-md5")
     flags.append("--disable-sha224")
@@ -137,12 +139,13 @@ def make_flags(prefix):
     # asymmetric ciphers
     flags.append("--enable-rsa")
     flags.append("--enable-ecc")
+    flags.append("--enable-ed25519")
+    flags.append("--enable-curve25519")
+    flags.append("--enable-keygen")
 
     flags.append("--disable-dh")
 
     # disabling other configs enabled by default
-    flags.append("--disable-filesystem")
-    flags.append("--disable-hashdrbg")
     flags.append("--disable-oldtls")
     flags.append("--disable-oldnames")
     flags.append("--disable-extended-master")

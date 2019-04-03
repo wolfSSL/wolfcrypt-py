@@ -80,7 +80,6 @@ def hash_cls(request):
 def hash_new(cls, data=None):
     if cls in [Sha, Sha256, Sha384, Sha512]:
         return cls(data)
-
     return cls("python", data)
 
 

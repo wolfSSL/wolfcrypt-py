@@ -191,10 +191,10 @@ class Sha512(_Hash):
 
 # Hmac types
 
-_TYPE_SHA = 1
-_TYPE_SHA256 = 2
-_TYPE_SHA384 = 5
-_TYPE_SHA512 = 4
+_TYPE_SHA = 4
+_TYPE_SHA256 = 6
+_TYPE_SHA384 = 7
+_TYPE_SHA512 = 8
 _HMAC_TYPES = [_TYPE_SHA, _TYPE_SHA256, _TYPE_SHA384, _TYPE_SHA512]
 
 
@@ -230,7 +230,12 @@ class _Hmac(_Hash):
         return cls(key, string)
 
     def _init(self, hmac, key):
-        return _lib.wc_HmacSetKey(self._native_object, hmac, key, len(key))
+        if _lib.wc_HmacInit(self._native_object, _ffi.NULL, -2) != 0:
+            raise WolfCryptError("wc_HmacInit error")
+        ret = _lib.wc_HmacSetKey(self._native_object, hmac, key, len(key))
+        if ret < 0:
+            raise WolfCryptError("wc_HmacSetKey returned %d" % ret)
+        return ret
 
     def _update(self, data):
         return _lib.wc_HmacUpdate(self._native_object, data, len(data))

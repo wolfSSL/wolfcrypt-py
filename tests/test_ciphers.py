@@ -25,7 +25,7 @@ import pytest
 from wolfcrypt.utils import t2b, h2b
 from wolfcrypt.ciphers import (
     Aes, Des3, MODE_ECB, MODE_CBC, RsaPrivate, RsaPublic,
-    EccPrivate, EccPublic, WolfCryptError
+    EccPrivate, EccPublic, Ed25519Private, Ed25519Public, WolfCryptError
 )
 
 
@@ -95,6 +95,20 @@ def vectors():
                 "0F44509A3DCE9BB7F0C54DF5707BD4EC248E1980EC5A4CA22403622C9BDA"
                 "EFA2351243847616C6569506CC01A9BDF6751A42F7BDA9B236225FC75D7F"
                 "B4"
+            )
+        ),
+        Ed25519Private: TestVector(
+             key = h2b(
+                 "47CD22B276161AA18BA1E0D13DBE84FE4840E4395D784F555A92E8CF739B"
+                 "F86B"
+        #         "8498C65F4841145F9C51E8BFF4504B5527E0D5753964B7CB3C707A2B9747"
+        #         "FC96"
+            )
+        ),
+        Ed25519Public: TestVector(
+            key=h2b(
+                "8498C65F4841145F9C51E8BFF4504B5527E0D5753964B7CB3C707A2B9747"
+                "FC96"
             )
         )
     }
@@ -312,3 +326,53 @@ def test_ecc_make_shared_secret():
         == b.shared_secret(a) \
         == a.shared_secret(b_pub) \
         == b.shared_secret(a_pub)
+
+@pytest.fixture
+def ed25519_private(vectors):
+    return Ed25519Private(vectors[Ed25519Private].key, vectors[Ed25519Public].key)
+
+
+@pytest.fixture
+def ed25519_public(vectors):
+    return Ed25519Public(vectors[Ed25519Public].key)
+
+
+def test_new_ed25519_raises(vectors):
+    with pytest.raises(WolfCryptError):
+        Ed25519Private(vectors[Ed25519Private].key[:-1])  # invalid key length
+
+    with pytest.raises(WolfCryptError):
+        Ed25519Public(vectors[Ed25519Public].key[:-1])    # invalid key length
+
+    with pytest.raises(WolfCryptError):           # invalid key size
+        Ed25519Private.make_key(1024)
+
+
+def test_ed25519_key_encoding(vectors):
+    priv = Ed25519Private()
+    pub = Ed25519Public()
+
+    priv.decode_key(vectors[Ed25519Private].key)
+    pub.decode_key(vectors[Ed25519Public].key)
+
+    assert priv.encode_key() == vectors[Ed25519Private].key
+    assert pub.encode_key() == vectors[Ed25519Public].key
+
+
+def test_ed25519_sign_verify(ed25519_private, ed25519_public):
+    plaintext = "Everyone gets Friday off."
+
+    # normal usage, sign with private, verify with public
+    signature = ed25519_private.sign(plaintext)
+
+    assert len(signature) <= ed25519_private.max_signature_size
+    assert ed25519_public.verify(signature, plaintext)
+
+    # invalid signature
+    with pytest.raises(WolfCryptError):
+        ed25519_public.verify(signature[:-1], plaintext)
+
+    # private object holds both private and public info, so it can also verify
+    # using the known public key.
+    assert ed25519_private.verify(signature, plaintext)
+
