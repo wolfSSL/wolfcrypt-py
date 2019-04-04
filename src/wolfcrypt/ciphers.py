@@ -674,11 +674,18 @@ class Ed25519Private(Ed25519Public):
         idx[0] = 0
         if pub:
             ret = _lib.wc_ed25519_import_private_key(key, len(key), pub, len(pub), self.native_object);
+            if ret < 0:
+                raise WolfCryptError("Key decode error (%d)" % ret)
         else:
             ret = _lib.wc_ed25519_import_private_only(key, len(key), self.native_object);
+            if ret < 0:
+                raise WolfCryptError("Key decode error (%d)" % ret)
+            pubkey = _ffi.new("byte[%d]" % (self.size * 4))
+            ret = _lib.wc_ed25519_make_public(self.native_object, pubkey, self.size)
+            if ret < 0:
+                raise WolfCryptError("Public key generate error (%d)" % ret)
+            ret = _lib.wc_ed25519_import_public(pubkey, self.size, self.native_object);
 
-        if ret < 0:
-            raise WolfCryptError("Key decode error (%d)" % ret)
         if self.size <= 0:  # pragma: no cover
             raise WolfCryptError("Key decode error (%d)" % self.size)
         if self.max_signature_size <= 0:  # pragma: no cover
@@ -692,15 +699,19 @@ class Ed25519Private(Ed25519Public):
         Returns the encoded key.
         """
         key = _ffi.new("byte[%d]" % (self.size * 4))
+        pubkey = _ffi.new("byte[%d]" % (self.size * 4))
         size = _ffi.new("word32[1]")
 
         size[0] = _lib.wc_ed25519_priv_size(self.native_object)
 
         ret = _lib.wc_ed25519_export_private_only(self.native_object, key, size)
         if ret != 0:  # pragma: no cover
-            raise WolfCryptError("Key encode error (%d)" % ret)
+            raise WolfCryptError("Private key encode error (%d)" % ret)
+        ret = _lib.wc_ed25519_export_public(self.native_object, pubkey, size)
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("Public key encode error (%d)" % ret)
 
-        return _ffi.buffer(key, size[0])[:]
+        return _ffi.buffer(key, size[0])[:], _ffi.buffer(pubkey, size[0])[:]
 
     def sign(self, plaintext):
         """

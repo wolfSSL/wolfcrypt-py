@@ -171,6 +171,8 @@ ffi.cdef(
     void wc_ed25519_free(ed25519_key* ed25519);
 
     int wc_ed25519_make_key(WC_RNG* rng, int keysize, ed25519_key* key);
+    int wc_ed25519_make_public(ed25519_key* key, unsigned char* pubKey,
+                           word32 pubKeySz);
     int wc_ed25519_size(ed25519_key* key);
     int wc_ed25519_sig_size(ed25519_key* key);
     int wc_ed25519_sign_msg(const byte* in, word32 inlen, byte* out,
