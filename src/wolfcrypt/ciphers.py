@@ -42,6 +42,45 @@ MODE_CTR = 6  # Counter
 
 _FEEDBACK_MODES = [MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR]
 
+# ECC curve id
+ECC_CURVE_INVALID = -1
+ECC_CURVE_DEF = 0
+
+# NIST Prime Curves
+ECC_SECP192R1 = 1
+ECC_PRIME192V2 = 2
+ECC_PRIME192V3 = 3
+ECC_PRIME239V1 = 4
+ECC_PRIME239V2 = 5
+ECC_PRIME239V3 = 6
+ECC_SECP256R1 = 7
+
+# SECP Curves
+ECC_SECP112R1 = 8
+ECC_SECP112R2 = 9
+ECC_SECP128R1 = 10
+ECC_SECP128R2 = 11
+ECC_SECP160R1 = 12
+ECC_SECP160R2 = 13
+ECC_SECP224R1 = 14
+ECC_SECP384R1 = 15
+ECC_SECP521R1 = 16
+
+# Koblitz
+ECC_SECP160K1 = 17
+ECC_SECP192K1 = 18
+ECC_SECP224K1 = 19
+ECC_SECP256K1 = 20
+
+# Brainpool Curves
+ECC_BRAINPOOLP160R1 = 21
+ECC_BRAINPOOLP192R1 = 22
+ECC_BRAINPOOLP224R1 = 23
+ECC_BRAINPOOLP256R1 = 24
+ECC_BRAINPOOLP320R1 = 25
+ECC_BRAINPOOLP384R1 = 26
+ECC_BRAINPOOLP512R1 = 27
+
 
 class _Cipher(object):
     """
@@ -407,6 +446,14 @@ class EccPublic(_Ecc):
             raise WolfCryptError(
                 "Key decode error (%d)" % self.max_signature_size)
 
+    def decode_key_raw(self, qx, qy, curve_id=ECC_SECP256R1):
+        """
+        Decodes an ECC public key from its raw elements: (Qx,Qy)
+        """
+        ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy, _ffi.NULL, curve_id)
+        if ret != 0:
+            raise WolfCryptError("Key decode error (%d)" % ret)
+
     def encode_key(self, with_curve=True):
         """
         Encodes the ECC public key in an ASN sequence.
@@ -421,6 +468,25 @@ class EccPublic(_Ecc):
             raise WolfCryptError("Key encode error (%d)" % ret)
 
         return _ffi.buffer(key, ret)[:]
+
+    def encode_key_raw(self):
+        """
+        Encodes the ECC public key in its two raw elements
+
+        Returns (Qx, Qy)
+        """
+        Qx = _ffi.new("byte[%d]" % (self.size))
+        Qy = _ffi.new("byte[%d]" % (self.size))
+        qx_size = _ffi.new("word32[1]")
+        qy_size = _ffi.new("word32[1]")
+        qx_size[0] = self.size
+        qy_size[0] = self.size
+
+        ret = _lib.wc_ecc_export_public_raw(self.native_object, Qx, qx_size, Qy, qy_size);
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("Key encode error (%d)" % ret)
+
+        return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy, qy_size[0])[:]
 
     def import_x963(self, x963):
         """
@@ -498,6 +564,14 @@ class EccPrivate(EccPublic):
             raise WolfCryptError(
                 "Key decode error (%d)" % self.max_signature_size)
 
+    def decode_key_raw(self, qx, qy, d, curve_id=ECC_SECP256R1):
+        """
+        Decodes an ECC private key from its raw elements: public (Qx,Qy) and private(d)
+        """
+        ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy, d, curve_id)
+        if ret != 0:
+            raise WolfCryptError("Key decode error (%d)" % ret)
+
     def encode_key(self):
         """
         Encodes the ECC private key in an ASN sequence.
@@ -511,6 +585,28 @@ class EccPrivate(EccPublic):
             raise WolfCryptError("Key encode error (%d)" % ret)
 
         return _ffi.buffer(key, ret)[:]
+
+    def encode_key_raw(self):
+        """
+        Encodes the ECC private key in its three raw elements
+
+        Returns (Qx, Qy, d)
+        """
+        Qx = _ffi.new("byte[%d]" % (self.size))
+        Qy = _ffi.new("byte[%d]" % (self.size))
+        d = _ffi.new("byte[%d]" % (self.size))
+        qx_size = _ffi.new("word32[1]")
+        qy_size = _ffi.new("word32[1]")
+        d_size = _ffi.new("word32[1]")
+        qx_size[0] = self.size
+        qy_size[0] = self.size
+        d_size[0] = self.size
+
+        ret = _lib.wc_ecc_export_private_raw(self.native_object, Qx, qx_size, Qy, qy_size, d, d_size);
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("Key encode error (%d)" % ret)
+
+        return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy, qy_size[0])[:], _ffi.buffer(d, d_size[0])[:]
 
     def shared_secret(self, peer):
         """

@@ -154,6 +154,13 @@ ffi.cdef(
 
     int wc_ecc_export_x963(ecc_key*, byte* out, word32* outLen);
     int wc_ecc_import_x963(const byte* in, word32 inLen, ecc_key* key);
+    int wc_ecc_export_private_raw(ecc_key* key, byte* qx, word32* qxLen,
+                              byte* qy, word32* qyLen, byte* d, word32* dLen);
+    int wc_ecc_import_unsigned(ecc_key* key, byte* qx, byte* qy,
+                   byte* d, int curve_id);
+    int wc_ecc_export_public_raw(ecc_key* key, byte* qx, word32* qxLen,
+                             byte* qy, word32* qyLen);
+
 
     int wc_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
                              byte* out, word32* outlen);
