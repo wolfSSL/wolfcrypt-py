@@ -392,7 +392,8 @@ def test_ed25519_key_encoding(vectors):
     priv.decode_key(vectors[Ed25519Private].key)
     pub.decode_key(vectors[Ed25519Public].key)
 
-    assert priv.encode_key() == vectors[Ed25519Private].key
+    assert priv.encode_key()[0] == vectors[Ed25519Private].key
+    assert priv.encode_key()[1] == vectors[Ed25519Public].key # Automatically re-generated from private-only
     assert pub.encode_key() == vectors[Ed25519Public].key
 
 
