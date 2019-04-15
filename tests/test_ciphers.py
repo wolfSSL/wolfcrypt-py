@@ -31,7 +31,7 @@ from wolfcrypt.ciphers import (
 
 @pytest.fixture
 def vectors():
-    TestVector = namedtuple("TestVector", "key iv plaintext ciphertext")
+    TestVector = namedtuple("TestVector", "key iv plaintext ciphertext raw_key")
     TestVector.__new__.__defaults__ = (None,) * len(TestVector._fields)
 
     return {
@@ -86,6 +86,10 @@ def vectors():
                 "0F44509A3DCE9BB7F0C54DF5707BD4EC248E1980EC5A4CA22403622C9BDA"
                 "EFA2351243847616C6569506CC01A9BDF6751A42F7BDA9B236225FC75D7F"
                 "B4"
+            ),
+            raw_key=h2b(
+                "55bff40f44509a3dce9bb7f0c54df5707bd4ec248e1980ec5a4ca22403622c9b"
+                "daefa2351243847616c6569506cc01a9bdf6751a42f7bda9b236225fc75d7fb4"
             )
         ),
         EccPrivate: TestVector(
@@ -95,14 +99,17 @@ def vectors():
                 "0F44509A3DCE9BB7F0C54DF5707BD4EC248E1980EC5A4CA22403622C9BDA"
                 "EFA2351243847616C6569506CC01A9BDF6751A42F7BDA9B236225FC75D7F"
                 "B4"
+            ),
+            raw_key=h2b(
+                "55bff40f44509a3dce9bb7f0c54df5707bd4ec248e1980ec5a4ca22403622c9b"
+                "daefa2351243847616c6569506cc01a9bdf6751a42f7bda9b236225fc75d7fb4"
+                "f8cf926bbd1e28f1a8aba1234f3274188850ad7ec7ec92f88f974daf568965c7"
             )
         ),
         Ed25519Private: TestVector(
              key = h2b(
                  "47CD22B276161AA18BA1E0D13DBE84FE4840E4395D784F555A92E8CF739B"
                  "F86B"
-        #         "8498C65F4841145F9C51E8BFF4504B5527E0D5753964B7CB3C707A2B9747"
-        #         "FC96"
             )
         ),
         Ed25519Public: TestVector(
@@ -271,12 +278,42 @@ def test_new_ecc_raises(vectors):
 def test_key_encoding(vectors):
     priv = EccPrivate()
     pub = EccPublic()
+    raw_priv = EccPrivate()
+    raw_pub = EccPublic()
 
+
+    # Test default encode/decode key
     priv.decode_key(vectors[EccPrivate].key)
     pub.decode_key(vectors[EccPublic].key)
-
     assert priv.encode_key() == vectors[EccPrivate].key
     assert pub.encode_key() == vectors[EccPublic].key
+
+    # Test EccPrivate.encode_key_raw/decode_key_raw
+    key = vectors[EccPrivate].raw_key
+    raw_priv.decode_key_raw(key[0:31], key[32:63], key[64:-1])
+    qx, qy, d = raw_priv.encode_key_raw()
+    assert qx[0:31] == vectors[EccPrivate].raw_key[0:31]
+    assert qy[0:31] == vectors[EccPrivate].raw_key[32:63]
+    assert d[0:31] == vectors[EccPrivate].raw_key[64:-1]
+    # Verify ECC key is the same as the raw key
+    qx, qy, d = priv.encode_key_raw()
+    assert qx[0:31] == vectors[EccPrivate].raw_key[0:31]
+    assert qy[0:31] == vectors[EccPrivate].raw_key[32:63]
+    assert d[0:31] == vectors[EccPrivate].raw_key[64:-1]
+
+    # Test EccPublic.encode_key_raw/decode_key_raw
+    key = vectors[EccPublic].raw_key
+    raw_pub.decode_key_raw(key[0:31], key[32:-1])
+    qx, qy = raw_pub.encode_key_raw()
+    assert qx[0:31] == vectors[EccPublic].raw_key[0:31]
+    assert qy[0:31] == vectors[EccPublic].raw_key[32:63]
+    # Verify ECC public key is the same as the raw key
+    qx, qy = pub.encode_key_raw()
+    assert qx[0:31] == vectors[EccPublic].raw_key[0:31]
+    assert qy[0:31] == vectors[EccPublic].raw_key[32:63]
+
+
+
 
 
 def test_x963(ecc_private, ecc_public):
