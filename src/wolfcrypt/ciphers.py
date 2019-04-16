@@ -530,6 +530,42 @@ class EccPublic(_Ecc):
 
         return status[0] == 1
 
+    def verify_raw(self, R, S, data):
+        """
+        Verifies signature from its raw elements **R** and **S**, using the
+        public key data in the object.
+
+        Returns **True** in case of a valid signature, otherwise **False**.
+        """
+        data = t2b(data)
+        status = _ffi.new("int[1]")
+        mpR = _ffi.new("mp_int[1]")
+        mpS = _ffi.new("mp_int[1]")
+        ret = _lib.mp_init(mpR)
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("wolfCrypt error (%d)" % ret)
+        ret = _lib.mp_init(mpS)
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("wolfCrypt error (%d)" % ret)
+
+        ret = _lib.mp_read_unsigned_bin(mpR, R, len(R))
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("wolfCrypt error (%d)" % ret)
+
+        ret = _lib.mp_read_unsigned_bin(mpS, S, len(S))
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("wolfCrypt error (%d)" % ret)
+
+
+        ret = _lib.wc_ecc_verify_hash_ex(mpR, mpS,
+                                      data, len(data),
+                                      status, self.native_object)
+
+        if ret < 0:
+            raise WolfCryptError("Verify error (%d)" % ret)
+
+        return status[0] == 1
+
 
 class EccPrivate(EccPublic):
     @classmethod
@@ -650,6 +686,43 @@ class EccPrivate(EccPublic):
 
         return _ffi.buffer(signature, signature_size[0])[:]
 
+    def sign_raw(self, plaintext, rng=Random()):
+        """
+        Signs **plaintext**, using the private key data in the object.
+
+        Returns the signature in its two raw components r, s
+        """
+        plaintext = t2b(plaintext)
+        R = _ffi.new("mp_int[1]");
+        S = _ffi.new("mp_int[1]");
+
+        R_bin = _ffi.new("unsigned char[%d]" % self.size )
+        S_bin = _ffi.new("unsigned char[%d]" % self.size )
+
+        ret = _lib.mp_init(R)
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("wolfCrypt error (%d)" % ret)
+        ret = _lib.mp_init(S)
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("wolfCrypt error (%d)" % ret)
+
+        ret = _lib.wc_ecc_sign_hash_ex(plaintext, len(plaintext),
+                                    rng.native_object,
+                                    self.native_object,
+                                    R, S)
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("Signature error (%d)" % ret)
+
+        ret = _lib.mp_to_unsigned_bin(R, R_bin)
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("wolfCrypt error (%d)" % ret)
+
+        ret = _lib.mp_to_unsigned_bin(S, S_bin)
+        if ret != 0:  # pragma: no cover
+            raise WolfCryptError("wolfCrypt error (%d)" % ret)
+
+        return _ffi.buffer(R_bin, self.size)[:], _ffi.buffer(S_bin, self.size)[:]
+
 class _Ed25519(object):  # pylint: disable=too-few-public-methods
     def __init__(self):
         self.native_object = _ffi.new("ed25519_key *")
@@ -733,6 +806,7 @@ class Ed25519Public(_Ed25519):
             raise WolfCryptError("Verify error (%d)" % ret)
 
         return status[0] == 1
+
 
 
 class Ed25519Private(Ed25519Public):
