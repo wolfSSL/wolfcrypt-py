@@ -349,6 +349,23 @@ def test_ecc_sign_verify(ecc_private, ecc_public):
     with pytest.raises(WolfCryptError):
         ecc_x963.import_x963(ecc_public.export_x963()[:-1])
 
+def test_ecc_sign_verify_raw(ecc_private, ecc_public):
+    plaintext = "Everyone gets Friday off."
+
+    # normal usage, sign with private, verify with public
+    r,s = ecc_private.sign_raw(plaintext)
+
+    assert len(r) + len(s) <= 2 * ecc_private.size
+    assert ecc_public.verify_raw(r, s, plaintext)
+
+    # invalid signature
+    ret = ecc_public.verify_raw(r, s[:-1], plaintext)
+    assert ret == False
+
+    # private object holds both private and public info, so it can also verify
+    # using the known public key.
+    assert ecc_private.verify_raw(r, s, plaintext)
+
 
 def test_ecc_make_shared_secret():
     a = EccPrivate.make_key(32)

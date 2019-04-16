@@ -59,6 +59,11 @@ ffi.cdef(
     typedef unsigned char byte;
     typedef unsigned int word32;
 
+    typedef struct { ...; } mp_int;
+
+    int mp_init (mp_int * a);
+    int mp_to_unsigned_bin (mp_int * a, unsigned char *b);
+    int mp_read_unsigned_bin (mp_int * a, const unsigned char *b, int c);
 
     typedef struct { ...; } wc_Sha;
 
@@ -94,6 +99,7 @@ ffi.cdef(
     int wc_HmacSetKey(Hmac*, int, const byte*, word32);
     int wc_HmacUpdate(Hmac*, const byte*, word32);
     int wc_HmacFinal(Hmac*, byte*);
+
 
 
     typedef struct { ...; } Aes;
@@ -172,8 +178,14 @@ ffi.cdef(
                            const byte* hash, word32 hashlen,
                            int* stat, ecc_key* key);
 
+    int wc_ecc_sign_hash_ex(const byte* in, word32 inlen, WC_RNG* rng,
+                     ecc_key* key, mp_int *r, mp_int *s);
+
+    int wc_ecc_verify_hash_ex(mp_int *r, mp_int *s, const byte* hash,
+                    word32 hashlen, int* res, ecc_key* key);
+
     typedef struct {...; } ed25519_key;
-    
+
     int wc_ed25519_init(ed25519_key* ed25519);
     void wc_ed25519_free(ed25519_key* ed25519);
 
