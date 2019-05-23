@@ -22,10 +22,31 @@
 
 from collections import namedtuple
 import pytest
+from wolfcrypt._ffi import ffi as _ffi
+from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import t2b
-from wolfcrypt.hashes import (
-    Sha, Sha256, Sha384, Sha512, HmacSha, HmacSha256, HmacSha384, HmacSha512
-)
+
+if _lib.SHA_ENABLED:
+    from wolfcrypt.hashes import Sha
+
+if _lib.SHA256_ENABLED:
+    from wolfcrypt.hashes import Sha256
+
+if _lib.SHA384_ENABLED:
+    from wolfcrypt.hashes import Sha384
+
+if _lib.SHA512_ENABLED:
+    from wolfcrypt.hashes import Sha512
+
+if _lib.HMAC_ENABLED:
+    if _lib.SHA_ENABLED:
+        from wolfcrypt.hashes import HmacSha
+    if _lib.SHA256_ENABLED:
+        from wolfcrypt.hashes import HmacSha256
+    if _lib.SHA384_ENABLED:
+        from wolfcrypt.hashes import HmacSha384
+    if _lib.SHA512_ENABLED:
+        from wolfcrypt.hashes import HmacSha512
 
 
 @pytest.fixture
@@ -33,52 +54,88 @@ def vectors():
     TestVector = namedtuple("TestVector", "digest")
     TestVector.__new__.__defaults__ = (None,) * len(TestVector._fields)
 
-    return {
-        Sha: TestVector(
+    # test vector dictionary
+    vectorArray = {}
+
+    if _lib.SHA_ENABLED:
+        vectorArray[Sha]=TestVector(
             digest=t2b("1b6182d68ae91ce0853bd9c6b6edfedd4b6a510d")
-        ),
-        Sha256: TestVector(
+        )
+
+    if _lib.SHA256_ENABLED:
+        vectorArray[Sha256]=TestVector(
             digest=t2b("96e02e7b1cbcd6f104fe1fdb4652027a" +
                        "5505b68652b70095c6318f9dce0d1844")
-        ),
-        Sha384: TestVector(
+        )
+
+    if _lib.SHA384_ENABLED:
+        vectorArray[Sha384]=TestVector(
             digest=t2b("4c79d80531203a16f91bee325f18c6aada47f9382fe44fc1" +
                        "1f92917837e9b7902f5dccb7d3656f667a1dce3460bc884b")
-        ),
-        Sha512: TestVector(
+        )
+
+    if _lib.SHA512_ENABLED:
+        vectorArray[Sha512]=TestVector(
             digest=t2b("88fcf67ffd8558d713f9cedcd852db47" +
                        "9e6573f0bd9955610a993f609637553c" +
                        "e8fff55e644ee8a106aae19c07f91b3f" +
                        "2a2a6d40dfa7302c0fa6a1a9a5bfa03f")
-        ),
-        HmacSha: TestVector(
-            digest=t2b("5dfabcfb3a25540824867cd21f065f52f73491e0")
-        ),
-        HmacSha256: TestVector(
-            digest=t2b("4b641d721493d80f019d9447830ebfee" +
-                       "89234a7d594378b89f8bb73873576bf6")
-        ),
-        HmacSha384: TestVector(
-            digest=t2b("e72c72070c9c5c78e3286593068a510c1740cdf9dc34b512" +
-                       "ccec97320295db1fe673216b46fe72e81f399a9ec04780ab")
-        ),
-        HmacSha512: TestVector(
-            digest=t2b("c7f48db79314fc2b5be9a93fd58601a1" +
-                       "bf42f397ec7f66dba034d44503890e6b" +
-                       "5708242dcd71a248a78162d815c685f6" +
-                       "038a4ac8cb34b8bf18986dbd300c9b41")
-        ),
-    }
+        )
+
+    if _lib.HMAC_ENABLED:
+        if _lib.SHA_ENABLED:
+            vectorArray[HmacSha]=TestVector(
+                digest=t2b("5dfabcfb3a25540824867cd21f065f52f73491e0")
+            )
+        if _lib.SHA256_ENABLED:
+            vectorArray[HmacSha256]=TestVector(
+                digest=t2b("4b641d721493d80f019d9447830ebfee" +
+                           "89234a7d594378b89f8bb73873576bf6")
+            )
+        if _lib.SHA384_ENABLED:
+            vectorArray[HmacSha384]=TestVector(
+                digest=t2b("e72c72070c9c5c78e3286593068a510c1740cdf9dc34b512" +
+                           "ccec97320295db1fe673216b46fe72e81f399a9ec04780ab")
+            )
+        if _lib.SHA512_ENABLED:
+            vectorArray[HmacSha512]=TestVector(
+                digest=t2b("c7f48db79314fc2b5be9a93fd58601a1" +
+                           "bf42f397ec7f66dba034d44503890e6b" +
+                           "5708242dcd71a248a78162d815c685f6" +
+                           "038a4ac8cb34b8bf18986dbd300c9b41")
+            )
+
+    return vectorArray
 
 
-@pytest.fixture(params=[
-    Sha, Sha256, Sha384, Sha512, HmacSha, HmacSha256, HmacSha384, HmacSha512])
+hash_params = []
+if _lib.SHA_ENABLED:
+    hash_params.append(Sha)
+if _lib.SHA256_ENABLED:
+    hash_params.append(Sha256)
+if _lib.SHA384_ENABLED:
+    hash_params.append(Sha384)
+if _lib.SHA512_ENABLED:
+    hash_params.append(Sha512)
+
+hmac_params = []
+if _lib.HMAC_ENABLED:
+    if _lib.SHA_ENABLED:
+        hmac_params.append(HmacSha)
+    if _lib.SHA256_ENABLED:
+        hmac_params.append(HmacSha256)
+    if _lib.SHA384_ENABLED:
+        hmac_params.append(HmacSha384)
+    if _lib.SHA512_ENABLED:
+        hmac_params.append(HmacSha512)
+
+@pytest.fixture(params=(hash_params + hmac_params))
 def hash_cls(request):
     return request.param
 
 
 def hash_new(cls, data=None):
-    if cls in [Sha, Sha256, Sha384, Sha512]:
+    if cls in hash_params:
         return cls(data)
     return cls("python", data)
 

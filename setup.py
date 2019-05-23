@@ -23,7 +23,6 @@
 
 import os
 import sys
-import pip
 from setuptools import setup
 from setuptools.command.build_ext import build_ext
 
@@ -50,7 +49,11 @@ class cffiBuilder(build_ext, object):
     def build_extension(self, ext):
         """ Compile manually the wolfcrypt-py extension, bypass setuptools
         """
-        build_wolfssl(wolfcrypt.__wolfssl_version__)
+
+        # if USE_LOCAL_WOLFSSL environment variable has been defined,
+        # do not clone and compile wolfSSL from GitHub
+        if os.environ.get("USE_LOCAL_WOLFSSL") is None:
+            build_wolfssl(wolfcrypt.__wolfssl_version__)
 
         super(cffiBuilder, self).build_extension(ext)
 
@@ -69,7 +72,7 @@ setup(
     package_dir={"":package_dir},
 
     zip_safe=False,
-    cffi_modules=["./src/wolfcrypt/_build_ffi.py:ffi"],
+    cffi_modules=["./src/wolfcrypt/_build_ffi.py:ffibuilder"],
 
     keywords="wolfssl, wolfcrypt, security, cryptography",
     classifiers=[
