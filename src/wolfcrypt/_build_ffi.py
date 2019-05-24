@@ -18,17 +18,24 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
+import os
 from distutils.util import get_platform
 from cffi import FFI
 from wolfcrypt import __wolfssl_version__ as version
 from wolfcrypt._build_wolfssl import wolfssl_inc_path, wolfssl_lib_path
 
-# open <wolfssl/options.h> header to parse for #define's
-# This will throw a FileNotFoundError if not able to find options.h
-optionsHeaderPath = wolfssl_inc_path() + "/wolfssl/options.h"
-optionsHeader = open(optionsHeaderPath, 'r')
-optionsHeaderStr = optionsHeader.read()
-optionsHeader.close()
+# detect features if user has built against local wolfSSL library
+# if they are not, we are controlling build options in _build_wolfssl.py
+local_wolfssl = os.environ.get("USE_LOCAL_WOLFSSL")
+if local_wolfssl is not None:
+    # open <wolfssl/options.h> header to parse for #define's
+    # This will throw a FileNotFoundError if not able to find options.h
+    optionsHeaderPath = wolfssl_inc_path() + "/wolfssl/options.h"
+    optionsHeader = open(optionsHeaderPath, 'r')
+    optionsHeaderStr = optionsHeader.read()
+    optionsHeader.close()
+else:
+    optionsHeaderStr = ""
 
 # default values
 MPAPI_ENABLED = 0
@@ -76,6 +83,7 @@ if '#define HAVE_ECC' in optionsHeaderStr:
 
 if '#define HAVE_ED25519' in optionsHeaderStr:
     ED25519_ENABLED = 1
+
 
 # build cffi module, wrapping native wolfSSL
 ffibuilder = FFI()

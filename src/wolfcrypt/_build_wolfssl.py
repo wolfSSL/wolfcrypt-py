@@ -23,6 +23,7 @@ import os
 import subprocess
 from contextlib import contextmanager
 from distutils.util import get_platform
+from wolfcrypt.__init__ import __wolfssl_version__ as version
 
 
 def local_path(path):
