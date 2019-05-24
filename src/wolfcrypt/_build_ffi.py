@@ -25,8 +25,10 @@ from wolfcrypt._build_wolfssl import wolfssl_inc_path, wolfssl_lib_path
 
 # open <wolfssl/options.h> header to parse for #define's
 # This will throw a FileNotFoundError if not able to find options.h
-optionsHeader = wolfssl_inc_path() + "/wolfssl/options.h"
-optionsHeaderStr = open(optionsHeader, 'r').read()
+optionsHeaderPath = wolfssl_inc_path() + "/wolfssl/options.h"
+optionsHeader = open(optionsHeaderPath, 'r')
+optionsHeaderStr = optionsHeader.read()
+optionsHeader.close()
 
 # default values
 MPAPI_ENABLED = 0
