@@ -213,6 +213,9 @@ def test_new_rsa_raises(vectors):
     with pytest.raises(WolfCryptError):
         RsaPublic(vectors[RsaPublic].key[:-1])    # invalid key length
 
+    with pytest.raises(WolfCryptError):           # invalid key size
+        RsaPrivate.make_key(16384)
+
 
 def test_rsa_encrypt_decrypt(rsa_private, rsa_public):
     plaintext = t2b("Everyone gets Friday off.")
@@ -247,16 +250,13 @@ def test_rsa_sign_verify(rsa_private, rsa_public):
     assert 1024 / 8 == len(signature) == rsa_private.output_size
     assert plaintext == rsa_private.verify(signature)
 
-
 @pytest.fixture
 def ecc_private(vectors):
     return EccPrivate(vectors[EccPrivate].key)
 
-
 @pytest.fixture
 def ecc_public(vectors):
     return EccPublic(vectors[EccPublic].key)
-
 
 def test_new_ecc_raises(vectors):
     with pytest.raises(WolfCryptError):

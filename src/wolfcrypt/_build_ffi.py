@@ -130,6 +130,10 @@ ffi.cdef(
     int wc_RsaSetRNG(RsaKey* key, WC_RNG* rng);
     int wc_FreeRsaKey(RsaKey* key);
 
+    int wc_MakeRsaKey(RsaKey* key, int size, long e, WC_RNG* rng);
+    int wc_RsaKeyToDer(RsaKey* key, byte* output, word32 inLen);
+    int wc_RsaKeyToPublicDer(RsaKey* key, byte* output, word32 inLen);
+
     int wc_RsaPrivateKeyDecode(const byte*, word32*, RsaKey*, word32);
     int wc_RsaPublicKeyDecode(const byte*, word32*, RsaKey*, word32);
     int wc_RsaEncryptSize(RsaKey*);

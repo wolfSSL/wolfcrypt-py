@@ -273,20 +273,21 @@ class _Rsa(object):  # pylint: disable=too-few-public-methods
 
 
 class RsaPublic(_Rsa):
-    def __init__(self, key):
-        key = t2b(key)
+    def __init__(self, key=None):
+        if key != None:
+            key = t2b(key)
 
         _Rsa.__init__(self)
 
         idx = _ffi.new("word32*")
         idx[0] = 0
-
         ret = _lib.wc_RsaPublicKeyDecode(key, idx,
-                                         self.native_object, len(key))
+                self.native_object, len(key))
         if ret < 0:
             raise WolfCryptError("Invalid key error (%d)" % ret)
 
         self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
+        self.size = len(key)
         if self.output_size <= 0:  # pragma: no cover
             raise WolfCryptError("Invalid key error (%d)" % self.output_size)
 
@@ -336,22 +337,61 @@ class RsaPublic(_Rsa):
 
 
 class RsaPrivate(RsaPublic):
-    def __init__(self, key):  # pylint: disable=super-init-not-called
-        key = t2b(key)
+    @classmethod
+    def make_key(cls, size, rng=Random()):
+        """
+        Generates a new key pair of desired length **size**.
+        """
+        rsa = cls(None)
+        if rsa == None:  # pragma: no cover
+            raise WolfCryptError("Invalid key error (%d)" % ret)
+
+        ret = _lib.wc_MakeRsaKey(rsa.native_object, size, 65537, rng.native_object)
+        if ret < 0:
+            raise WolfCryptError("Key generation error (%d)" % ret)
+        rsa.output_size = _lib.wc_RsaEncryptSize(rsa.native_object)
+        rsa.size = size
+        if rsa.output_size <= 0:  # pragma: no cover
+            raise WolfCryptError("Invalid key size error (%d)" % rsa.output_size)
+        return rsa
+    def __init__(self, key = None):  # pylint: disable=super-init-not-called
 
         _Rsa.__init__(self)  # pylint: disable=non-parent-init-called
 
         idx = _ffi.new("word32*")
         idx[0] = 0
 
-        ret = _lib.wc_RsaPrivateKeyDecode(key, idx,
-                                          self.native_object, len(key))
-        if ret < 0:
-            raise WolfCryptError("Invalid key error (%d)" % ret)
+        if key != None:
+            key = t2b(key)
+            ret = _lib.wc_RsaPrivateKeyDecode(key, idx,
+                                              self.native_object, len(key))
+            if ret < 0:
+                raise WolfCryptError("Invalid key error (%d)" % ret)
 
-        self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
-        if self.output_size <= 0:  # pragma: no cover
-            raise WolfCryptError("Invalid key error (%d)" % self.output_size)
+            self.size = len(key)
+            self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
+            if self.output_size <= 0:  # pragma: no cover
+                raise WolfCryptError("Invalid key size error (%d)" % self.output_size)
+
+    def encode_key(self):
+        """
+        Encodes the RSA private and public keys in an ASN sequence.
+
+        Returns the encoded key.
+        """
+        priv = _ffi.new("byte[%d]" % (self.size * 4))
+        pub = _ffi.new("byte[%d]" % (self.size * 4))
+
+
+        ret = _lib.wc_RsaKeyToDer(self.native_object, priv, self.size)
+        if ret <= 0:  # pragma: no cover
+            raise WolfCryptError("Private RSA key error (%d)" % ret)
+        privlen = ret
+        ret = _lib.wc_RsaKeyToPublicDer(self.native_object, pub, self.size)
+        if ret <= 0:  # pragma: no cover
+            raise WolfCryptError("Public RSA key encode error (%d)" % ret)
+        publen = ret
+        return _ffi.buffer(priv, privlen)[:], _ffi.buffer(pub, publen)[:]
 
     def decrypt(self, ciphertext):
         """
