@@ -263,7 +263,8 @@ if _lib.RSA_ENABLED:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
             self._random = Random()
-            ret = _lib.wc_RsaSetRNG(self.native_object, self._random.native_object)
+            ret = _lib.wc_RsaSetRNG(self.native_object,
+                    self._random.native_object)
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("Key initialization error (%d)" % ret)
 
@@ -293,7 +294,8 @@ if _lib.RSA_ENABLED:
             self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
             self.size = len(key)
             if self.output_size <= 0:  # pragma: no cover
-                raise WolfCryptError("Invalid key error (%d)" % self.output_size)
+                raise WolfCryptError("Invalid key error (%d)" %
+                        self.output_size)
 
         def encrypt(self, plaintext):
             """
@@ -341,26 +343,27 @@ if _lib.RSA_ENABLED:
 
 
     class RsaPrivate(RsaPublic):
-        @classmethod
-        def make_key(cls, size, rng=Random()):
-            """
-            Generates a new key pair of desired length **size**.
-            """
-            rsa = cls(None)
-            if rsa == None:  # pragma: no cover
-                raise WolfCryptError("Invalid key error (%d)" % ret)
+        if _lib.KEYGEN_ENABLED:
+            @classmethod
+            def make_key(cls, size, rng=Random()):
+                """
+                Generates a new key pair of desired length **size**.
+                """
+                rsa = cls(None)
+                if rsa == None:  # pragma: no cover
+                    raise WolfCryptError("Invalid key error (%d)" % ret)
 
-            ret = _lib.wc_MakeRsaKey(rsa.native_object, size, 65537,
-                    rng.native_object)
-            if ret < 0:
-                raise WolfCryptError("Key generation error (%d)" % ret)
+                ret = _lib.wc_MakeRsaKey(rsa.native_object, size, 65537,
+                        rng.native_object)
+                if ret < 0:
+                    raise WolfCryptError("Key generation error (%d)" % ret)
 
-            rsa.output_size = _lib.wc_RsaEncryptSize(rsa.native_object)
-            rsa.size = size
-            if rsa.output_size <= 0  # pragma: no cover
-                raise WolfCryptError("Invalid key size error (%d)" % ret)
+                rsa.output_size = _lib.wc_RsaEncryptSize(rsa.native_object)
+                rsa.size = size
+                if rsa.output_size <= 0:  # pragma: no cover
+                    raise WolfCryptError("Invalid key size error (%d)" % ret)
 
-            return rsa
+                return rsa
 
         def __init__(self, key = None):  # pylint: disable=super-init-not-called
 
@@ -377,30 +380,35 @@ if _lib.RSA_ENABLED:
                 if ret < 0:
                     raise WolfCryptError("Invalid key error (%d)" % ret)
 
-            self.size = len(key)
-            self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
-            if self.output_size <= 0:  # pragma: no cover
-                raise WolfCryptError("Invalid key size error (%d)" % self.output_size)
+                self.size = len(key)
+                self.output_size = _lib.wc_RsaEncryptSize(self.native_object)
+                if self.output_size <= 0:  # pragma: no cover
+                    raise WolfCryptError("Invalid key size error (%d)" %
+                            self.output_size)
 
-        def encode_key(self):
-            """
-            Encodes the RSA private and public keys in an ASN sequence.
+        if _lib.KEYGEN_ENABLED:
+            def encode_key(self):
+                """
+                Encodes the RSA private and public keys in an ASN sequence.
 
-            Returns the encoded key.
-            """
-            priv = _ffi.new("byte[%d]" % (self.size * 4))
-            pub = _ffi.new("byte[%d]" % (self.size * 4))
+                Returns the encoded key.
+                """
+                priv = _ffi.new("byte[%d]" % (self.size * 4))
+                pub = _ffi.new("byte[%d]" % (self.size * 4))
 
 
-            ret = _lib.wc_RsaKeyToDer(self.native_object, priv, self.size)
-            if ret <= 0:  # pragma: no cover
-                raise WolfCryptError("Private RSA key error (%d)" % ret)
-            privlen = ret
-            ret = _lib.wc_RsaKeyToPublicDer(self.native_object, pub, self.size)
-            if ret <= 0:  # pragma: no cover
-                raise WolfCryptError("Public RSA key encode error (%d)" % ret)
-            publen = ret
-            return _ffi.buffer(priv, privlen)[:], _ffi.buffer(pub, publen)[:]
+                ret = _lib.wc_RsaKeyToDer(self.native_object, priv, self.size)
+                if ret <= 0:  # pragma: no cover
+                    raise WolfCryptError("Private RSA key error (%d)" % ret)
+                privlen = ret
+                ret = _lib.wc_RsaKeyToPublicDer(self.native_object, pub,
+                        self.size)
+                if ret <= 0:  # pragma: no cover
+                    raise WolfCryptError("Public RSA key encode error (%d)" %
+                            ret)
+                publen = ret
+                return _ffi.buffer(priv, privlen)[:], _ffi.buffer(pub,
+                        publen)[:]
 
         def decrypt(self, ciphertext):
             """
@@ -500,7 +508,8 @@ if _lib.ECC_ENABLED:
             """
             Decodes an ECC public key from its raw elements: (Qx,Qy)
             """
-            ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy, _ffi.NULL, curve_id)
+            ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy,
+                    _ffi.NULL, curve_id)
             if ret != 0:
                 raise WolfCryptError("Key decode error (%d)" % ret)
 
@@ -532,11 +541,13 @@ if _lib.ECC_ENABLED:
             qx_size[0] = self.size
             qy_size[0] = self.size
 
-            ret = _lib.wc_ecc_export_public_raw(self.native_object, Qx, qx_size, Qy, qy_size);
+            ret = _lib.wc_ecc_export_public_raw(self.native_object, Qx,
+                    qx_size, Qy, qy_size);
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Key encode error (%d)" % ret)
 
-            return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy, qy_size[0])[:]
+            return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy,
+                    qy_size[0])[:]
 
         def import_x963(self, x963):
             """
@@ -583,10 +594,11 @@ if _lib.ECC_ENABLED:
         if _lib.MPAPI_ENABLED:
             def verify_raw(self, R, S, data):
                 """
-                Verifies signature from its raw elements **R** and **S**, using the
-                public key data in the object.
+                Verifies signature from its raw elements **R** and **S**, using
+                the public key data in the object.
 
-                Returns **True** in case of a valid signature, otherwise **False**.
+                Returns **True** in case of a valid signature, otherwise
+                **False**.
                 """
                 data = t2b(data)
                 status = _ffi.new("int[1]")
@@ -626,7 +638,8 @@ if _lib.ECC_ENABLED:
             """
             ecc = cls()
 
-            ret = _lib.wc_ecc_make_key(rng.native_object, size, ecc.native_object)
+            ret = _lib.wc_ecc_make_key(rng.native_object, size,
+                    ecc.native_object)
             if ret < 0:
                 raise WolfCryptError("Key generation error (%d)" % ret)
 
@@ -653,9 +666,11 @@ if _lib.ECC_ENABLED:
 
         def decode_key_raw(self, qx, qy, d, curve_id=ECC_SECP256R1):
             """
-            Decodes an ECC private key from its raw elements: public (Qx,Qy) and private(d)
+            Decodes an ECC private key from its raw elements: public (Qx,Qy)
+            and private(d)
             """
-            ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy, d, curve_id)
+            ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy, d,
+                    curve_id)
             if ret != 0:
                 raise WolfCryptError("Key decode error (%d)" % ret)
 
@@ -689,11 +704,13 @@ if _lib.ECC_ENABLED:
             qy_size[0] = self.size
             d_size[0] = self.size
 
-            ret = _lib.wc_ecc_export_private_raw(self.native_object, Qx, qx_size, Qy, qy_size, d, d_size);
+            ret = _lib.wc_ecc_export_private_raw(self.native_object, Qx,
+                    qx_size, Qy, qy_size, d, d_size);
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Key encode error (%d)" % ret)
 
-            return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy, qy_size[0])[:], _ffi.buffer(d, d_size[0])[:]
+            return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy,
+                    qy_size[0])[:], _ffi.buffer(d, d_size[0])[:]
 
         def shared_secret(self, peer):
             """
@@ -773,7 +790,8 @@ if _lib.ECC_ENABLED:
                 if ret != 0:  # pragma: no cover
                     raise WolfCryptError("wolfCrypt error (%d)" % ret)
 
-                return _ffi.buffer(R_bin, self.size)[:], _ffi.buffer(S_bin, self.size)[:]
+                return _ffi.buffer(R_bin, self.size)[:], _ffi.buffer(S_bin,
+                        self.size)[:]
 
 
 if _lib.ED25519_ENABLED:
@@ -817,7 +835,8 @@ if _lib.ED25519_ENABLED:
 
             idx = _ffi.new("word32*")
             idx[0] = 0
-            ret = _lib.wc_ed25519_import_public(key, len(key), self.native_object)
+            ret = _lib.wc_ed25519_import_public(key, len(key),
+                    self.native_object)
             if ret < 0:
                 raise WolfCryptError("Key decode error (%d)" % ret)
             if self.size <= 0:  # pragma: no cover
@@ -879,7 +898,8 @@ if _lib.ED25519_ENABLED:
             """
             ed25519 = cls()
 
-            ret = _lib.wc_ed25519_make_key(rng.native_object, size, ed25519.native_object)
+            ret = _lib.wc_ed25519_make_key(rng.native_object, size,
+                    ed25519.native_object)
             if ret < 0:
                 raise WolfCryptError("Key generation error (%d)" % ret)
 
@@ -897,18 +917,22 @@ if _lib.ED25519_ENABLED:
             idx = _ffi.new("word32*")
             idx[0] = 0
             if pub:
-                ret = _lib.wc_ed25519_import_private_key(key, len(key), pub, len(pub), self.native_object);
+                ret = _lib.wc_ed25519_import_private_key(key, len(key), pub,
+                        len(pub), self.native_object);
                 if ret < 0:
                     raise WolfCryptError("Key decode error (%d)" % ret)
             else:
-                ret = _lib.wc_ed25519_import_private_only(key, len(key), self.native_object);
+                ret = _lib.wc_ed25519_import_private_only(key, len(key),
+                        self.native_object);
                 if ret < 0:
                     raise WolfCryptError("Key decode error (%d)" % ret)
                 pubkey = _ffi.new("byte[%d]" % (self.size * 4))
-                ret = _lib.wc_ed25519_make_public(self.native_object, pubkey, self.size)
+                ret = _lib.wc_ed25519_make_public(self.native_object, pubkey,
+                        self.size)
                 if ret < 0:
                     raise WolfCryptError("Public key generate error (%d)" % ret)
-                ret = _lib.wc_ed25519_import_public(pubkey, self.size, self.native_object);
+                ret = _lib.wc_ed25519_import_public(pubkey, self.size,
+                        self.native_object);
 
             if self.size <= 0:  # pragma: no cover
                 raise WolfCryptError("Key decode error (%d)" % self.size)
@@ -928,10 +952,12 @@ if _lib.ED25519_ENABLED:
 
             size[0] = _lib.wc_ed25519_priv_size(self.native_object)
 
-            ret = _lib.wc_ed25519_export_private_only(self.native_object, key, size)
+            ret = _lib.wc_ed25519_export_private_only(self.native_object,
+                    key, size)
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Private key encode error (%d)" % ret)
-            ret = _lib.wc_ed25519_export_public(self.native_object, pubkey, size)
+            ret = _lib.wc_ed25519_export_public(self.native_object, pubkey,
+                    size)
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Public key encode error (%d)" % ret)
 

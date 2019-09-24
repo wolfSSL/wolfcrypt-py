@@ -49,6 +49,7 @@ HMAC_ENABLED = 1
 RSA_ENABLED = 1
 ECC_ENABLED = 0
 ED25519_ENABLED = 0
+KEYGEN_ENABLED = 0
 
 # detect native features based on options.h defines
 if '#define WOLFSSL_PUBLIC_MP' in optionsHeaderStr:
@@ -83,6 +84,9 @@ if '#define HAVE_ECC' in optionsHeaderStr:
 
 if '#define HAVE_ED25519' in optionsHeaderStr:
     ED25519_ENABLED = 1
+
+if '#define WOLFSSL_KEY_GEN' in optionsHeaderStr:
+    KEYGEN_ENABLED = 1
 
 
 # build cffi module, wrapping native wolfSSL
@@ -121,6 +125,7 @@ ffibuilder.set_source(
     int RSA_ENABLED = """ + str(RSA_ENABLED) + """;
     int ECC_ENABLED = """ + str(ECC_ENABLED) + """;
     int ED25519_ENABLED = """ + str(ED25519_ENABLED) + """;
+    int KEYGEN_ENABLED = """ + str(KEYGEN_ENABLED) + """;
 
     """,
     include_dirs=[wolfssl_inc_path()],
@@ -140,6 +145,7 @@ _cdef = """
     int RSA_ENABLED;
     int ECC_ENABLED;
     int ED25519_ENABLED;
+    int KEYGEN_ENABLED;
 
     typedef unsigned char byte;
     typedef unsigned int word32;
@@ -229,10 +235,6 @@ if (RSA_ENABLED == 1):
     int wc_RsaSetRNG(RsaKey* key, WC_RNG* rng);
     int wc_FreeRsaKey(RsaKey* key);
 
-    int wc_MakeRsaKey(RsaKey* key, int size, long e, WC_RNG* rng);
-    int wc_RsaKeyToDer(RsaKey* key, byte* output, word32 inLen);
-    int wc_RsaKeyToPublicDer(RsaKey* key, byte* output, word32 inLen);
-
     int wc_RsaPrivateKeyDecode(const byte*, word32*, RsaKey*, word32);
     int wc_RsaPublicKeyDecode(const byte*, word32*, RsaKey*, word32);
     int wc_RsaEncryptSize(RsaKey*);
@@ -245,6 +247,14 @@ if (RSA_ENABLED == 1):
     int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
     int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
     """
+
+    if (KEYGEN_ENABLED):
+        _cdef += """
+        int wc_MakeRsaKey(RsaKey* key, int size, long e, WC_RNG* rng);
+        int wc_RsaKeyToDer(RsaKey* key, byte* output, word32 inLen);
+        int wc_RsaKeyToPublicDer(RsaKey* key, byte* output, word32 inLen);
+
+        """
 
 if (ECC_ENABLED == 1):
     _cdef += """

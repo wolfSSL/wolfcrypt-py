@@ -247,8 +247,9 @@ if _lib.RSA_ENABLED:
         with pytest.raises(WolfCryptError):
             RsaPublic(vectors[RsaPublic].key[:-1])    # invalid key length
 
-    with pytest.raises(WolfCryptError):           # invalid key size
-        RsaPrivate.make_key(16384)
+        if _lib.KEYGEN_ENABLED:
+            with pytest.raises(WolfCryptError):           # invalid key size
+                RsaPrivate.make_key(16384)
 
 
     def test_rsa_encrypt_decrypt(rsa_private, rsa_public):
