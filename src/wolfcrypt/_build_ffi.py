@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
 import os
+import sys
 from distutils.util import get_platform
 from cffi import FFI
 from wolfcrypt import __wolfssl_version__ as version
@@ -28,14 +29,22 @@ from wolfcrypt._build_wolfssl import wolfssl_inc_path, wolfssl_lib_path
 # if they are not, we are controlling build options in _build_wolfssl.py
 local_wolfssl = os.environ.get("USE_LOCAL_WOLFSSL")
 if local_wolfssl is not None:
-    # open <wolfssl/options.h> header to parse for #define's
+    # Try to do native wolfSSL/wolfCrypt feature detection.
+    # Open <wolfssl/options.h> header to parse for #define's
     # This will throw a FileNotFoundError if not able to find options.h
     optionsHeaderPath = wolfssl_inc_path() + "/wolfssl/options.h"
     optionsHeader = open(optionsHeaderPath, 'r')
     optionsHeaderStr = optionsHeader.read()
     optionsHeader.close()
+    featureDetection = 1
+    sys.stderr.write("\nDEBUG: Found <wolfssl/options.h>, attempting native "
+                     "feature detection\n")
+
 else:
     optionsHeaderStr = ""
+    featureDetection = 0
+    sys.stderr.write("\nDEBUG: Skipping native feature detection, build not "
+                     "using USE_LOCAL_WOLFSSL\n")
 
 # default values
 MPAPI_ENABLED = 0
@@ -52,41 +61,66 @@ ED25519_ENABLED = 0
 KEYGEN_ENABLED = 0
 
 # detect native features based on options.h defines
-if '#define WOLFSSL_PUBLIC_MP' in optionsHeaderStr:
-    MPAPI_ENABLED = 1
+if featureDetection == 1:
+    if '#define WOLFSSL_PUBLIC_MP' in optionsHeaderStr:
+        MPAPI_ENABLED = 1
+    else:
+        MPAPI_ENABLED = 0
 
-if '#define NO_SHA' in optionsHeaderStr:
-    SHA_ENABLED = 0
+    if '#define NO_SHA' in optionsHeaderStr:
+        SHA_ENABLED = 0
+    else:
+        SHA_ENABLED = 1
 
-if '#define NO_SHA256' in optionsHeaderStr:
-    SHA256_ENABLED = 0
+    if '#define NO_SHA256' in optionsHeaderStr:
+        SHA256_ENABLED = 0
+    else:
+        SHA256_ENABLED = 1
 
-if '#define WOLFSSL_SHA384' in optionsHeaderStr:
-    SHA384_ENABLED = 1
+    if '#define WOLFSSL_SHA384' in optionsHeaderStr:
+        SHA384_ENABLED = 1
+    else:
+        SHA384_ENABLED = 0
 
-if '#define WOLFSSL_SHA512' in optionsHeaderStr:
-    SHA512_ENABLED = 1
+    if '#define WOLFSSL_SHA512' in optionsHeaderStr:
+        SHA512_ENABLED = 1
+    else:
+        SHA512_ENABLED = 0
 
-if '#define NO_DES3' in optionsHeaderStr:
-    DES3_ENABLED = 0
+    if '#define NO_DES3' in optionsHeaderStr:
+        DES3_ENABLED = 0
+    else:
+        DES3_ENABLED = 1
 
-if '#define NO_AES' in optionsHeaderStr:
-    AES_ENABLED = 0
+    if '#define NO_AES' in optionsHeaderStr:
+        AES_ENABLED = 0
+    else:
+        AES_ENABLED = 1
 
-if '#define NO_HMAC' in optionsHeaderStr:
-    HMAC_ENABLED = 0
+    if '#define NO_HMAC' in optionsHeaderStr:
+        HMAC_ENABLED = 0
+    else:
+        HMAC_ENABLED = 1
 
-if '#define NO_RSA' in optionsHeaderStr:
-    RSA_ENABLED = 0
+    if '#define NO_RSA' in optionsHeaderStr:
+        RSA_ENABLED = 0
+    else:
+        RSA_ENABLED = 1
 
-if '#define HAVE_ECC' in optionsHeaderStr:
-    ECC_ENABLED = 1
+    if '#define HAVE_ECC' in optionsHeaderStr:
+        ECC_ENABLED = 1
+    else:
+        ECC_ENABLED = 0
 
-if '#define HAVE_ED25519' in optionsHeaderStr:
-    ED25519_ENABLED = 1
+    if '#define HAVE_ED25519' in optionsHeaderStr:
+        ED25519_ENABLED = 1
+    else:
+        ED25519_ENABLED = 0
 
-if '#define WOLFSSL_KEY_GEN' in optionsHeaderStr:
-    KEYGEN_ENABLED = 1
+    if '#define WOLFSSL_KEY_GEN' in optionsHeaderStr:
+        KEYGEN_ENABLED = 1
+    else:
+        KEYGEN_ENABLED = 0
 
 
 # build cffi module, wrapping native wolfSSL
