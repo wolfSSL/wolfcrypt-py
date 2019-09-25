@@ -56,9 +56,9 @@ DES3_ENABLED = 1
 AES_ENABLED = 1
 HMAC_ENABLED = 1
 RSA_ENABLED = 1
-ECC_ENABLED = 0
-ED25519_ENABLED = 0
-KEYGEN_ENABLED = 0
+ECC_ENABLED = 1
+ED25519_ENABLED = 1
+KEYGEN_ENABLED = 1
 
 # detect native features based on options.h defines
 if featureDetection == 1:
