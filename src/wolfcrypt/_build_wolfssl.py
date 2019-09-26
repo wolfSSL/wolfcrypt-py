@@ -23,6 +23,7 @@ import os
 import subprocess
 from contextlib import contextmanager
 from distutils.util import get_platform
+from wolfcrypt.__init__ import __wolfssl_version__ as version
 
 
 def local_path(path):
@@ -35,6 +36,29 @@ def local_path(path):
 
 WOLFSSL_GIT_ADDR = "https://github.com/wolfssl/wolfssl.git"
 WOLFSSL_SRC_PATH = local_path("lib/wolfssl/src")
+
+
+def wolfssl_inc_path():
+    wolfssl_path = os.environ.get("USE_LOCAL_WOLFSSL")
+    if wolfssl_path is None:
+        return local_path("lib/wolfssl/src")
+    else:
+        if os.path.isdir(wolfssl_path) and os.path.exists(wolfssl_path):
+            return wolfssl_path + "/include"
+        else:
+            return "/usr/local/include"
+
+
+def wolfssl_lib_path():
+    wolfssl_path = os.environ.get("USE_LOCAL_WOLFSSL")
+    if wolfssl_path is None:
+        return local_path("lib/wolfssl/{}/{}/lib".format(
+                          get_platform(), version))
+    else:
+        if os.path.isdir(wolfssl_path) and os.path.exists(wolfssl_path):
+            return wolfssl_path + "/lib"
+        else:
+            return "/usr/local/lib"
 
 
 def call(cmd):

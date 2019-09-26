@@ -106,87 +106,91 @@ class _Hash(object):
         return b2h(self.digest())
 
 
-class Sha(_Hash):
-    """
-    **SHA-1** is a cryptographic hash function standardized by **NIST**.
+if _lib.SHA_ENABLED:
+    class Sha(_Hash):
+        """
+        **SHA-1** is a cryptographic hash function standardized by **NIST**.
 
-    It produces an [ **160-bit | 20 bytes** ] message digest.
-    """
-    digest_size = 20
-    _native_type = "wc_Sha *"
-    _native_size = _ffi.sizeof("wc_Sha")
+        It produces an [ **160-bit | 20 bytes** ] message digest.
+        """
+        digest_size = 20
+        _native_type = "wc_Sha *"
+        _native_size = _ffi.sizeof("wc_Sha")
 
-    def _init(self):
-        return _lib.wc_InitSha(self._native_object)
+        def _init(self):
+            return _lib.wc_InitSha(self._native_object)
 
-    def _update(self, data):
-        return _lib.wc_ShaUpdate(self._native_object, data, len(data))
+        def _update(self, data):
+            return _lib.wc_ShaUpdate(self._native_object, data, len(data))
 
-    def _final(self, obj, ret):
-        return _lib.wc_ShaFinal(obj, ret)
-
-
-class Sha256(_Hash):
-    """
-    **SHA-256** is a cryptographic hash function from the
-    **SHA-2 family** and is standardized by **NIST**.
-
-    It produces a [ **256-bit | 32 bytes** ] message digest.
-    """
-    digest_size = 32
-    _native_type = "wc_Sha256 *"
-    _native_size = _ffi.sizeof("wc_Sha256")
-
-    def _init(self):
-        return _lib.wc_InitSha256(self._native_object)
-
-    def _update(self, data):
-        return _lib.wc_Sha256Update(self._native_object, data, len(data))
-
-    def _final(self, obj, ret):
-        return _lib.wc_Sha256Final(obj, ret)
+        def _final(self, obj, ret):
+            return _lib.wc_ShaFinal(obj, ret)
 
 
-class Sha384(_Hash):
-    """
-    **SHA-384** is a cryptographic hash function from the
-    **SHA-2 family** and is standardized by **NIST**.
+if _lib.SHA256_ENABLED:
+    class Sha256(_Hash):
+        """
+        **SHA-256** is a cryptographic hash function from the
+        **SHA-2 family** and is standardized by **NIST**.
 
-    It produces a [ **384-bit | 48 bytes** ] message digest.
-    """
-    digest_size = 48
-    _native_type = "wc_Sha384 *"
-    _native_size = _ffi.sizeof("wc_Sha384")
+        It produces a [ **256-bit | 32 bytes** ] message digest.
+        """
+        digest_size = 32
+        _native_type = "wc_Sha256 *"
+        _native_size = _ffi.sizeof("wc_Sha256")
 
-    def _init(self):
-        return _lib.wc_InitSha384(self._native_object)
+        def _init(self):
+            return _lib.wc_InitSha256(self._native_object)
 
-    def _update(self, data):
-        return _lib.wc_Sha384Update(self._native_object, data, len(data))
+        def _update(self, data):
+            return _lib.wc_Sha256Update(self._native_object, data, len(data))
 
-    def _final(self, obj, ret):
-        return _lib.wc_Sha384Final(obj, ret)
+        def _final(self, obj, ret):
+            return _lib.wc_Sha256Final(obj, ret)
 
 
-class Sha512(_Hash):
-    """
-    **SHA-512** is a cryptographic hash function from the
-    **SHA-2 family** and is standardized by **NIST**.
+if _lib.SHA384_ENABLED:
+    class Sha384(_Hash):
+        """
+        **SHA-384** is a cryptographic hash function from the
+        **SHA-2 family** and is standardized by **NIST**.
 
-    It produces a [ **512-bit | 64 bytes** ] message digest.
-    """
-    digest_size = 64
-    _native_type = "wc_Sha512 *"
-    _native_size = _ffi.sizeof("wc_Sha512")
+        It produces a [ **384-bit | 48 bytes** ] message digest.
+        """
+        digest_size = 48
+        _native_type = "wc_Sha384 *"
+        _native_size = _ffi.sizeof("wc_Sha384")
 
-    def _init(self):
-        return _lib.wc_InitSha512(self._native_object)
+        def _init(self):
+            return _lib.wc_InitSha384(self._native_object)
 
-    def _update(self, data):
-        return _lib.wc_Sha512Update(self._native_object, data, len(data))
+        def _update(self, data):
+            return _lib.wc_Sha384Update(self._native_object, data, len(data))
 
-    def _final(self, obj, ret):
-        return _lib.wc_Sha512Final(obj, ret)
+        def _final(self, obj, ret):
+            return _lib.wc_Sha384Final(obj, ret)
+
+
+if _lib.SHA512_ENABLED:
+    class Sha512(_Hash):
+        """
+        **SHA-512** is a cryptographic hash function from the
+        **SHA-2 family** and is standardized by **NIST**.
+
+        It produces a [ **512-bit | 64 bytes** ] message digest.
+        """
+        digest_size = 64
+        _native_type = "wc_Sha512 *"
+        _native_size = _ffi.sizeof("wc_Sha512")
+
+        def _init(self):
+            return _lib.wc_InitSha512(self._native_object)
+
+        def _update(self, data):
+            return _lib.wc_Sha512Update(self._native_object, data, len(data))
+
+        def _final(self, obj, ret):
+            return _lib.wc_Sha512Final(obj, ret)
 
 
 # Hmac types
@@ -198,91 +202,96 @@ _TYPE_SHA512 = 8
 _HMAC_TYPES = [_TYPE_SHA, _TYPE_SHA256, _TYPE_SHA384, _TYPE_SHA512]
 
 
-class _Hmac(_Hash):
-    """
-    A **PEP 247: Cryptographic Hash Functions** compliant
-    **Keyed Hash Function Interface**.
-    """
-    digest_size = None
-    _native_type = "Hmac *"
-    _native_size = _ffi.sizeof("Hmac")
-
-    def __init__(self, key, string=None):  # pylint: disable=W0231
-        key = t2b(key)
-
-        self._native_object = _ffi.new(self._native_type)
-        ret = self._init(self._type, key)
-        if ret < 0:  # pragma: no cover
-            raise WolfCryptError("Hmac init error (%d)" % ret)
-
-        if string:
-            self.update(string)
-
-    @classmethod
-    def new(cls, key, string=None):  # pylint: disable=W0221
+if _lib.HMAC_ENABLED:
+    class _Hmac(_Hash):
         """
-        Creates a new hashing object and returns it. **key** is
-        a required parameter containing a string giving the key
-        to use. The optional **string** parameter, if supplied,
-        will be immediately hashed into the object's starting
-        state, as if obj.update(string) was called.
+        A **PEP 247: Cryptographic Hash Functions** compliant
+        **Keyed Hash Function Interface**.
         """
-        return cls(key, string)
+        digest_size = None
+        _native_type = "Hmac *"
+        _native_size = _ffi.sizeof("Hmac")
 
-    def _init(self, hmac, key):
-        if _lib.wc_HmacInit(self._native_object, _ffi.NULL, -2) != 0:
-            raise WolfCryptError("wc_HmacInit error")
-        ret = _lib.wc_HmacSetKey(self._native_object, hmac, key, len(key))
-        if ret < 0:
-            raise WolfCryptError("wc_HmacSetKey returned %d" % ret)
-        return ret
+        def __init__(self, key, string=None):  # pylint: disable=W0231
+            key = t2b(key)
 
-    def _update(self, data):
-        return _lib.wc_HmacUpdate(self._native_object, data, len(data))
+            self._native_object = _ffi.new(self._native_type)
+            ret = self._init(self._type, key)
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("Hmac init error (%d)" % ret)
 
-    def _final(self, obj, ret):
-        return _lib.wc_HmacFinal(obj, ret)
+            if string:
+                self.update(string)
 
+        @classmethod
+        def new(cls, key, string=None):  # pylint: disable=W0221
+            """
+            Creates a new hashing object and returns it. **key** is
+            a required parameter containing a string giving the key
+            to use. The optional **string** parameter, if supplied,
+            will be immediately hashed into the object's starting
+            state, as if obj.update(string) was called.
+            """
+            return cls(key, string)
 
-class HmacSha(_Hmac):
-    """
-    A HMAC function using **SHA-1** as it's cryptographic
-    hash function.
+        def _init(self, hmac, key):
+            if _lib.wc_HmacInit(self._native_object, _ffi.NULL, -2) != 0:
+                raise WolfCryptError("wc_HmacInit error")
+            ret = _lib.wc_HmacSetKey(self._native_object, hmac, key, len(key))
+            if ret < 0:
+                raise WolfCryptError("wc_HmacSetKey returned %d" % ret)
+            return ret
 
-    It produces a [ **512-bit | 64 bytes** ] message digest.
-    """
-    _type = _TYPE_SHA
-    digest_size = Sha.digest_size
+        def _update(self, data):
+            return _lib.wc_HmacUpdate(self._native_object, data, len(data))
 
-
-class HmacSha256(_Hmac):
-    """
-    A HMAC function using **SHA-256** as it's cryptographic
-    hash function.
-
-    It produces a [ **512-bit | 64 bytes** ] message digest.
-    """
-    _type = _TYPE_SHA256
-    digest_size = Sha256.digest_size
-
-
-class HmacSha384(_Hmac):
-    """
-    A HMAC function using **SHA-384** as it's cryptographic
-    hash function.
-
-    It produces a [ **512-bit | 64 bytes** ] message digest.
-    """
-    _type = _TYPE_SHA384
-    digest_size = Sha384.digest_size
+        def _final(self, obj, ret):
+            return _lib.wc_HmacFinal(obj, ret)
 
 
-class HmacSha512(_Hmac):
-    """
-    A HMAC function using **SHA-512** as it's cryptographic
-    hash function.
+    if _lib.SHA_ENABLED:
+        class HmacSha(_Hmac):
+            """
+            A HMAC function using **SHA-1** as it's cryptographic
+            hash function.
 
-    It produces a [ **512-bit | 64 bytes** ] message digest.
-    """
-    _type = _TYPE_SHA512
-    digest_size = Sha512.digest_size
+            It produces a [ **512-bit | 64 bytes** ] message digest.
+            """
+            _type = _TYPE_SHA
+            digest_size = Sha.digest_size
+
+
+    if _lib.SHA256_ENABLED:
+        class HmacSha256(_Hmac):
+            """
+            A HMAC function using **SHA-256** as it's cryptographic
+            hash function.
+
+            It produces a [ **512-bit | 64 bytes** ] message digest.
+            """
+            _type = _TYPE_SHA256
+            digest_size = Sha256.digest_size
+
+
+    if _lib.SHA384_ENABLED:
+        class HmacSha384(_Hmac):
+            """
+            A HMAC function using **SHA-384** as it's cryptographic
+            hash function.
+
+            It produces a [ **512-bit | 64 bytes** ] message digest.
+            """
+            _type = _TYPE_SHA384
+            digest_size = Sha384.digest_size
+
+
+    if _lib.SHA512_ENABLED:
+        class HmacSha512(_Hmac):
+            """
+            A HMAC function using **SHA-512** as it's cryptographic
+            hash function.
+
+            It produces a [ **512-bit | 64 bytes** ] message digest.
+            """
+            _type = _TYPE_SHA512
+            digest_size = Sha512.digest_size
