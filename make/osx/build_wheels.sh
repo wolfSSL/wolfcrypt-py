@@ -6,11 +6,15 @@ for VER in 2.7 3.6 3.7; do
     PYTHON="python${VER}"
     VENV="venv_${VER}"
 
-    ${PIP} install virtualenv
-    virtualenv -p ${PYTHON} ${VENV}
-    . ./${VENV}/bin/activate
+    # update pip for newer TLS support
     curl https://bootstrap.pypa.io/get-pip.py | ${PYTHON}
     ${PIP} install -r requirements/setup.txt
+
+    # update virtualenv
+    ${PIP} install --upgrade virtualenv
+    virtualenv -p ${PYTHON} ${VENV}
+    . ./${VENV}/bin/activate
+
     ${PYTHON} setup.py bdist_wheel
     ${PIP} install -r requirements/test.txt
     set +e
