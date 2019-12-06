@@ -26,7 +26,7 @@ We provide Python wheels (prebuilt binaries) for OSX 64 bits and Linux 64 bits:
 To build wolfcrypt-py against a local installation of the native C wolfSSL
 library, use the USE_LOCAL_WOLFSSL variable.  This variable should be
 
-wolfcrypt-py can be built against a local verison of the native wolfSSL
+wolfcrypt-py can be built against a local version of the native wolfSSL
 library by using pip with the USE_LOCAL_WOLFSSL variable. USE_LOCAL_WOLFSSL
 should be set equal to the installation path for the wolfSSL library:
 
