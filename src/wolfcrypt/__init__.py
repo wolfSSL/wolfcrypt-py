@@ -1,6 +1,6 @@
 # __init__.py
 #
-# Copyright (C) 2006-2018 wolfSSL Inc.
+# Copyright (C) 2006-2020 wolfSSL Inc.
 #
 # This file is part of wolfSSL. (formerly known as CyaSSL)
 #
@@ -38,7 +38,7 @@ __author__ = "wolfSSL Inc."
 __email__ = "info@wolfssl.com"
 
 __license__ = "GPLv2 or Commercial License"
-__copyright__ = "Copyright (C) 2006-2018 wolfSSL Inc"
+__copyright__ = "Copyright (C) 2006-2020 wolfSSL Inc"
 
 __all__ = [
     "__title__", "__summary__", "__uri__", "__version__",
