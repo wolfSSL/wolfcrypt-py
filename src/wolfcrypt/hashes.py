@@ -204,15 +204,19 @@ if _lib.SHA3_ENABLED:
         """
         _native_type = "wc_Sha3 *"
         _native_size = _ffi.sizeof("wc_Sha3")
+        SHA3_224_DIGEST_SIZE = 28
+        SHA3_256_DIGEST_SIZE = 32
+        SHA3_384_DIGEST_SIZE = 48
+        SHA3_512_DIGEST_SIZE = 64
 
         def __init__(self):  # pylint: disable=W0231
             self._native_object = _ffi.new(self._native_type)
-            self.digest_size = 48
+            self.digest_size = SHA3_384_DIGEST_SIZE
             ret = self._init()
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("Sha3 init error (%d)" % ret)
 
-        def __init__(self, string, size=48):  # pylint: disable=W0231
+        def __init__(self, string, size=SHA3_384_DIGEST_SIZE):  # pylint: disable=W0231
             self._native_object = _ffi.new(self._native_type)
             self.digest_size = size
             ret = self._init()
@@ -222,36 +226,36 @@ if _lib.SHA3_ENABLED:
                 self.update(string)
 
         def _init(self):
-            if (self.digest_size != 28 and
-                    self.digest_size != 32 and
-                    self.digest_size != 48 and
-                    self.digest_size != 64):
+            if (self.digest_size != Sha3.SHA3_224_DIGEST_SIZE and
+                    self.digest_size != Sha3.SHA3_256_DIGEST_SIZE and
+                    self.digest_size != Sha3.SHA3_384_DIGEST_SIZE and
+                    self.digest_size != Sha3.SHA3_512_DIGEST_SIZE):
                 return -1
-            if self.digest_size == 28:
+            if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
                 return _lib.wc_InitSha3_224(self._native_object, _ffi.NULL, 0)
-            if self.digest_size == 32:
+            if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
                 return _lib.wc_InitSha3_256(self._native_object, _ffi.NULL, 0)
-            if self.digest_size == 48:
+            if self.digest_size == Sha3.SHA3_384_DIGEST_SIZE:
                 return _lib.wc_InitSha3_384(self._native_object, _ffi.NULL, 0)
-            if self.digest_size == 64:
+            if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
                 return _lib.wc_InitSha3_512(self._native_object, _ffi.NULL, 0)
         def _update(self, data):
-            if self.digest_size == 28:
+            if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
                 return _lib.wc_Sha3_224_Update(self._native_object, data, len(data))
-            if self.digest_size == 32:
+            if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
                 return _lib.wc_Sha3_256_Update(self._native_object, data, len(data))
-            if self.digest_size == 48:
+            if self.digest_size == Sha3.SHA3_384_DIGEST_SIZE:
                 return _lib.wc_Sha3_384_Update(self._native_object, data, len(data))
-            if self.digest_size == 64:
+            if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
                 return _lib.wc_Sha3_512_Update(self._native_object, data, len(data))
         def _final(self, obj, ret):
-            if self.digest_size == 28:
+            if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
                 return _lib.wc_Sha3_224_Final(obj, ret)
-            if self.digest_size == 32:
+            if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
                 return _lib.wc_Sha3_256_Final(obj, ret)
-            if self.digest_size == 48:
+            if self.digest_size == Sha3.SHA3_384_DIGEST_SIZE:
                 return _lib.wc_Sha3_384_Final(obj, ret)
-            if self.digest_size == 64:
+            if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
                 return _lib.wc_Sha3_512_Final(obj, ret)
 
 # Hmac types
