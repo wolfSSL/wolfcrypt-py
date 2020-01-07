@@ -153,11 +153,11 @@ def make_flags(prefix):
     flags.append("--enable-sha")
     flags.append("--enable-sha384")
     flags.append("--enable-sha512")
+    flags.append("--enable-sha3")
     flags.append("--enable-hkdf")
 
     flags.append("--disable-md5")
     flags.append("--disable-sha224")
-    flags.append("--disable-sha3")
     flags.append("--disable-poly1305")
 
     # asymmetric ciphers

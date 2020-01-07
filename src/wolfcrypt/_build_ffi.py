@@ -47,11 +47,12 @@ else:
                      "using USE_LOCAL_WOLFSSL\n")
 
 # default values
-MPAPI_ENABLED = 0
+MPAPI_ENABLED = 1
 SHA_ENABLED = 1
 SHA256_ENABLED = 1
 SHA384_ENABLED = 1
 SHA512_ENABLED = 1
+SHA3_ENABLED = 1
 DES3_ENABLED = 1
 AES_ENABLED = 1
 HMAC_ENABLED = 1
@@ -86,6 +87,11 @@ if featureDetection == 1:
         SHA512_ENABLED = 1
     else:
         SHA512_ENABLED = 0
+
+    if '#define WOLFSSL_SHA3' in optionsHeaderStr:
+        SHA3_ENABLED = 1
+    else:
+        SHA3_ENABLED = 0
 
     if '#define NO_DES3' in optionsHeaderStr:
         DES3_ENABLED = 0
@@ -134,6 +140,7 @@ ffibuilder.set_source(
     #include <wolfssl/wolfcrypt/sha.h>
     #include <wolfssl/wolfcrypt/sha256.h>
     #include <wolfssl/wolfcrypt/sha512.h>
+    #include <wolfssl/wolfcrypt/sha3.h>
 
     #include <wolfssl/wolfcrypt/hmac.h>
 
@@ -153,6 +160,7 @@ ffibuilder.set_source(
     int SHA256_ENABLED = """ + str(SHA256_ENABLED) + """;
     int SHA384_ENABLED = """ + str(SHA384_ENABLED) + """;
     int SHA512_ENABLED = """ + str(SHA512_ENABLED) + """;
+    int SHA3_ENABLED = """ + str(SHA3_ENABLED) + """;
     int DES3_ENABLED = """ + str(DES3_ENABLED) + """;
     int AES_ENABLED = """ + str(AES_ENABLED) + """;
     int HMAC_ENABLED = """ + str(HMAC_ENABLED) + """;
@@ -173,6 +181,7 @@ _cdef = """
     int SHA256_ENABLED;
     int SHA384_ENABLED;
     int SHA512_ENABLED;
+    int SHA3_ENABLED;
     int DES3_ENABLED;
     int AES_ENABLED;
     int HMAC_ENABLED;
@@ -233,6 +242,22 @@ if (SHA512_ENABLED == 1):
     int wc_InitSha512(wc_Sha512*);
     int wc_Sha512Update(wc_Sha512*, const byte*, word32);
     int wc_Sha512Final(wc_Sha512*, byte*);
+    """
+if (SHA3_ENABLED == 1):
+    _cdef += """
+    typedef struct { ...; } wc_Sha3;
+    int wc_InitSha3_224(wc_Sha3*, void *, int);
+    int wc_InitSha3_256(wc_Sha3*, void *, int);
+    int wc_InitSha3_384(wc_Sha3*, void *, int);
+    int wc_InitSha3_512(wc_Sha3*, void *, int);
+    int wc_Sha3_224_Update(wc_Sha3*, const byte*, word32);
+    int wc_Sha3_256_Update(wc_Sha3*, const byte*, word32);
+    int wc_Sha3_384_Update(wc_Sha3*, const byte*, word32);
+    int wc_Sha3_512_Update(wc_Sha3*, const byte*, word32);
+    int wc_Sha3_224_Final(wc_Sha3*, byte*);
+    int wc_Sha3_256_Final(wc_Sha3*, byte*);
+    int wc_Sha3_384_Final(wc_Sha3*, byte*);
+    int wc_Sha3_512_Final(wc_Sha3*, byte*);
     """
 
 if (DES3_ENABLED == 1):
