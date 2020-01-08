@@ -38,6 +38,9 @@ if _lib.SHA384_ENABLED:
 if _lib.SHA512_ENABLED:
     from wolfcrypt.hashes import Sha512
 
+if _lib.SHA3_ENABLED:
+    from wolfcrypt.hashes import Sha3
+
 if _lib.HMAC_ENABLED:
     if _lib.SHA_ENABLED:
         from wolfcrypt.hashes import HmacSha
@@ -81,7 +84,12 @@ def vectors():
                        "e8fff55e644ee8a106aae19c07f91b3f" +
                        "2a2a6d40dfa7302c0fa6a1a9a5bfa03f")
         )
-
+    if _lib.SHA3_ENABLED:
+        vectorArray[Sha3]=TestVector(
+            digest=t2b("6170dedf06f83c3305ec18b7558384a5" +
+                       "a62d86e42c143d416aaec32f971986c1" +
+                       "e84edf61df308cc6d8c310d1956e1908")
+            )
     if _lib.HMAC_ENABLED:
         if _lib.SHA_ENABLED:
             vectorArray[HmacSha]=TestVector(
@@ -117,6 +125,8 @@ if _lib.SHA384_ENABLED:
     hash_params.append(Sha384)
 if _lib.SHA512_ENABLED:
     hash_params.append(Sha512)
+if _lib.SHA3_ENABLED:
+    hash_params.append(Sha3)
 
 hmac_params = []
 if _lib.HMAC_ENABLED:
