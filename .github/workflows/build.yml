@@ -18,14 +18,20 @@ jobs:
       with:
         python-version: '3.8'
 
-    - name: Install cibuildwheel
-      run: |
-        python3 -m pip install cibuildwheel==1.3.0
 
-    - name: Install Visual C++ for Python 3
+    - name: Install Python 3.8 for windows
       if: startsWith(matrix.os, 'windows')
       run: |
-        choco install python3 -f -y
+        choco install python --version 3.8.0
+        export PATH="/c/Python38:/c/Python38/Scripts:$PATH"
+    
+    - name: Install cibuildwheel
+      run: |
+        python3 -m pip3 install cibuildwheel==1.3.0
+    
+    - name: Install cffi
+      run: |
+        python3 -m pip3 install cffi
 
     - name: Build wheel
       run: |
