@@ -27,11 +27,11 @@ jobs:
     
     - name: Install cibuildwheel
       run: |
-        python3 -m pip3 install cibuildwheel==1.3.0
+        python3 -m pip install cibuildwheel==1.3.0
     
     - name: Install cffi
       run: |
-        python3 -m pip3 install cffi
+        python3 -m pip install cffi
 
     - name: Build wheel
       run: |
