@@ -32,6 +32,9 @@ if _lib.DES3_ENABLED:
 if _lib.AES_ENABLED:
     from wolfcrypt.ciphers import Aes
 
+if _lib.CHACHA_ENABLED:
+    from wolfcrypt.ciphers import ChaCha
+
 if _lib.RSA_ENABLED:
     from wolfcrypt.ciphers import (RsaPrivate, RsaPublic)
 
@@ -60,6 +63,11 @@ def vectors():
             iv="1234567890abcdef",
             plaintext=t2b("now is the time "),
             ciphertext=h2b("959492575f4281532ccc9d4677a233cb")
+        )
+    if _lib.CHACHA_ENABLED:
+        vectorArray[ChaCha]=TestVector(
+            key="0123456789abcdef01234567890abcdef",
+            iv="1234567890abcdef",
         )
     if _lib.DES3_ENABLED:
         vectorArray[Des3]=TestVector(
@@ -227,6 +235,23 @@ def test_block_cipher(cipher_cls, vectors):
 
     with pytest.raises(ValueError):
         cipher_obj.decrypt(ciphertext[:-1])
+
+if _lib.CHACHA_ENABLED:
+    @pytest.fixture
+    def chacha_obj(vectors):
+        r = ChaCha(vectors[ChaCha].key, 32)
+        r.set_iv(vectors[ChaCha].iv, 16)
+        return r
+
+    @pytest.fixture
+    def test_chacha_enc_dec(chacha_obj):
+        plaintext = t2b("Everyone gets Friday off.")
+        cyt = chacha_obj.encrypt(plaintext)
+        chacha_obj.set_iv(vectors[ChaCha].iv, 16)
+        dec = chacha_obj.decrypt(cyt)
+        assert plaintext == dec
+
+
 
 
 if _lib.RSA_ENABLED:
