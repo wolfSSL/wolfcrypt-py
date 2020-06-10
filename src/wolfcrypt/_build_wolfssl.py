@@ -145,8 +145,8 @@ def make_flags(prefix):
     # symmetric ciphers
     flags.append("--enable-aes")
     flags.append("--enable-des3")
+    flags.append("--enable-chacha")
 
-    flags.append("--disable-chacha")
     flags.append("--disable-aesgcm")
 
     # hashes and MACs

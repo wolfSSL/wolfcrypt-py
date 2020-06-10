@@ -60,6 +60,7 @@ RSA_ENABLED = 1
 ECC_ENABLED = 1
 ED25519_ENABLED = 1
 KEYGEN_ENABLED = 1
+CHACHA_ENABLED = 1
 
 # detect native features based on options.h defines
 if featureDetection == 1:
@@ -103,6 +104,11 @@ if featureDetection == 1:
     else:
         AES_ENABLED = 1
 
+    if '#define HAVE_CHACHA' in optionsHeaderStr:
+        CHACHA_ENABLED = 1
+    else:
+        CHACHA_ENABLED = 0
+
     if '#define NO_HMAC' in optionsHeaderStr:
         HMAC_ENABLED = 0
     else:
@@ -136,6 +142,7 @@ ffibuilder.set_source(
     "wolfcrypt._ffi",
     """
     #include <wolfssl/options.h>
+    #include <wolfssl/wolfcrypt/settings.h>
 
     #include <wolfssl/wolfcrypt/sha.h>
     #include <wolfssl/wolfcrypt/sha256.h>
@@ -145,6 +152,7 @@ ffibuilder.set_source(
     #include <wolfssl/wolfcrypt/hmac.h>
 
     #include <wolfssl/wolfcrypt/aes.h>
+    #include <wolfssl/wolfcrypt/chacha.h>
     #include <wolfssl/wolfcrypt/des3.h>
     #include <wolfssl/wolfcrypt/asn.h>
 
@@ -163,6 +171,7 @@ ffibuilder.set_source(
     int SHA3_ENABLED = """ + str(SHA3_ENABLED) + """;
     int DES3_ENABLED = """ + str(DES3_ENABLED) + """;
     int AES_ENABLED = """ + str(AES_ENABLED) + """;
+    int CHACHA_ENABLED = """ + str(CHACHA_ENABLED) + """;
     int HMAC_ENABLED = """ + str(HMAC_ENABLED) + """;
     int RSA_ENABLED = """ + str(RSA_ENABLED) + """;
     int ECC_ENABLED = """ + str(ECC_ENABLED) + """;
@@ -184,6 +193,7 @@ _cdef = """
     int SHA3_ENABLED;
     int DES3_ENABLED;
     int AES_ENABLED;
+    int CHACHA_ENABLED;
     int HMAC_ENABLED;
     int RSA_ENABLED;
     int ECC_ENABLED;
@@ -275,6 +285,15 @@ if (AES_ENABLED == 1):
     int wc_AesSetKey(Aes*, const byte*, word32, const byte*, int);
     int wc_AesCbcEncrypt(Aes*, byte*, const byte*, word32);
     int wc_AesCbcDecrypt(Aes*, byte*, const byte*, word32);
+    """
+
+if (CHACHA_ENABLED == 1):
+    _cdef += """
+    typedef struct { ...; } ChaCha;
+
+    int wc_Chacha_SetKey(ChaCha*, const byte*, word32);
+    int wc_Chacha_SetIV(ChaCha*, const byte*, word32);
+    int wc_Chacha_Process(ChaCha*, byte*, const byte*,word32);
     """
 
 if (HMAC_ENABLED == 1):

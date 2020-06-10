@@ -147,8 +147,11 @@ class _Cipher(object):
         Returns a string containing the ciphertext.
         """
         string = t2b(string)
+        if not string:
+            raise ValueError(
+                    "empty string not allowed")
 
-        if not string or len(string) % self.block_size:
+        if len(string) % self.block_size and not "ChaCha" in self._native_type:
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
 
@@ -177,7 +180,11 @@ class _Cipher(object):
         """
         string = t2b(string)
 
-        if not string or len(string) % self.block_size:
+        if not string:
+            raise ValueError(
+                    "empty string not allowed")
+
+        if len(string) % self.block_size and not "ChaCha" in self._native_type:
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
 
@@ -222,6 +229,56 @@ if _lib.AES_ENABLED:
             return _lib.wc_AesCbcDecrypt(self._dec, destination,
                                          source, len(source))
 
+if _lib.CHACHA_ENABLED:
+    class ChaCha(_Cipher):
+        """
+        ChaCha20
+        """
+        block_size = 16
+        key_size = None  # 16, 24, 32
+        _key_sizes = [16, 32]
+        _native_type = "ChaCha *"
+
+        def __init__(self, key="", size=32):
+            self._native_object = _ffi.new(self._native_type)
+            self._enc = None
+            self._dec = None
+            self._key = None
+            if len(key) > 0:
+                if not size in self._key_sizes:
+                    raise ValueError("Invalid key size %d" % size)
+                self._key = t2b(key)
+                self.key_size = size
+            self._IV = []
+
+        def _set_key(self, direction):
+            if self._key == None:
+                return -1
+            if self._enc:
+                ret = _lib.wc_Chacha_SetKey(self._enc, self._key, len(self._key))
+                if ret == 0:
+                    _lib.wc_Chacha_SetIV(self._enc, self._IV, self.block_size)
+                if ret != 0:
+                    return ret
+            if self._dec:
+                ret = _lib.wc_Chacha_SetKey(self._dec, self._key, len(self._key))
+                if ret == 0:
+                    _lib.wc_Chacha_SetIV(self._dec, self._IV, self.block_size)
+                if ret != 0:
+                    return ret
+            return 0
+
+        def _encrypt(self, destination, source):
+            return _lib.wc_Chacha_Process(self._enc, destination,
+                                         source, len(source))
+
+        def _decrypt(self, destination, source):
+            return _lib.wc_Chacha_Process(self._dec,
+                                          destination, source, len(source))
+
+        def set_iv(self, iv):
+            self._IV = t2b(iv)
+            self._set_key(0)
 
 if _lib.DES3_ENABLED:
     class Des3(_Cipher):
