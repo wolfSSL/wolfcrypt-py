@@ -240,14 +240,14 @@ if _lib.CHACHA_ENABLED:
     @pytest.fixture
     def chacha_obj(vectors):
         r = ChaCha(vectors[ChaCha].key, 32)
-        r.set_iv(vectors[ChaCha].iv, 16)
+        r.set_iv(vectors[ChaCha].iv)
         return r
 
     @pytest.fixture
     def test_chacha_enc_dec(chacha_obj):
         plaintext = t2b("Everyone gets Friday off.")
         cyt = chacha_obj.encrypt(plaintext)
-        chacha_obj.set_iv(vectors[ChaCha].iv, 16)
+        chacha_obj.set_iv(vectors[ChaCha].iv)
         dec = chacha_obj.decrypt(cyt)
         assert plaintext == dec
 

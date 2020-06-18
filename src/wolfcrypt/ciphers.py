@@ -238,6 +238,8 @@ if _lib.CHACHA_ENABLED:
         key_size = None  # 16, 24, 32
         _key_sizes = [16, 32]
         _native_type = "ChaCha *"
+        _IV_nonce = []
+        _IV_counter = 0
 
         def __init__(self, key="", size=32):
             self._native_object = _ffi.new(self._native_type)
@@ -249,7 +251,8 @@ if _lib.CHACHA_ENABLED:
                     raise ValueError("Invalid key size %d" % size)
                 self._key = t2b(key)
                 self.key_size = size
-            self._IV = []
+            self._IV_nonce = []
+            self._IV_counter = 0
 
         def _set_key(self, direction):
             if self._key == None:
@@ -257,13 +260,13 @@ if _lib.CHACHA_ENABLED:
             if self._enc:
                 ret = _lib.wc_Chacha_SetKey(self._enc, self._key, len(self._key))
                 if ret == 0:
-                    _lib.wc_Chacha_SetIV(self._enc, self._IV, self.block_size)
+                    _lib.wc_Chacha_SetIV(self._enc, self._IV_nonce, self._IV_counter)
                 if ret != 0:
                     return ret
             if self._dec:
                 ret = _lib.wc_Chacha_SetKey(self._dec, self._key, len(self._key))
                 if ret == 0:
-                    _lib.wc_Chacha_SetIV(self._dec, self._IV, self.block_size)
+                    _lib.wc_Chacha_SetIV(self._dec, self._IV_nonce, self._IV_counter)
                 if ret != 0:
                     return ret
             return 0
@@ -276,8 +279,9 @@ if _lib.CHACHA_ENABLED:
             return _lib.wc_Chacha_Process(self._dec,
                                           destination, source, len(source))
 
-        def set_iv(self, iv):
-            self._IV = t2b(iv)
+        def set_iv(self, nonce, counter = 0):
+            self._IV_nonce = t2b(nonce)
+            self._IV_counter = counter
             self._set_key(0)
 
 if _lib.DES3_ENABLED:
