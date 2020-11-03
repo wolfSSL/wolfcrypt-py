@@ -1,17 +1,26 @@
 set -e
 set +x
 
-for PYVERSION in 2.7 3.6 3.7; do
-    virtualenv -p /Library/Frameworks/Python.framework/Versions/${PYVERSION}/bin/python${PYVERSION} venv_${PYVERSION}
-    . ./venv_${PYVERSION}/bin/activate
-    curl https://bootstrap.pypa.io/get-pip.py | python
-    pip install -r requirements/setup.txt
-    python setup.py bdist_wheel
-    pip install -r requirements/test.txt
+for VER in 2.7 3.6 3.7; do
+    PIP="pip${VER}"
+    PYTHON="python${VER}"
+    VENV="venv_${VER}"
+
+    # update pip for newer TLS support
+    curl https://bootstrap.pypa.io/get-pip.py | ${PYTHON}
+    ${PIP} install -r requirements/setup.txt
+
+    # update virtualenv
+    ${PIP} install --upgrade virtualenv
+    virtualenv -p ${PYTHON} ${VENV}
+    . ./${VENV}/bin/activate
+
+    ${PYTHON} setup.py bdist_wheel
+    ${PIP} install -r requirements/test.txt
     set +e
-    pip uninstall -y wolfcrypt
+    ${PIP} uninstall -y wolfcrypt
     set -e
-    pip install wolfcrypt --no-index -f dist
+    ${PIP} install wolfcrypt --no-index -f dist
     rm -rf tests/__pycache__
     py.test tests
     deactivate
