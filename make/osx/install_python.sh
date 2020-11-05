@@ -3,10 +3,9 @@ set -euo pipefail
 set -x
 
 URLS=(
-    'https://www.python.org/ftp/python/2.7.15/python-2.7.15-macosx10.6.pkg'
-    'https://www.python.org/ftp/python/3.5.4/python-3.5.4-macosx10.6.pkg'
-    'https://www.python.org/ftp/python/3.6.6/python-3.6.6-macosx10.6.pkg'
-    'https://www.python.org/ftp/python/3.7.0/python-3.7.0-macosx10.6.pkg'
+    'https://www.python.org/ftp/python/2.7.18/python-2.7.18-macosx10.9.pkg'
+    'https://www.python.org/ftp/python/3.7.9/python-3.7.9-macosx10.9.pkg'
+    'https://www.python.org/ftp/python/3.8.6/python-3.8.6-macosx10.9.pkg'
 )
 
 for url in "${URLS[@]}"; do
