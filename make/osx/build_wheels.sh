@@ -1,10 +1,11 @@
 set -e
 set +x
 
-for VER in 2.7 3.6 3.7; do
+for VER in 2.7 3.7 3.8; do
     PIP="pip${VER}"
     PYTHON="python${VER}"
     VENV="venv_${VER}"
+    PATH="/Library/Frameworks/Python.framework/Versions/${VER}/bin:$PATH"
 
     # update pip for newer TLS support
     curl https://bootstrap.pypa.io/get-pip.py | ${PYTHON}
