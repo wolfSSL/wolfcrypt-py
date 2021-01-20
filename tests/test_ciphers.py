@@ -51,7 +51,7 @@ from wolfcrypt.ciphers import (
 
 @pytest.fixture
 def vectors():
-    TestVector = namedtuple("TestVector", "key iv plaintext ciphertext raw_key")
+    TestVector = namedtuple("TestVector", "key iv plaintext ciphertext raw_key pkcs8_key")
     TestVector.__new__.__defaults__ = (None,) * len(TestVector._fields)
 
     # test vector dictionary
@@ -109,7 +109,48 @@ def vectors():
                 "C8DEF61BC2612376EFB09D1C44BE1343396717C89DCAFBF545648B38822C"
                 "F28102403989E59C195530BAB7488C48140EF49F7E779743E1B419353123"
                 "759C3B44AD691256EE0061641666D37C742B15B4A2FEBF086B1A5D3F9012"
-                "B105863129DBD9E2")
+                "B105863129DBD9E2"),
+            pkcs8_key=h2b(
+                "30820276020100300d06092a864886f7"
+                "0d0101010500048202603082025c0201"
+                "0002818100bc730ea849f374a2a9ef18"
+                "a5da559921f9c8ecb36d48e535357577"
+                "37ecd161905f3ed9e4d5df94cac1a9d7"
+                "19da86c9e84dc4613682feabad7e7725"
+                "bb8d11a5bc623aa838cc39a20466b4f7"
+                "f7f3aada4d020ebb5e8d6948dc77c928"
+                "0e22e96ba426ba4ce8c1fd4a6f2b1fef"
+                "8aaef69062e5641eeb2b3c67c8dc2700"
+                "f6916865a902030100010281801397ea"
+                "e8387825a25c04ce0d407c31e5c470cd"
+                "9b823b5809863b665fdc3190f14fd5db"
+                "15ddded73b95933118310e5ea3d6a21a"
+                "716e81481c4bcfdb8e7a866132dcfb55"
+                "c1166d279224458bf1b848b14b1dacde"
+                "dadd8e2fc291fba5a96ef83a6af1fd50"
+                "18ef9fe7c3ca78ea56d3d3725b96dd4e"
+                "064e3ac3d9be72b66507074c01024100"
+                "fa47d47a7c923c55ef81f041302da3cf"
+                "8f1ce6872705700ddf9835d6f18b382f"
+                "24b5d084b6794f7129945af0646aace7"
+                "72c6ed4d59983e673af3742cf9611769"
+                "024100c0c1820d0cebc62fdc92f99d82"
+                "1a31e9e9f74bf282871cee166ad11d18"
+                "8270f3c0b62ff6f3f71df18623c84eeb"
+                "8f568e8ff5bff1f72bb5cc3dc657390c"
+                "1b54410241009d7e05deedf4b7b2fbfc"
+                "304b551de32f0147966905cd0e2e2cbd"
+                "8363b6ab7cb76dca5b64a7cebe86df3b"
+                "53de61d21eeba5f637edacab78d94ce7"
+                "55fbd71199c1024018981829e61e2739"
+                "702168ac0a2fa172c121869538c65890"
+                "a0579cbae3a7b115c8def61bc2612376"
+                "efb09d1c44be1343396717c89dcafbf5"
+                "45648b38822cf28102403989e59c1955"
+                "30bab7488c48140ef49f7e779743e1b4"
+                "19353123759c3b44ad691256ee006164"
+                "1666d37c742b15b4a2febf086b1a5d3f"
+                "9012b105863129dbd9e2")
         )
 
     if _lib.ECC_ENABLED:
@@ -259,6 +300,9 @@ if _lib.RSA_ENABLED:
     def rsa_private(vectors):
         return RsaPrivate(vectors[RsaPrivate].key)
 
+    @pytest.fixture
+    def rsa_private_pkcs8(vectors):
+        return RsaPrivate(vectors[RsaPrivate].pkcs8_key)
 
     @pytest.fixture
     def rsa_public(vectors):
@@ -280,7 +324,7 @@ if _lib.RSA_ENABLED:
     def test_rsa_encrypt_decrypt(rsa_private, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
-        # normal usage, encrypt with public, decrypt with pirate
+        # normal usage, encrypt with public, decrypt with private
         ciphertext = rsa_public.encrypt(plaintext)
 
         assert 1024 / 8 == len(ciphertext) == rsa_public.output_size
@@ -292,6 +336,22 @@ if _lib.RSA_ENABLED:
 
         assert 1024 / 8 == len(ciphertext) == rsa_private.output_size
         assert plaintext == rsa_private.decrypt(ciphertext)
+
+    def test_rsa_pkcs8_encrypt_decrypt(rsa_private_pkcs8, rsa_public):
+        plaintext = t2b("Everyone gets Friday off.")
+
+        # normal usage, encrypt with public, decrypt with private
+        ciphertext = rsa_public.encrypt(plaintext)
+
+        assert 1024 / 8 == len(ciphertext) == rsa_public.output_size
+        assert plaintext == rsa_private_pkcs8.decrypt(ciphertext)
+
+        # private object holds both private and public info, so it can also encrypt
+        # using the known public key.
+        ciphertext = rsa_private_pkcs8.encrypt(plaintext)
+
+        assert 1024 / 8 == len(ciphertext) == rsa_private_pkcs8.output_size
+        assert plaintext == rsa_private_pkcs8.decrypt(ciphertext)
 
 
     def test_rsa_sign_verify(rsa_private, rsa_public):
@@ -309,6 +369,22 @@ if _lib.RSA_ENABLED:
 
         assert 1024 / 8 == len(signature) == rsa_private.output_size
         assert plaintext == rsa_private.verify(signature)
+
+    def test_rsa_pkcs8_sign_verify(rsa_private_pkcs8, rsa_public):
+        plaintext = t2b("Everyone gets Friday off.")
+
+        # normal usage, sign with private, verify with public
+        signature = rsa_private_pkcs8.sign(plaintext)
+
+        assert 1024 / 8 == len(signature) == rsa_private_pkcs8.output_size
+        assert plaintext == rsa_public.verify(signature)
+
+        # private object holds both private and public info, so it can also verify
+        # using the known public key.
+        signature = rsa_private_pkcs8.sign(plaintext)
+
+        assert 1024 / 8 == len(signature) == rsa_private_pkcs8.output_size
+        assert plaintext == rsa_private_pkcs8.verify(signature)
 
 
 if _lib.ECC_ENABLED:
