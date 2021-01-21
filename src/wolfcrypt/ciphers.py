@@ -435,11 +435,18 @@ if _lib.RSA_ENABLED:
 
             if key != None:
                 key = t2b(key)
-
                 ret = _lib.wc_RsaPrivateKeyDecode(key, idx,
                                               self.native_object, len(key))
                 if ret < 0:
-                    raise WolfCryptError("Invalid key error (%d)" % ret)
+                    idx[0] = 0
+                    ret = _lib.wc_GetPkcs8TraditionalOffset(key, idx, len(key))
+                    if ret < 0:
+                        raise WolfCryptError("Invalid key error (%d)" % ret)
+
+                    ret = _lib.wc_RsaPrivateKeyDecode(key, idx,
+                                              self.native_object, len(key))
+                    if ret < 0:
+                        raise WolfCryptError("Invalid key error (%d)" % ret)
 
                 self.size = len(key)
                 self.output_size = _lib.wc_RsaEncryptSize(self.native_object)

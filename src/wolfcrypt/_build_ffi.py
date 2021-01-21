@@ -209,7 +209,7 @@ _cdef = """
     int wc_RNG_GenerateByte(WC_RNG*, byte*);
     int wc_FreeRng(WC_RNG*);
 
-
+    int wc_GetPkcs8TraditionalOffset(byte* input, word32* inOutIdx, word32 sz);
 """
 
 if (MPAPI_ENABLED == 1):
