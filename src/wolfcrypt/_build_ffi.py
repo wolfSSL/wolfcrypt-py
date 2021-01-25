@@ -61,6 +61,7 @@ ECC_ENABLED = 1
 ED25519_ENABLED = 1
 KEYGEN_ENABLED = 1
 CHACHA_ENABLED = 1
+PWDBASED_ENABLED = 0
 
 # detect native features based on options.h defines
 if featureDetection == 1:
@@ -134,6 +135,8 @@ if featureDetection == 1:
     else:
         KEYGEN_ENABLED = 0
 
+    PWDBASED_ENABLED = 0 if '#define NO_PWDBASED' in optionsHeaderStr else 1
+
 
 # build cffi module, wrapping native wolfSSL
 ffibuilder = FFI()
@@ -177,7 +180,7 @@ ffibuilder.set_source(
     int ECC_ENABLED = """ + str(ECC_ENABLED) + """;
     int ED25519_ENABLED = """ + str(ED25519_ENABLED) + """;
     int KEYGEN_ENABLED = """ + str(KEYGEN_ENABLED) + """;
-
+    int PWDBASED_ENABLED = """ + str(PWDBASED_ENABLED) + """;
     """,
     include_dirs=[wolfssl_inc_path()],
     library_dirs=[wolfssl_lib_path()],
@@ -199,6 +202,7 @@ _cdef = """
     int ECC_ENABLED;
     int ED25519_ENABLED;
     int KEYGEN_ENABLED;
+    int PWDBASED_ENABLED;
 
     typedef unsigned char byte;
     typedef unsigned int word32;
@@ -415,6 +419,13 @@ if (ED25519_ENABLED == 1):
     int wc_ed25519_check_key(ed25519_key* key);
     int wc_ed25519_pub_size(ed25519_key* key);
     int wc_ed25519_priv_size(ed25519_key* key);
+    """
+
+if PWDBASED_ENABLED:
+    _cdef += """
+    int wc_PBKDF2(byte* output, const byte* passwd, int pLen,
+                  const byte* salt, int sLen, int iterations, int kLen,
+                  int typeH);
     """
 
 ffibuilder.cdef(_cdef)
