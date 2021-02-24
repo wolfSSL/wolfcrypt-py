@@ -1,7 +1,7 @@
 set -e
 set +x
 
-for VER in 2.7 3.7 3.8; do
+for VER in 3.7 3.8; do
     PIP="pip${VER}"
     PYTHON="python${VER}"
     VENV="venv_${VER}"
