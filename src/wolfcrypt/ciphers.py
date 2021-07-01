@@ -324,10 +324,11 @@ if _lib.RSA_ENABLED:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
             self._random = Random()
-            ret = _lib.wc_RsaSetRNG(self.native_object,
-                    self._random.native_object)
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptError("Key initialization error (%d)" % ret)
+            if _lib.RSA_BLINDING_ENABLED:
+                ret = _lib.wc_RsaSetRNG(self.native_object,
+                        self._random.native_object)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptError("Key initialization error (%d)" % ret)
 
         # making sure _lib.wc_FreeRsaKey outlives RsaKey instances
         _delete = _lib.wc_FreeRsaKey
