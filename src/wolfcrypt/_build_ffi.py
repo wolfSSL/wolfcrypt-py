@@ -57,85 +57,37 @@ DES3_ENABLED = 1
 AES_ENABLED = 1
 HMAC_ENABLED = 1
 RSA_ENABLED = 1
+RSA_BLINDING_ENABLED = 1
 ECC_ENABLED = 1
 ED25519_ENABLED = 1
 KEYGEN_ENABLED = 1
 CHACHA_ENABLED = 1
 PWDBASED_ENABLED = 0
+FIPS_ENABLED = 0
 
 # detect native features based on options.h defines
-if featureDetection == 1:
-    if '#define WOLFSSL_PUBLIC_MP' in optionsHeaderStr:
-        MPAPI_ENABLED = 1
-    else:
-        MPAPI_ENABLED = 0
-
-    if '#define NO_SHA' in optionsHeaderStr:
-        SHA_ENABLED = 0
-    else:
-        SHA_ENABLED = 1
-
-    if '#define NO_SHA256' in optionsHeaderStr:
-        SHA256_ENABLED = 0
-    else:
-        SHA256_ENABLED = 1
-
-    if '#define WOLFSSL_SHA384' in optionsHeaderStr:
-        SHA384_ENABLED = 1
-    else:
-        SHA384_ENABLED = 0
-
-    if '#define WOLFSSL_SHA512' in optionsHeaderStr:
-        SHA512_ENABLED = 1
-    else:
-        SHA512_ENABLED = 0
-
-    if '#define WOLFSSL_SHA3' in optionsHeaderStr:
-        SHA3_ENABLED = 1
-    else:
-        SHA3_ENABLED = 0
-
-    if '#define NO_DES3' in optionsHeaderStr:
-        DES3_ENABLED = 0
-    else:
-        DES3_ENABLED = 1
-
-    if '#define NO_AES' in optionsHeaderStr:
-        AES_ENABLED = 0
-    else:
-        AES_ENABLED = 1
-
-    if '#define HAVE_CHACHA' in optionsHeaderStr:
-        CHACHA_ENABLED = 1
-    else:
-        CHACHA_ENABLED = 0
-
-    if '#define NO_HMAC' in optionsHeaderStr:
-        HMAC_ENABLED = 0
-    else:
-        HMAC_ENABLED = 1
-
-    if '#define NO_RSA' in optionsHeaderStr:
-        RSA_ENABLED = 0
-    else:
-        RSA_ENABLED = 1
-
-    if '#define HAVE_ECC' in optionsHeaderStr:
-        ECC_ENABLED = 1
-    else:
-        ECC_ENABLED = 0
-
-    if '#define HAVE_ED25519' in optionsHeaderStr:
-        ED25519_ENABLED = 1
-    else:
-        ED25519_ENABLED = 0
-
-    if '#define WOLFSSL_KEY_GEN' in optionsHeaderStr:
-        KEYGEN_ENABLED = 1
-    else:
-        KEYGEN_ENABLED = 0
-
+if featureDetection:
+    MPAPI_ENABLED = 1 if '#define WOLFSSL_PUBLIC_MP' in optionsHeaderStr else 0
+    SHA_ENABLED = 0 if '#define NO_SHA' in optionsHeaderStr else 1
+    SHA256_ENABLED = 0 if '#define NO_SHA256' in optionsHeaderStr else 1
+    SHA384_ENABLED = 1 if '#define WOLFSSL_SHA384' in optionsHeaderStr else 0
+    SHA512_ENABLED = 1 if '#define WOLFSSL_SHA512' in optionsHeaderStr else 0
+    SHA3_ENABLED = 1 if '#define WOLFSSL_SHA3' in optionsHeaderStr else 0
+    DES3_ENABLED = 0 if '#define NO_DES3' in optionsHeaderStr else 1
+    AES_ENABLED = 0 if '#define NO_AES' in optionsHeaderStr else 1
+    CHACHA_ENABLED = 1 if '#define HAVE_CHACHA' in optionsHeaderStr else 0
+    HMAC_ENABLED = 0 if '#define NO_HMAC' in optionsHeaderStr else 1
+    RSA_ENABLED = 0 if '#define NO_RSA' in optionsHeaderStr else 1
+    RSA_BLINDING_ENABLED = 1 if '#define WC_RSA_BLINDING' in optionsHeaderStr else 0
+    ECC_ENABLED = 1 if '#define HAVE_ECC' in optionsHeaderStr else 0
+    ED25519_ENABLED = 1 if '#define HAVE_ED25519' in optionsHeaderStr else 0
+    KEYGEN_ENABLED = 1 if '#define WOLFSSL_KEY_GEN' in optionsHeaderStr else 0
     PWDBASED_ENABLED = 0 if '#define NO_PWDBASED' in optionsHeaderStr else 1
+    FIPS_ENABLED = 1 if '#define HAVE_FIPS' in optionsHeaderStr else 0
+
+if RSA_BLINDING_ENABLED and FIPS_ENABLED:
+    # These settings can't coexist. See settings.h.
+    RSA_BLINDING_ENABLED = 0
 
 
 # build cffi module, wrapping native wolfSSL
@@ -158,6 +110,7 @@ ffibuilder.set_source(
     #include <wolfssl/wolfcrypt/chacha.h>
     #include <wolfssl/wolfcrypt/des3.h>
     #include <wolfssl/wolfcrypt/asn.h>
+    #include <wolfssl/wolfcrypt/pwdbased.h>
 
     #include <wolfssl/wolfcrypt/random.h>
 
@@ -177,10 +130,12 @@ ffibuilder.set_source(
     int CHACHA_ENABLED = """ + str(CHACHA_ENABLED) + """;
     int HMAC_ENABLED = """ + str(HMAC_ENABLED) + """;
     int RSA_ENABLED = """ + str(RSA_ENABLED) + """;
+    int RSA_BLINDING_ENABLED = """ + str(RSA_BLINDING_ENABLED) + """;
     int ECC_ENABLED = """ + str(ECC_ENABLED) + """;
     int ED25519_ENABLED = """ + str(ED25519_ENABLED) + """;
     int KEYGEN_ENABLED = """ + str(KEYGEN_ENABLED) + """;
     int PWDBASED_ENABLED = """ + str(PWDBASED_ENABLED) + """;
+    int FIPS_ENABLED = """ + str(FIPS_ENABLED) + """;
     """,
     include_dirs=[wolfssl_inc_path()],
     library_dirs=[wolfssl_lib_path()],
@@ -188,21 +143,23 @@ ffibuilder.set_source(
 )
 
 _cdef = """
-    int MPAPI_ENABLED;
-    int SHA_ENABLED;
-    int SHA256_ENABLED;
-    int SHA384_ENABLED;
-    int SHA512_ENABLED;
-    int SHA3_ENABLED;
-    int DES3_ENABLED;
-    int AES_ENABLED;
-    int CHACHA_ENABLED;
-    int HMAC_ENABLED;
-    int RSA_ENABLED;
-    int ECC_ENABLED;
-    int ED25519_ENABLED;
-    int KEYGEN_ENABLED;
-    int PWDBASED_ENABLED;
+    extern int MPAPI_ENABLED;
+    extern int SHA_ENABLED;
+    extern int SHA256_ENABLED;
+    extern int SHA384_ENABLED;
+    extern int SHA512_ENABLED;
+    extern int SHA3_ENABLED;
+    extern int DES3_ENABLED;
+    extern int AES_ENABLED;
+    extern int CHACHA_ENABLED;
+    extern int HMAC_ENABLED;
+    extern int RSA_ENABLED;
+    extern int RSA_BLINDING_ENABLED;
+    extern int ECC_ENABLED;
+    extern int ED25519_ENABLED;
+    extern int KEYGEN_ENABLED;
+    extern int PWDBASED_ENABLED;
+    extern int FIPS_ENABLED;
 
     typedef unsigned char byte;
     typedef unsigned int word32;
@@ -216,7 +173,7 @@ _cdef = """
     int wc_GetPkcs8TraditionalOffset(byte* input, word32* inOutIdx, word32 sz);
 """
 
-if (MPAPI_ENABLED == 1):
+if MPAPI_ENABLED:
     _cdef += """
     typedef struct { ...; } mp_int;
 
@@ -225,7 +182,7 @@ if (MPAPI_ENABLED == 1):
     int mp_read_unsigned_bin (mp_int * a, const unsigned char *b, int c);
     """
 
-if (SHA_ENABLED == 1):
+if SHA_ENABLED:
     _cdef += """
     typedef struct { ...; } wc_Sha;
     int wc_InitSha(wc_Sha*);
@@ -233,7 +190,7 @@ if (SHA_ENABLED == 1):
     int wc_ShaFinal(wc_Sha*, byte*);
     """
 
-if (SHA256_ENABLED == 1):
+if SHA256_ENABLED:
     _cdef += """
     typedef struct { ...; } wc_Sha256;
     int wc_InitSha256(wc_Sha256*);
@@ -241,7 +198,7 @@ if (SHA256_ENABLED == 1):
     int wc_Sha256Final(wc_Sha256*, byte*);
     """
 
-if (SHA384_ENABLED == 1):
+if SHA384_ENABLED:
     _cdef += """
     typedef struct { ...; } wc_Sha384;
     int wc_InitSha384(wc_Sha384*);
@@ -249,7 +206,7 @@ if (SHA384_ENABLED == 1):
     int wc_Sha384Final(wc_Sha384*, byte*);
     """
 
-if (SHA512_ENABLED == 1):
+if SHA512_ENABLED:
     _cdef += """
     typedef struct { ...; } wc_Sha512;
 
@@ -257,7 +214,7 @@ if (SHA512_ENABLED == 1):
     int wc_Sha512Update(wc_Sha512*, const byte*, word32);
     int wc_Sha512Final(wc_Sha512*, byte*);
     """
-if (SHA3_ENABLED == 1):
+if SHA3_ENABLED:
     _cdef += """
     typedef struct { ...; } wc_Sha3;
     int wc_InitSha3_224(wc_Sha3*, void *, int);
@@ -274,7 +231,7 @@ if (SHA3_ENABLED == 1):
     int wc_Sha3_512_Final(wc_Sha3*, byte*);
     """
 
-if (DES3_ENABLED == 1):
+if DES3_ENABLED:
     _cdef += """
         typedef struct { ...; } Des3;
         int wc_Des3_SetKey(Des3*, const byte*, const byte*, int);
@@ -282,7 +239,7 @@ if (DES3_ENABLED == 1):
         int wc_Des3_CbcDecrypt(Des3*, byte*, const byte*, word32);
     """
 
-if (AES_ENABLED == 1):
+if AES_ENABLED:
     _cdef += """
     typedef struct { ...; } Aes;
 
@@ -291,7 +248,7 @@ if (AES_ENABLED == 1):
     int wc_AesCbcDecrypt(Aes*, byte*, const byte*, word32);
     """
 
-if (CHACHA_ENABLED == 1):
+if CHACHA_ENABLED:
     _cdef += """
     typedef struct { ...; } ChaCha;
 
@@ -300,7 +257,7 @@ if (CHACHA_ENABLED == 1):
     int wc_Chacha_Process(ChaCha*, byte*, const byte*,word32);
     """
 
-if (HMAC_ENABLED == 1):
+if HMAC_ENABLED:
     _cdef += """
     typedef struct { ...; } Hmac;
     int wc_HmacInit(Hmac* hmac, void* heap, int devId);
@@ -309,12 +266,11 @@ if (HMAC_ENABLED == 1):
     int wc_HmacFinal(Hmac*, byte*);
     """
 
-if (RSA_ENABLED == 1):
+if RSA_ENABLED:
     _cdef += """
     typedef struct {...; } RsaKey;
 
     int wc_InitRsaKey(RsaKey* key, void*);
-    int wc_RsaSetRNG(RsaKey* key, WC_RNG* rng);
     int wc_FreeRsaKey(RsaKey* key);
 
     int wc_RsaPrivateKeyDecode(const byte*, word32*, RsaKey*, word32);
@@ -330,7 +286,13 @@ if (RSA_ENABLED == 1):
     int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
     """
 
-    if (KEYGEN_ENABLED):
+
+    if RSA_BLINDING_ENABLED:
+        _cdef += """
+        int wc_RsaSetRNG(RsaKey* key, WC_RNG* rng);
+        """
+
+    if KEYGEN_ENABLED:
         _cdef += """
         int wc_MakeRsaKey(RsaKey* key, int size, long e, WC_RNG* rng);
         int wc_RsaKeyToDer(RsaKey* key, byte* output, word32 inLen);
@@ -338,7 +300,7 @@ if (RSA_ENABLED == 1):
 
         """
 
-if (ECC_ENABLED == 1):
+if ECC_ENABLED:
     _cdef += """
     typedef struct {...; } ecc_key;
 
@@ -377,7 +339,7 @@ if (ECC_ENABLED == 1):
                            int* stat, ecc_key* key);
     """
 
-if (ECC_ENABLED == 1 and MPAPI_ENABLED == 1):
+if ECC_ENABLED and MPAPI_ENABLED:
     _cdef += """
     int wc_ecc_sign_hash_ex(const byte* in, word32 inlen, WC_RNG* rng,
                      ecc_key* key, mp_int *r, mp_int *s);
@@ -386,7 +348,7 @@ if (ECC_ENABLED == 1 and MPAPI_ENABLED == 1):
                     word32 hashlen, int* res, ecc_key* key);
     """
 
-if (ED25519_ENABLED == 1):
+if ED25519_ENABLED:
     _cdef += """
     typedef struct {...; } ed25519_key;
 
