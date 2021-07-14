@@ -260,10 +260,17 @@ if _lib.SHA3_ENABLED:
 
 # Hmac types
 
-_TYPE_SHA = 4
-_TYPE_SHA256 = 6
-_TYPE_SHA384 = 7
-_TYPE_SHA512 = 8
+if _lib.FIPS_ENABLED:
+    _TYPE_SHA = 1
+    _TYPE_SHA256 = 2
+    _TYPE_SHA384 = 5
+    _TYPE_SHA512 = 4
+else:
+    _TYPE_SHA = 4
+    _TYPE_SHA256 = 6
+    _TYPE_SHA384 = 7
+    _TYPE_SHA512 = 8
+
 _HMAC_TYPES = [_TYPE_SHA, _TYPE_SHA256, _TYPE_SHA384, _TYPE_SHA512]
 
 
