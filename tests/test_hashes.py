@@ -93,24 +93,23 @@ def vectors():
     if _lib.HMAC_ENABLED:
         if _lib.SHA_ENABLED:
             vectorArray[HmacSha]=TestVector(
-                digest=t2b("5dfabcfb3a25540824867cd21f065f52f73491e0")
+                digest=t2b("7ab9aca2c87c7c45ba2ffa52f719fdbd8fbff62d")
             )
         if _lib.SHA256_ENABLED:
             vectorArray[HmacSha256]=TestVector(
-                digest=t2b("4b641d721493d80f019d9447830ebfee" +
-                           "89234a7d594378b89f8bb73873576bf6")
+                digest=t2b("9041ac8c66fc350a1a0d5f4fff9d8ef74721d5a43ec8893a2" +
+                           "875cf69576c45c2")
             )
         if _lib.SHA384_ENABLED:
             vectorArray[HmacSha384]=TestVector(
-                digest=t2b("e72c72070c9c5c78e3286593068a510c1740cdf9dc34b512" +
-                           "ccec97320295db1fe673216b46fe72e81f399a9ec04780ab")
+                digest=t2b("f8c589ddf5489404f85c3c718a8345f207fb1ed6c6f5ecb09" +
+                           "8e8be8aeb1aaa9f0c6dd84c141410b29a47a1a2b3a85ae0")
             )
         if _lib.SHA512_ENABLED:
             vectorArray[HmacSha512]=TestVector(
-                digest=t2b("c7f48db79314fc2b5be9a93fd58601a1" +
-                           "bf42f397ec7f66dba034d44503890e6b" +
-                           "5708242dcd71a248a78162d815c685f6" +
-                           "038a4ac8cb34b8bf18986dbd300c9b41")
+                digest=t2b("7708a12ca110cd81a334bd4e8bddc4314acd3ed218bbff7c6" +
+                           "486e149fc145e9f5c05f05e919f7c2bc027266e986679984c" +
+                           "3ade1a14084ad7627a65c3671a2d05")
             )
 
     return vectorArray
@@ -146,8 +145,12 @@ def hash_cls(request):
 
 def hash_new(cls, data=None):
     if cls in hash_params:
+        # If it's a non-HMAC hash algo, we don't need a key. Call the
+        # constructor that doesn't take a key.
         return cls(data)
-    return cls("python", data)
+    # HMAC requires a key (first parameter to constructor below). Do not shorten
+    # the length of this key below the FIPS requirement. See HMAC_FIPS_MIN_KEY.
+    return cls("wolfCrypt is the best crypto around", data)
 
 
 def test_hash(hash_cls, vectors):

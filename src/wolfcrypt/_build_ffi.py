@@ -20,6 +20,7 @@
 
 import os
 import sys
+import re
 from distutils.util import get_platform
 from cffi import FFI
 from wolfcrypt import __wolfssl_version__ as version
@@ -58,12 +59,15 @@ AES_ENABLED = 1
 HMAC_ENABLED = 1
 RSA_ENABLED = 1
 RSA_BLINDING_ENABLED = 1
+ECC_TIMING_RESISTANCE_ENABLED = 1
 ECC_ENABLED = 1
 ED25519_ENABLED = 1
 KEYGEN_ENABLED = 1
 CHACHA_ENABLED = 1
 PWDBASED_ENABLED = 0
 FIPS_ENABLED = 0
+FIPS_VERSION = 0
+ERROR_STRINGS_ENABLED = 1
 
 # detect native features based on options.h defines
 if featureDetection:
@@ -78,12 +82,19 @@ if featureDetection:
     CHACHA_ENABLED = 1 if '#define HAVE_CHACHA' in optionsHeaderStr else 0
     HMAC_ENABLED = 0 if '#define NO_HMAC' in optionsHeaderStr else 1
     RSA_ENABLED = 0 if '#define NO_RSA' in optionsHeaderStr else 1
+    ECC_TIMING_RESISTANCE_ENABLED = 1 if '#define ECC_TIMING_RESISTANT' in optionsHeaderStr else 0
     RSA_BLINDING_ENABLED = 1 if '#define WC_RSA_BLINDING' in optionsHeaderStr else 0
     ECC_ENABLED = 1 if '#define HAVE_ECC' in optionsHeaderStr else 0
     ED25519_ENABLED = 1 if '#define HAVE_ED25519' in optionsHeaderStr else 0
     KEYGEN_ENABLED = 1 if '#define WOLFSSL_KEY_GEN' in optionsHeaderStr else 0
     PWDBASED_ENABLED = 0 if '#define NO_PWDBASED' in optionsHeaderStr else 1
-    FIPS_ENABLED = 1 if '#define HAVE_FIPS' in optionsHeaderStr else 0
+    ERROR_STRINGS_ENABLED = 0 if '#define NO_ERROR_STRINGS' in optionsHeaderStr else 1
+
+    if '#define HAVE_FIPS' in optionsHeaderStr:
+        FIPS_ENABLED = 1
+        version_match = re.search(r'#define HAVE_FIPS_VERSION\s+(\d+)', optionsHeaderStr)
+        if version_match is not None:
+            FIPS_VERSION = int(version_match.group(1))
 
 if RSA_BLINDING_ENABLED and FIPS_ENABLED:
     # These settings can't coexist. See settings.h.
@@ -131,11 +142,13 @@ ffibuilder.set_source(
     int HMAC_ENABLED = """ + str(HMAC_ENABLED) + """;
     int RSA_ENABLED = """ + str(RSA_ENABLED) + """;
     int RSA_BLINDING_ENABLED = """ + str(RSA_BLINDING_ENABLED) + """;
+    int ECC_TIMING_RESISTANCE_ENABLED = """ + str(ECC_TIMING_RESISTANCE_ENABLED) + """;
     int ECC_ENABLED = """ + str(ECC_ENABLED) + """;
     int ED25519_ENABLED = """ + str(ED25519_ENABLED) + """;
     int KEYGEN_ENABLED = """ + str(KEYGEN_ENABLED) + """;
     int PWDBASED_ENABLED = """ + str(PWDBASED_ENABLED) + """;
     int FIPS_ENABLED = """ + str(FIPS_ENABLED) + """;
+    int FIPS_VERSION = """ + str(FIPS_VERSION) + """;
     """,
     include_dirs=[wolfssl_inc_path()],
     library_dirs=[wolfssl_lib_path()],
@@ -155,11 +168,13 @@ _cdef = """
     extern int HMAC_ENABLED;
     extern int RSA_ENABLED;
     extern int RSA_BLINDING_ENABLED;
+    extern int ECC_TIMING_RESISTANCE_ENABLED;
     extern int ECC_ENABLED;
     extern int ED25519_ENABLED;
     extern int KEYGEN_ENABLED;
     extern int PWDBASED_ENABLED;
     extern int FIPS_ENABLED;
+    extern int FIPS_VERSION;
 
     typedef unsigned char byte;
     typedef unsigned int word32;
@@ -339,14 +354,19 @@ if ECC_ENABLED:
                            int* stat, ecc_key* key);
     """
 
-if ECC_ENABLED and MPAPI_ENABLED:
-    _cdef += """
-    int wc_ecc_sign_hash_ex(const byte* in, word32 inlen, WC_RNG* rng,
-                     ecc_key* key, mp_int *r, mp_int *s);
+    if MPAPI_ENABLED:
+        _cdef += """
+        int wc_ecc_sign_hash_ex(const byte* in, word32 inlen, WC_RNG* rng,
+                             ecc_key* key, mp_int *r, mp_int *s);
+        int wc_ecc_verify_hash_ex(mp_int *r, mp_int *s, const byte* hash,
+                        word32 hashlen, int* res, ecc_key* key);
+        """
 
-    int wc_ecc_verify_hash_ex(mp_int *r, mp_int *s, const byte* hash,
-                    word32 hashlen, int* res, ecc_key* key);
-    """
+    if ECC_TIMING_RESISTANCE_ENABLED:
+        _cdef += """
+        int wc_ecc_set_rng(ecc_key* key, WC_RNG* rng);
+        """
+
 
 if ED25519_ENABLED:
     _cdef += """

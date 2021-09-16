@@ -408,9 +408,6 @@ if _lib.ECC_ENABLED:
         with pytest.raises(WolfCryptError):
             EccPrivate(vectors[EccPublic].key)        # invalid key type
 
-        with pytest.raises(WolfCryptError):
-            EccPublic(vectors[EccPrivate].key)        # invalid key type
-
         with pytest.raises(WolfCryptError):           # invalid key size
             EccPrivate.make_key(1024)
 
@@ -430,27 +427,27 @@ if _lib.ECC_ENABLED:
 
         # Test EccPrivate.encode_key_raw/decode_key_raw
         key = vectors[EccPrivate].raw_key
-        raw_priv.decode_key_raw(key[0:31], key[32:63], key[64:-1])
+        raw_priv.decode_key_raw(key[0:32], key[32:64], key[64:96])
         qx, qy, d = raw_priv.encode_key_raw()
-        assert qx[0:31] == vectors[EccPrivate].raw_key[0:31]
-        assert qy[0:31] == vectors[EccPrivate].raw_key[32:63]
-        assert d[0:31] == vectors[EccPrivate].raw_key[64:-1]
+        assert qx[0:32] == vectors[EccPrivate].raw_key[0:32]
+        assert qy[0:32] == vectors[EccPrivate].raw_key[32:64]
+        assert d[0:32] == vectors[EccPrivate].raw_key[64:96]
         # Verify ECC key is the same as the raw key
         qx, qy, d = priv.encode_key_raw()
-        assert qx[0:31] == vectors[EccPrivate].raw_key[0:31]
-        assert qy[0:31] == vectors[EccPrivate].raw_key[32:63]
-        assert d[0:31] == vectors[EccPrivate].raw_key[64:-1]
+        assert qx[0:32] == vectors[EccPrivate].raw_key[0:32]
+        assert qy[0:32] == vectors[EccPrivate].raw_key[32:64]
+        assert d[0:32] == vectors[EccPrivate].raw_key[64:96]
 
         # Test EccPublic.encode_key_raw/decode_key_raw
         key = vectors[EccPublic].raw_key
-        raw_pub.decode_key_raw(key[0:31], key[32:-1])
+        raw_pub.decode_key_raw(key[0:32], key[32:64])
         qx, qy = raw_pub.encode_key_raw()
-        assert qx[0:31] == vectors[EccPublic].raw_key[0:31]
-        assert qy[0:31] == vectors[EccPublic].raw_key[32:63]
+        assert qx[0:32] == vectors[EccPublic].raw_key[0:32]
+        assert qy[0:32] == vectors[EccPublic].raw_key[32:64]
         # Verify ECC public key is the same as the raw key
         qx, qy = pub.encode_key_raw()
-        assert qx[0:31] == vectors[EccPublic].raw_key[0:31]
-        assert qy[0:31] == vectors[EccPublic].raw_key[32:63]
+        assert qx[0:32] == vectors[EccPublic].raw_key[0:32]
+        assert qy[0:32] == vectors[EccPublic].raw_key[32:64]
 
 
 

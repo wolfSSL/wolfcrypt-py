@@ -260,7 +260,7 @@ if _lib.SHA3_ENABLED:
 
 # Hmac types
 
-if _lib.FIPS_ENABLED:
+if _lib.FIPS_ENABLED and _lib.FIPS_VERSION <= 2:
     _TYPE_SHA = 1
     _TYPE_SHA256 = 2
     _TYPE_SHA384 = 5
@@ -309,9 +309,19 @@ if _lib.HMAC_ENABLED:
         def _init(self, hmac, key):
             if _lib.wc_HmacInit(self._native_object, _ffi.NULL, -2) != 0:
                 raise WolfCryptError("wc_HmacInit error")
-            ret = _lib.wc_HmacSetKey(self._native_object, hmac, key, len(key))
-            if ret < 0:
-                raise WolfCryptError("wc_HmacSetKey returned %d" % ret)
+            # If the key isn't set, don't call wc_HmacSetKey. This can happen,
+            # for example, when the HMAC object is being copied. See the copy
+            # function of _Hash.
+            ret = 0
+            if len(key) > 0:
+                ret = _lib.wc_HmacSetKey(self._native_object, hmac, key, len(key))
+                if ret < 0:
+                    err_str = "no error description found"
+                    try:
+                        err_str = _ffi.string(_lib.wc_GetErrorString(ret)).decode()
+                    except:
+                        pass
+                    raise WolfCryptError("wc_HmacSetKey returned {}: {}".format(ret, err_str))
             return ret
 
         def _update(self, data):
