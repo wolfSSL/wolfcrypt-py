@@ -712,6 +712,11 @@ if _lib.ECC_ENABLED:
             if ret < 0:
                 raise WolfCryptError("Key generation error (%d)" % ret)
 
+            if _lib.ECC_TIMING_RESISTANCE_ENABLED:
+                ret = _lib.wc_ecc_set_rng(ecc.native_object, rng.native_object)
+                if ret < 0:
+                    raise WolfCryptError("Error setting ECC RNG (%d)" % ret)
+
             return ecc
 
         def decode_key(self, key):

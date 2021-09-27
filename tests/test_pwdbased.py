@@ -19,8 +19,11 @@ def pbkdf2_vectors():
     vectors = []
 
     if _lib.PWDBASED_ENABLED and _lib.SHA_ENABLED and _lib.HMAC_ENABLED:
+        # HMAC requires a key, which in this case is the password. Do not
+        # shorten the length of the password below the FIPS requirement.
+        # See HMAC_FIPS_MIN_KEY.
         vectors.append(TestVector(
-            password="pass1234",
+            password="wolfcrypt is the best crypto around",
             salt="salt1234",
             iterations=1000,
             key_length=Sha.digest_size,
