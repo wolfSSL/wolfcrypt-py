@@ -1057,3 +1057,205 @@ if _lib.ED25519_ENABLED:
                 raise WolfCryptError("Signature error (%d)" % ret)
 
             return _ffi.buffer(signature, signature_size[0])[:]
+
+if _lib.ED448_ENABLED:
+    class _Ed448(object):  # pylint: disable=too-few-public-methods
+        def __init__(self):
+            self.native_object = _ffi.new("ed448_key *")
+            ret = _lib.wc_ed448_init(self.native_object)
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("Invalid key error (%d)" % ret)
+
+        # making sure _lib.wc_ed448_free outlives ed448_key instances
+        _delete = _lib.wc_ed448_free
+
+        def __del__(self):
+            if self.native_object:
+                self._delete(self.native_object)
+
+        @property
+        def size(self):
+            return _lib.wc_ed448_size(self.native_object)
+
+        @property
+        def max_signature_size(self):
+            return _lib.wc_ed448_sig_size(self.native_object)
+
+
+    class Ed448Public(_Ed448):
+        def __init__(self, key=None):
+            _Ed448.__init__(self)
+
+            if key:
+                self.decode_key(key)
+
+        def decode_key(self, key):
+            """
+            Decodes an ED448 public key
+            """
+            key = t2b(key)
+            if (len(key) < _lib.wc_ed448_pub_size(self.native_object)):
+                raise WolfCryptError("Key decode error: key too short")
+
+            idx = _ffi.new("word32*")
+            idx[0] = 0
+            ret = _lib.wc_ed448_import_public(key, len(key),
+                    self.native_object)
+            if ret < 0:
+                raise WolfCryptError("Key decode error (%d)" % ret)
+            if self.size <= 0:  # pragma: no cover
+                raise WolfCryptError("Key decode error (%d)" % self.size)
+            if self.max_signature_size <= 0:  # pragma: no cover
+                raise WolfCryptError(
+                    "Key decode error (%d)" % self.max_signature_size)
+
+        def encode_key(self):
+            """
+            Encodes the ED448 public key
+
+            Returns the encoded key.
+            """
+            key = _ffi.new("byte[%d]" % (self.size * 4))
+            size = _ffi.new("word32[1]")
+
+            size[0] = _lib.wc_ed448_pub_size(self.native_object)
+
+            ret = _lib.wc_ed448_export_public(self.native_object, key, size)
+            if ret != 0:  # pragma: no cover
+                raise WolfCryptError("Key encode error (%d)" % ret)
+
+            return _ffi.buffer(key, size[0])[:]
+
+        def verify(self, signature, data, ctx=None):
+            """
+            Verifies **signature**, using the public key data in the object.
+
+            Returns **True** in case of a valid signature, otherwise **False**.
+            """
+            data = t2b(data)
+            status = _ffi.new("int[1]")
+            ctx_buf = _ffi.NULL
+            ctx_buf_len = 0
+            if ctx != None:
+                ctx_buf = t2b(ctx)
+                ctx_buf_len = len(ctx_buf)
+
+            ret = _lib.wc_ed448_verify_msg(signature, len(signature),
+                                          data, len(data), status,
+                                          self.native_object, ctx_buf,
+                                          ctx_buf_len)
+
+            if ret < 0:
+                raise WolfCryptError("Verify error (%d)" % ret)
+
+            return status[0] == 1
+
+
+
+    class Ed448Private(Ed448Public):
+        def __init__(self, key=None, pub=None):
+            _Ed448.__init__(self)
+
+            if key and not pub:
+                self.decode_key(key)
+            if key and pub:
+                self.decode_key(key,pub)
+
+        @classmethod
+        def make_key(cls, size, rng=Random()):
+            """
+            Generates a new key pair of desired length **size**.
+            """
+            ed448 = cls()
+
+            ret = _lib.wc_ed448_make_key(rng.native_object, size,
+                    ed448.native_object)
+            if ret < 0:
+                raise WolfCryptError("Key generation error (%d)" % ret)
+
+            return ed448
+
+        def decode_key(self, key, pub = None):
+            """
+            Decodes an ED448 private + pub key
+            """
+            key = t2b(key)
+
+            if (len(key) < _lib.wc_ed448_priv_size(self.native_object)/2):
+                raise WolfCryptError("Key decode error: key too short")
+
+            idx = _ffi.new("word32*")
+            idx[0] = 0
+            if pub:
+                ret = _lib.wc_ed448_import_private_key(key, len(key), pub,
+                        len(pub), self.native_object);
+                if ret < 0:
+                    raise WolfCryptError("Key decode error (%d)" % ret)
+            else:
+                ret = _lib.wc_ed448_import_private_only(key, len(key),
+                        self.native_object);
+                if ret < 0:
+                    raise WolfCryptError("Key decode error (%d)" % ret)
+                pubkey = _ffi.new("byte[%d]" % (self.size * 4))
+                ret = _lib.wc_ed448_make_public(self.native_object, pubkey,
+                        self.size)
+                if ret < 0:
+                    raise WolfCryptError("Public key generate error (%d)" % ret)
+                ret = _lib.wc_ed448_import_public(pubkey, self.size,
+                        self.native_object);
+
+            if self.size <= 0:  # pragma: no cover
+                raise WolfCryptError("Key decode error (%d)" % self.size)
+            if self.max_signature_size <= 0:  # pragma: no cover
+                raise WolfCryptError(
+                    "Key decode error (%d)" % self.max_signature_size)
+
+        def encode_key(self):
+            """
+            Encodes the ED448 private key.
+
+            Returns the encoded key.
+            """
+            key = _ffi.new("byte[%d]" % (self.size * 4))
+            pubkey = _ffi.new("byte[%d]" % (self.size * 4))
+            size = _ffi.new("word32[1]")
+
+            size[0] = _lib.wc_ed448_priv_size(self.native_object)
+
+            ret = _lib.wc_ed448_export_private_only(self.native_object,
+                    key, size)
+            if ret != 0:  # pragma: no cover
+                raise WolfCryptError("Private key encode error (%d)" % ret)
+            ret = _lib.wc_ed448_export_public(self.native_object, pubkey,
+                    size)
+            if ret != 0:  # pragma: no cover
+                raise WolfCryptError("Public key encode error (%d)" % ret)
+
+            return _ffi.buffer(key, size[0])[:], _ffi.buffer(pubkey, size[0])[:]
+
+        def sign(self, plaintext, ctx=None):
+            """
+            Signs **plaintext**, using the private key data in the object.
+
+            Returns the signature.
+            """
+            plaintext = t2b(plaintext)
+            signature = _ffi.new("byte[%d]" % self.max_signature_size)
+
+            signature_size = _ffi.new("word32[1]")
+            signature_size[0] = self.max_signature_size
+            ctx_buf = _ffi.NULL
+            ctx_buf_len = 0
+            if (ctx != None):
+                ctx_buf = t2b(ctx)
+                ctx_buf_len = len(ctx_buf)
+
+            ret = _lib.wc_ed448_sign_msg(plaintext, len(plaintext),
+                                        signature, signature_size,
+                                        self.native_object, ctx_buf,
+                                        ctx_buf_len)
+
+            if ret != 0:  # pragma: no cover
+                raise WolfCryptError("Signature error (%d)" % ret)
+
+            return _ffi.buffer(signature, signature_size[0])[:]

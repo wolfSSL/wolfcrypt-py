@@ -44,6 +44,9 @@ if _lib.ECC_ENABLED:
 if _lib.ED25519_ENABLED:
     from wolfcrypt.ciphers import (Ed25519Private, Ed25519Public)
 
+if _lib.ED448_ENABLED:
+    from wolfcrypt.ciphers import (Ed448Private, Ed448Public)
+
 from wolfcrypt.ciphers import (
     MODE_ECB, MODE_CBC, WolfCryptError
 )
@@ -194,7 +197,19 @@ def vectors():
                 "FC96"
             )
         )
-
+    if _lib.ED448_ENABLED:
+        vectorArray[Ed448Private]=TestVector(
+            key=h2b("c2b29804e9a893c9e275cac1f8a3033f3d4b78b79eb427ed359fdeb8"
+                    "82d657c129c7930936b181971b795167ad18cabeeb52b59b94f115ad"
+                    "59"
+            )
+        )
+        vectorArray[Ed448Public]=TestVector(
+            key=h2b("89fb2b5a5ab67dd317794cc5f1700cace295b043f3ad73a66299e10a"
+                    "d3fc0a28289ddd1c641598a354113867a42e82ad844b4d858d92e4e7"
+                    "80"
+            )
+        )
     return vectorArray
 
 algo_params = []
@@ -570,3 +585,53 @@ if _lib.ED25519_ENABLED:
         # using the known public key.
         assert ed25519_private.verify(signature, plaintext)
 
+if _lib.ED448_ENABLED:
+    @pytest.fixture
+    def ed448_private(vectors):
+        return Ed448Private(vectors[Ed448Private].key, vectors[Ed448Public].key)
+
+
+    @pytest.fixture
+    def ed448_public(vectors):
+        return Ed448Public(vectors[Ed448Public].key)
+
+
+    def test_new_ed448_raises(vectors):
+        with pytest.raises(WolfCryptError):
+            Ed448Private(vectors[Ed448Private].key[:-1])  # invalid key length
+
+        with pytest.raises(WolfCryptError):
+            Ed448Public(vectors[Ed448Public].key[:-1])    # invalid key length
+
+        with pytest.raises(WolfCryptError):           # invalid key size
+            Ed448Private.make_key(1024)
+
+
+    def test_ed448_key_encoding(vectors):
+        priv = Ed448Private()
+        pub = Ed448Public()
+
+        priv.decode_key(vectors[Ed448Private].key)
+        pub.decode_key(vectors[Ed448Public].key)
+
+        assert priv.encode_key()[0] == vectors[Ed448Private].key
+        assert priv.encode_key()[1] == vectors[Ed448Public].key # Automatically re-generated from private-only
+        assert pub.encode_key() == vectors[Ed448Public].key
+
+
+    def test_ed448_sign_verify(ed448_private, ed448_public):
+        plaintext = "Everyone gets Friday off."
+
+        # normal usage, sign with private, verify with public
+        signature = ed448_private.sign(plaintext)
+
+        assert len(signature) <= ed448_private.max_signature_size
+        assert ed448_public.verify(signature, plaintext)
+
+        # invalid signature
+        with pytest.raises(WolfCryptError):
+            ed448_public.verify(signature[:-1], plaintext)
+
+        # private object holds both private and public info, so it can also verify
+        # using the known public key.
+        assert ed448_private.verify(signature, plaintext)
