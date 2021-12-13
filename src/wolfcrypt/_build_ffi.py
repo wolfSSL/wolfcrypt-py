@@ -62,6 +62,7 @@ RSA_BLINDING_ENABLED = 1
 ECC_TIMING_RESISTANCE_ENABLED = 1
 ECC_ENABLED = 1
 ED25519_ENABLED = 1
+ED448_ENABLED = 1
 KEYGEN_ENABLED = 1
 CHACHA_ENABLED = 1
 PWDBASED_ENABLED = 0
@@ -86,6 +87,7 @@ if featureDetection:
     RSA_BLINDING_ENABLED = 1 if '#define WC_RSA_BLINDING' in optionsHeaderStr else 0
     ECC_ENABLED = 1 if '#define HAVE_ECC' in optionsHeaderStr else 0
     ED25519_ENABLED = 1 if '#define HAVE_ED25519' in optionsHeaderStr else 0
+    ED448_ENABLED = 1 if '#define HAVE_ED448' in optionsHeaderStr else 0
     KEYGEN_ENABLED = 1 if '#define WOLFSSL_KEY_GEN' in optionsHeaderStr else 0
     PWDBASED_ENABLED = 0 if '#define NO_PWDBASED' in optionsHeaderStr else 1
     ERROR_STRINGS_ENABLED = 0 if '#define NO_ERROR_STRINGS' in optionsHeaderStr else 1
@@ -128,6 +130,7 @@ ffibuilder.set_source(
     #include <wolfssl/wolfcrypt/rsa.h>
     #include <wolfssl/wolfcrypt/ecc.h>
     #include <wolfssl/wolfcrypt/ed25519.h>
+    #include <wolfssl/wolfcrypt/ed448.h>
     #include <wolfssl/wolfcrypt/curve25519.h>
 
     int MPAPI_ENABLED = """ + str(MPAPI_ENABLED) + """;
@@ -145,6 +148,7 @@ ffibuilder.set_source(
     int ECC_TIMING_RESISTANCE_ENABLED = """ + str(ECC_TIMING_RESISTANCE_ENABLED) + """;
     int ECC_ENABLED = """ + str(ECC_ENABLED) + """;
     int ED25519_ENABLED = """ + str(ED25519_ENABLED) + """;
+    int ED448_ENABLED = """ + str(ED448_ENABLED) + """;
     int KEYGEN_ENABLED = """ + str(KEYGEN_ENABLED) + """;
     int PWDBASED_ENABLED = """ + str(PWDBASED_ENABLED) + """;
     int FIPS_ENABLED = """ + str(FIPS_ENABLED) + """;
@@ -171,6 +175,7 @@ _cdef = """
     extern int ECC_TIMING_RESISTANCE_ENABLED;
     extern int ECC_ENABLED;
     extern int ED25519_ENABLED;
+    extern int ED448_ENABLED;
     extern int KEYGEN_ENABLED;
     extern int PWDBASED_ENABLED;
     extern int FIPS_ENABLED;
@@ -401,6 +406,43 @@ if ED25519_ENABLED:
     int wc_ed25519_check_key(ed25519_key* key);
     int wc_ed25519_pub_size(ed25519_key* key);
     int wc_ed25519_priv_size(ed25519_key* key);
+    """
+
+if ED448_ENABLED:
+    _cdef += """
+    typedef struct {...; } ed448_key;
+
+    int wc_ed448_init(ed448_key* ed448);
+    void wc_ed448_free(ed448_key* ed448);
+
+    int wc_ed448_make_key(WC_RNG* rng, int keysize, ed448_key* key);
+    int wc_ed448_make_public(ed448_key* key, unsigned char* pubKey,
+                           word32 pubKeySz);
+    int wc_ed448_size(ed448_key* key);
+    int wc_ed448_sig_size(ed448_key* key);
+    int wc_ed448_sign_msg(const byte* in, word32 inlen, byte* out,
+                        word32 *outlen, ed448_key* key, byte* ctx,
+                        word32 ctx_len);
+    int wc_ed448_verify_msg(const byte* sig, word32 siglen, const byte* msg,
+                          word32 msglen, int* stat, ed448_key* key, byte *ctx,
+                          word32 ctx_len);
+    int wc_Ed448PrivateKeyDecode(const byte*, word32*, ed448_key*, word32);
+    int wc_Ed448KeyToDer(ed448_key*, byte* output, word32 inLen);
+
+    int wc_Ed448PublicKeyDecode(const byte*, word32*, ed448_key*, word32);
+    int wc_Ed448PublicKeyToDer(ed448_key*, byte* output,
+                             word32 inLen, int with_AlgCurve);
+
+    int wc_ed448_import_public(const byte* in, word32 inLen, ed448_key* key);
+    int wc_ed448_import_private_only(const byte* priv, word32 privSz, ed448_key* key);
+    int wc_ed448_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed448_key* key);
+    int wc_ed448_export_public(ed448_key*, byte* out, word32* outLen);
+    int wc_ed448_export_private_only(ed448_key* key, byte* out, word32* outLen);
+    int wc_ed448_export_private(ed448_key* key, byte* out, word32* outLen);
+    int wc_ed448_export_key(ed448_key* key, byte* priv, word32 *privSz, byte* pub, word32 *pubSz);
+    int wc_ed448_check_key(ed448_key* key);
+    int wc_ed448_pub_size(ed448_key* key);
+    int wc_ed448_priv_size(ed448_key* key);
     """
 
 if PWDBASED_ENABLED:

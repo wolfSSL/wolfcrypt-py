@@ -68,3 +68,4 @@ venv_*
 
 # code editor preferences
 .vscode
+.tags
