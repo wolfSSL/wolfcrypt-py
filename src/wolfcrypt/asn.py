@@ -22,9 +22,16 @@
 
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
-
 from wolfcrypt.exceptions import WolfCryptError
 
+if _lib.SHA_ENABLED:
+    from wolfcrypt.hashes import Sha
+if _lib.SHA256_ENABLED:
+    from wolfcrypt.hashes import Sha256
+if _lib.SHA384_ENABLED:
+    from wolfcrypt.hashes import Sha384
+if _lib.SHA512_ENABLED:
+    from wolfcrypt.hashes import Sha512
 
 if _lib.ASN_ENABLED:
     def pem_to_der(pem, pem_type):
@@ -52,3 +59,40 @@ if _lib.ASN_ENABLED:
             raise WolfCryptError(err)
 
         return _ffi.buffer(pem, pem_length)[:]
+
+    def hash_oid_from_class(hash_cls):
+        if hash_cls == Sha:
+            return _lib.SHAh
+        elif hash_cls == Sha256:
+            return _lib.SHA256h
+        elif hash_cls == Sha384:
+            return _lib.SHA384h
+        elif hash_cls == Sha512:
+            return _lib.SHA512h
+        else:
+            err = "Unknown hash class {}.".format(hash_cls.__name__)
+            raise WolfCryptError(err)
+
+    def make_signature(data, hash_cls, key=None):
+        hash_obj = hash_cls()
+        hash_obj.update(data)
+        digest = hash_obj.digest()
+
+        plaintext_sig = _ffi.new("byte[%d]" % _lib.MAX_DER_DIGEST_SZ)
+        hash_oid = hash_oid_from_class(hash_cls)
+        plaintext_len = _lib.wc_EncodeSignature(plaintext_sig, digest,
+                                                len(digest), hash_oid)
+        if plaintext_len == 0:
+            err = "Error calling wc_EncodeSignature. ({})".format(plaintext_len)
+            raise WolfCryptError(err)
+
+        plaintext_sig = _ffi.buffer(plaintext_sig, plaintext_len)[:]
+        if key:
+            return key.sign(plaintext_sig)
+        else:
+            return plaintext_sig
+
+    def check_signature(signature, data, hash_cls, pub_key):
+        computed_signature = make_signature(data, hash_cls)
+        decrypted_signature = pub_key.verify(signature)
+        return computed_signature == decrypted_signature

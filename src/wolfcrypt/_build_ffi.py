@@ -461,6 +461,11 @@ if ASN_ENABLED:
     static const long PRIVATEKEY_TYPE;
     static const long PUBLICKEY_TYPE;
     static const long CERT_TYPE;
+    static const long MAX_DER_DIGEST_SZ;
+    static const long SHAh;
+    static const long SHA256h;
+    static const long SHA384h;
+    static const long SHA512h;
 
     typedef struct DerBuffer {
         byte*  buffer;
@@ -476,6 +481,8 @@ if ASN_ENABLED:
                     int* keyFormat);
     int wc_DerToPemEx(const byte* der, word32 derSz, byte* output, word32 outSz,
                       byte *cipher_info, int type);
+    word32 wc_EncodeSignature(byte* out, const byte* digest, word32 digSz,
+                              int hashOID);
     """
 
 ffibuilder.cdef(_cdef)
