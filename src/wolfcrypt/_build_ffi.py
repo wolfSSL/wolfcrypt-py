@@ -69,6 +69,7 @@ PWDBASED_ENABLED = 0
 FIPS_ENABLED = 0
 FIPS_VERSION = 0
 ERROR_STRINGS_ENABLED = 1
+ASN_ENABLED = 1
 
 # detect native features based on options.h defines
 if featureDetection:
@@ -91,6 +92,7 @@ if featureDetection:
     KEYGEN_ENABLED = 1 if '#define WOLFSSL_KEY_GEN' in optionsHeaderStr else 0
     PWDBASED_ENABLED = 0 if '#define NO_PWDBASED' in optionsHeaderStr else 1
     ERROR_STRINGS_ENABLED = 0 if '#define NO_ERROR_STRINGS' in optionsHeaderStr else 1
+    ASN_ENABLED = 0 if '#define NO_ASN' in optionsHeaderStr else 1
 
     if '#define HAVE_FIPS' in optionsHeaderStr:
         FIPS_ENABLED = 1
@@ -153,6 +155,7 @@ ffibuilder.set_source(
     int PWDBASED_ENABLED = """ + str(PWDBASED_ENABLED) + """;
     int FIPS_ENABLED = """ + str(FIPS_ENABLED) + """;
     int FIPS_VERSION = """ + str(FIPS_VERSION) + """;
+    int ASN_ENABLED = """ + str(ASN_ENABLED) + """;
     """,
     include_dirs=[wolfssl_inc_path()],
     library_dirs=[wolfssl_lib_path()],
@@ -180,6 +183,7 @@ _cdef = """
     extern int PWDBASED_ENABLED;
     extern int FIPS_ENABLED;
     extern int FIPS_VERSION;
+    extern int ASN_ENABLED;
 
     typedef unsigned char byte;
     typedef unsigned int word32;
@@ -450,6 +454,28 @@ if PWDBASED_ENABLED:
     int wc_PBKDF2(byte* output, const byte* passwd, int pLen,
                   const byte* salt, int sLen, int iterations, int kLen,
                   int typeH);
+    """
+
+if ASN_ENABLED:
+    _cdef += """
+    static const long PRIVATEKEY_TYPE;
+    static const long PUBLICKEY_TYPE;
+    static const long CERT_TYPE;
+
+    typedef struct DerBuffer {
+        byte*  buffer;
+        void*  heap;
+        word32 length;
+        int    type;
+        int    dynType;
+    } DerBuffer;
+    typedef struct { ...; } EncryptedInfo;
+
+    int wc_PemToDer(const unsigned char* buff, long longSz, int type,
+                    DerBuffer** pDer, void* heap, EncryptedInfo* info,
+                    int* keyFormat);
+    int wc_DerToPemEx(const byte* der, word32 derSz, byte* output, word32 outSz,
+                      byte *cipher_info, int type);
     """
 
 ffibuilder.cdef(_cdef)

@@ -25,6 +25,9 @@ import pytest
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import t2b, h2b
+import os
+
+certs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "certs")
 
 if _lib.DES3_ENABLED:
     from wolfcrypt.ciphers import Des3
@@ -54,7 +57,8 @@ from wolfcrypt.ciphers import (
 
 @pytest.fixture
 def vectors():
-    TestVector = namedtuple("TestVector", "key iv plaintext ciphertext raw_key pkcs8_key")
+    TestVector = namedtuple("TestVector", """key iv plaintext ciphertext raw_key
+                                             pkcs8_key pem""")
     TestVector.__new__.__defaults__ = (None,) * len(TestVector._fields)
 
     # test vector dictionary
@@ -88,7 +92,8 @@ def vectors():
                 "905F3ED9E4D5DF94CAC1A9D719DA86C9E84DC4613682FEABAD7E7725BB8D"
                 "11A5BC623AA838CC39A20466B4F7F7F3AADA4D020EBB5E8D6948DC77C928"
                 "0E22E96BA426BA4CE8C1FD4A6F2B1FEF8AAEF69062E5641EEB2B3C67C8DC"
-                "2700F6916865A90203010001")
+                "2700F6916865A90203010001"),
+            pem=os.path.join(certs_dir, "server-keyPub.pem")
         )
         vectorArray[RsaPrivate]=TestVector(
             key=h2b(
@@ -153,7 +158,8 @@ def vectors():
                 "30bab7488c48140ef49f7e779743e1b4"
                 "19353123759c3b44ad691256ee006164"
                 "1666d37c742b15b4a2febf086b1a5d3f"
-                "9012b105863129dbd9e2")
+                "9012b105863129dbd9e2"),
+            pem=os.path.join(certs_dir, "server-key.pem")
         )
 
     if _lib.ECC_ENABLED:
@@ -323,6 +329,18 @@ if _lib.RSA_ENABLED:
     def rsa_public(vectors):
         return RsaPublic(vectors[RsaPublic].key)
 
+    @pytest.fixture
+    def rsa_private_pem(vectors):
+        with open(vectors[RsaPrivate].pem, "rb") as f:
+            pem = f.read()
+        return RsaPrivate.from_pem(pem)
+
+    @pytest.fixture
+    def rsa_public_pem(vectors):
+        with open(vectors[RsaPublic].pem, "rb") as f:
+            pem = f.read()
+        return RsaPublic.from_pem(pem)
+
 
     def test_new_rsa_raises(vectors):
         with pytest.raises(WolfCryptError):
@@ -384,6 +402,22 @@ if _lib.RSA_ENABLED:
 
         assert 1024 / 8 == len(signature) == rsa_private.output_size
         assert plaintext == rsa_private.verify(signature)
+
+    def test_rsa_sign_verify_pem(rsa_private_pem, rsa_public_pem):
+        plaintext = t2b("Everyone gets Friday off.")
+
+        # normal usage, sign with private, verify with public
+        signature = rsa_private_pem.sign(plaintext)
+
+        assert 256 == len(signature) == rsa_private_pem.output_size
+        assert plaintext == rsa_public_pem.verify(signature)
+
+        # private object holds both private and public info, so it can also verify
+        # using the known public key.
+        signature = rsa_private_pem.sign(plaintext)
+
+        assert 256 == len(signature) == rsa_private_pem.output_size
+        assert plaintext == rsa_private_pem.verify(signature)
 
     def test_rsa_pkcs8_sign_verify(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")

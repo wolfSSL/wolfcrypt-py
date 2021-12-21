@@ -24,6 +24,7 @@ from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import t2b
 from wolfcrypt.random import Random
+from wolfcrypt.asn import pem_to_der
 
 from wolfcrypt.exceptions import WolfCryptError
 
@@ -359,6 +360,12 @@ if _lib.RSA_ENABLED:
                 raise WolfCryptError("Invalid key error (%d)" %
                         self.output_size)
 
+        if _lib.ASN_ENABLED:
+            @classmethod
+            def from_pem(cls, file):
+                der = pem_to_der(file, _lib.PUBLICKEY_TYPE)
+                return cls(der)
+
         def encrypt(self, plaintext):
             """
             Encrypts **plaintext**, using the public key data in the
@@ -454,6 +461,12 @@ if _lib.RSA_ENABLED:
                 if self.output_size <= 0:  # pragma: no cover
                     raise WolfCryptError("Invalid key size error (%d)" %
                             self.output_size)
+
+        if _lib.ASN_ENABLED:
+            @classmethod
+            def from_pem(cls, file):
+                der = pem_to_der(file, _lib.PRIVATEKEY_TYPE)
+                return cls(der)
 
         if _lib.KEYGEN_ENABLED:
             def encode_key(self):

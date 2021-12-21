@@ -31,7 +31,7 @@ _BINARY_TYPE = bytes if _PY3 else str
 
 def t2b(string):
     """
-    Converts text to bynary.
+    Converts text to binary.
     """
     if isinstance(string, _BINARY_TYPE):
         return string
