@@ -24,7 +24,7 @@ __uri__ = "https://github.com/wolfssl/wolfcrypt-py"
 
 # When bumping the C library version, reset the POST count to 0
 
-__wolfssl_version__ = "v5.0.0-stable"
+__wolfssl_version__ = "v5.1.1-stable"
 
 # We're using implicit post releases [PEP 440] to bump package version
 # while maintaining the C library version intact for better reference.
@@ -32,16 +32,16 @@ __wolfssl_version__ = "v5.0.0-stable"
 #
 # MAJOR.MINOR.BUILD-POST
 
-__version__ = "5.0.0-0"
+__version__ = "5.1.1-0"
 
 __author__ = "wolfSSL Inc."
 __email__ = "info@wolfssl.com"
 
 __license__ = "GPLv2 or Commercial License"
-__copyright__ = "Copyright (C) 2006-2020 wolfSSL Inc"
+__copyright__ = "Copyright (C) 2006-2021 wolfSSL Inc"
 
 __all__ = [
     "__title__", "__summary__", "__uri__", "__version__",
     "__author__", "__email__", "__license__", "__copyright__",
-    "ciphers", "hashes", "random"
+    "ciphers", "hashes", "random", "pwdbased"
 ]
