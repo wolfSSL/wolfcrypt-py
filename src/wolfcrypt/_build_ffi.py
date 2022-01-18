@@ -1,6 +1,6 @@
 # build_ffi.py
 #
-# Copyright (C) 2006-2020 wolfSSL Inc.
+# Copyright (C) 2006-2022 wolfSSL Inc.
 #
 # This file is part of wolfSSL. (formerly known as CyaSSL)
 #
@@ -65,7 +65,7 @@ ED25519_ENABLED = 1
 ED448_ENABLED = 1
 KEYGEN_ENABLED = 1
 CHACHA_ENABLED = 1
-PWDBASED_ENABLED = 0
+PWDBASED_ENABLED = 1
 FIPS_ENABLED = 0
 FIPS_VERSION = 0
 ERROR_STRINGS_ENABLED = 1

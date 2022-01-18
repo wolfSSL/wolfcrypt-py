@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2006-2020 wolfSSL Inc.
+# Copyright (C) 2006-2022 wolfSSL Inc.
 #
 # This file is part of wolfSSL. (formerly known as CyaSSL)
 #
@@ -132,7 +132,7 @@ def make_flags(prefix):
     flags = []
 
     if get_platform() in ["linux-x86_64", "linux-i686"]:
-        flags.append("CFLAGS=-fpic")
+        flags.append("CFLAGS=-fPIC")
 
     # install location
     flags.append("--prefix={}".format(prefix))
@@ -169,6 +169,10 @@ def make_flags(prefix):
     flags.append("--enable-keygen")
 
     flags.append("--disable-dh")
+
+    # pwdbased
+    flags.append("--enable-pwdbased")
+    flags.append("--enable-pkcs7")
 
     # disabling other configs enabled by default
     flags.append("--disable-oldtls")
