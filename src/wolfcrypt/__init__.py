@@ -45,3 +45,18 @@ __all__ = [
     "__author__", "__email__", "__license__", "__copyright__",
     "ciphers", "hashes", "random", "pwdbased"
 ]
+
+try:
+    from wolfcrypt._ffi import ffi as _ffi
+    from wolfcrypt._ffi import lib as _lib
+except ImportError:
+    # FFI not built. Not running initialization code.
+    pass
+else:
+    from wolfcrypt.exceptions import WolfCryptError
+
+    if hasattr(_lib, 'WC_RNG_SEED_CB_ENABLED'):
+        if _lib.WC_RNG_SEED_CB_ENABLED:
+            ret = _lib.wc_SetSeed_Cb(_ffi.addressof(_lib, "wc_GenerateSeed"))
+            if ret < 0:
+                raise WolfCryptError("wc_SetSeed_Cb failed (%d)" % ret)
