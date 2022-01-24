@@ -499,6 +499,16 @@ if WC_RNG_SEED_CB_ENABLED:
     int wc_SetSeed_Cb(wc_RngSeed_Cb cb);
     """
 
+if FIPS_ENABLED and (FIPS_VERSION > 5 or (FIPS_VERSION == 5 and FIPS_VERSION >= 1)):
+    _cdef += """
+    enum wc_KeyType {
+        WC_KEYTYPE_ALL = 0
+    };
+
+    int wolfCrypt_SetPrivateKeyReadEnable_fips(int, enum wc_KeyType);
+    int wolfCrypt_GetPrivateKeyReadEnable_fips(enum wc_KeyType);
+    """
+
 ffibuilder.cdef(_cdef)
 
 if __name__ == "__main__":
