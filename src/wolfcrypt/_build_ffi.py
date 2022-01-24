@@ -70,6 +70,7 @@ FIPS_ENABLED = 0
 FIPS_VERSION = 0
 ERROR_STRINGS_ENABLED = 1
 ASN_ENABLED = 1
+WC_RNG_SEED_CB_ENABLED = 0
 
 # detect native features based on options.h defines
 if featureDetection:
@@ -93,6 +94,7 @@ if featureDetection:
     PWDBASED_ENABLED = 0 if '#define NO_PWDBASED' in optionsHeaderStr else 1
     ERROR_STRINGS_ENABLED = 0 if '#define NO_ERROR_STRINGS' in optionsHeaderStr else 1
     ASN_ENABLED = 0 if '#define NO_ASN' in optionsHeaderStr else 1
+    WC_RNG_SEED_CB_ENABLED = 1 if '#define WC_RNG_SEED_CB' in optionsHeaderStr else 0
 
     if '#define HAVE_FIPS' in optionsHeaderStr:
         FIPS_ENABLED = 1
@@ -156,6 +158,7 @@ ffibuilder.set_source(
     int FIPS_ENABLED = """ + str(FIPS_ENABLED) + """;
     int FIPS_VERSION = """ + str(FIPS_VERSION) + """;
     int ASN_ENABLED = """ + str(ASN_ENABLED) + """;
+    int WC_RNG_SEED_CB_ENABLED = """ + str(WC_RNG_SEED_CB_ENABLED) + """;
     """,
     include_dirs=[wolfssl_inc_path()],
     library_dirs=[wolfssl_lib_path()],
@@ -184,15 +187,19 @@ _cdef = """
     extern int FIPS_ENABLED;
     extern int FIPS_VERSION;
     extern int ASN_ENABLED;
+    extern int WC_RNG_SEED_CB_ENABLED;
 
     typedef unsigned char byte;
     typedef unsigned int word32;
 
     typedef struct { ...; } WC_RNG;
+    typedef struct { ...; } OS_Seed;
+
     int wc_InitRng(WC_RNG*);
     int wc_RNG_GenerateBlock(WC_RNG*, byte*, word32);
     int wc_RNG_GenerateByte(WC_RNG*, byte*);
     int wc_FreeRng(WC_RNG*);
+    int wc_GenerateSeed(OS_Seed* os, byte* seed, word32 sz);
 
     int wc_GetPkcs8TraditionalOffset(byte* input, word32* inOutIdx, word32 sz);
 """
@@ -483,6 +490,13 @@ if ASN_ENABLED:
                       byte *cipher_info, int type);
     word32 wc_EncodeSignature(byte* out, const byte* digest, word32 digSz,
                               int hashOID);
+    """
+
+if WC_RNG_SEED_CB_ENABLED:
+    _cdef += """
+    typedef int (*wc_RngSeed_Cb)(OS_Seed* os, byte* seed, word32 sz);
+
+    int wc_SetSeed_Cb(wc_RngSeed_Cb cb);
     """
 
 ffibuilder.cdef(_cdef)
