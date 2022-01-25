@@ -60,3 +60,10 @@ else:
             ret = _lib.wc_SetSeed_Cb(_ffi.addressof(_lib, "wc_GenerateSeed"))
             if ret < 0:
                 raise WolfCryptError("wc_SetSeed_Cb failed (%d)" % ret)
+    if _lib.FIPS_ENABLED and (_lib.FIPS_VERSION > 5 or (_lib.FIPS_VERSION == 5
+        and _lib.FIPS_VERSION >= 1)):
+        ret = _lib.wolfCrypt_SetPrivateKeyReadEnable_fips(1,
+                                                          _lib.WC_KEYTYPE_ALL);
+        if ret < 0:
+            raise WolfCryptError("wolfCrypt_SetPrivateKeyReadEnable_fips failed"
+                " (%d)" % ret)
