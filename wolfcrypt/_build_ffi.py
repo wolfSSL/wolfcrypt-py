@@ -24,7 +24,38 @@ import re
 from distutils.util import get_platform
 from cffi import FFI
 from wolfcrypt import __wolfssl_version__ as version
-from wolfcrypt._build_wolfssl import wolfssl_inc_path, wolfssl_lib_path
+from wolfcrypt._build_wolfssl import wolfssl_inc_path, wolfssl_lib_path, ensure_wolfssl_src, make, make_flags, local_path
+
+libwolfssl_path = ""
+
+def get_libwolfssl():
+    global libwolfssl_path
+    if sys.platform == "win32":
+        libwolfssl_path = os.path.join(wolfssl_lib_path(), "wolfssl.lib")
+        if not os.path.exists(libwolfssl_path):
+            return 0
+        else:
+            return 1
+    else:
+        libwolfssl_path = os.path.join(wolfssl_lib_path(), "libwolfssl.a")
+        if not os.path.exists(libwolfssl_path):
+            libwolfssl_path = os.path.join(wolfssl_lib_path(), "libwolfssl.so")
+            if not os.path.exists(libwolfssl_path):
+                return 0
+            else:
+                return 1
+        else:
+            return 1
+
+def generate_libwolfssl():
+    ensure_wolfssl_src(version)
+    prefix = local_path("lib/wolfssl/{}/{}".format(
+        get_platform(), version))
+    make(make_flags(prefix))
+
+if get_libwolfssl() == 0:
+    generate_libwolfssl()
+    get_libwolfssl()
 
 # detect features if user has built against local wolfSSL library
 # if they are not, we are controlling build options in _build_wolfssl.py
@@ -110,9 +141,18 @@ if RSA_BLINDING_ENABLED and FIPS_ENABLED:
 # build cffi module, wrapping native wolfSSL
 ffibuilder = FFI()
 
+cffi_libraries = ["wolfssl"]
+
+# Needed for WIN32 functions in random.c
+if sys.platform == "win32":
+    cffi_libraries.append("Advapi32")
+
 ffibuilder.set_source(
     "wolfcrypt._ffi",
     """
+#ifdef __cplusplus
+extern "C" {
+#endif
     #include <wolfssl/options.h>
     #include <wolfssl/wolfcrypt/settings.h>
 
@@ -136,6 +176,9 @@ ffibuilder.set_source(
     #include <wolfssl/wolfcrypt/ed25519.h>
     #include <wolfssl/wolfcrypt/ed448.h>
     #include <wolfssl/wolfcrypt/curve25519.h>
+#ifdef __cplusplus
+}
+#endif
 
     int MPAPI_ENABLED = """ + str(MPAPI_ENABLED) + """;
     int SHA_ENABLED = """ + str(SHA_ENABLED) + """;
@@ -162,7 +205,7 @@ ffibuilder.set_source(
     """,
     include_dirs=[wolfssl_inc_path()],
     library_dirs=[wolfssl_lib_path()],
-    libraries=["wolfssl"],
+    libraries=cffi_libraries,
 )
 
 _cdef = """
@@ -511,5 +554,4 @@ if FIPS_ENABLED and (FIPS_VERSION > 5 or (FIPS_VERSION == 5 and FIPS_VERSION >= 
 
 ffibuilder.cdef(_cdef)
 
-if __name__ == "__main__":
-    ffibuilder.compile(verbose=True)
+ffibuilder.compile(verbose=True)
