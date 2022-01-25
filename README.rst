@@ -14,6 +14,41 @@ speed, and feature set. It works seamlessly in desktop, enterprise, and cloud
 environments as well. It is the crypto engine behind `wolfSSl's embedded ssl
 library <https://wolfssl.com/wolfSSL/Products-wolfssl.html>`_.
 
+Compiling
+---------
+
+Windows
+^^^^^^^
+
+Install the following on Windows:
+
+* `CMake <https://cmake.org/download/>`_
+* `Git <https://git-scm.com/download/win>`_
+* `Python 3.9 <https://www.python.org/downloads/windows/>`_
+* `Build Tools for Visual Studio <https://visualstudio.microsoft.com/downloads/>`_. This is in the "Tools for Visual Studio" section at the bottom of the page. The "Desktop development with C++" pack is needed from the installer.
+
+Then from the command line install tox and CFFI using:
+
+.. code-block:: sh
+    pip install tox cffi
+
+You can then build the source distribution packages using:
+
+.. code-block:: sh
+    python setup.py sdist
+
+
+Linux
+^^^^^
+
+The `setup.py` file covers most things you will need to do to build and install from source. As pre-requisites you will need to install either from your OS repository or pip. You'll also need the Python development package for your Python version:
+
+* `cffi`
+* `tox`
+* `pytest`
+
+To build a source package run `python setup.py sdist`, to build a wheel package run `python setup.py bdist_wheel`. To test the build run `tox`. The `tox` tests rely on Python 3.9 being installed, if you do not have this version we recommend using `pyenv` to install it.
+
 Installation
 ------------
 

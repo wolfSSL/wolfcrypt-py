@@ -28,7 +28,7 @@ from setuptools.command.build_ext import build_ext
 
 
 # Adding src folder to the include path in order to import from wolfcrypt
-package_dir = os.path.join(os.path.dirname(__file__), "src")
+package_dir = os.path.dirname(__file__)
 sys.path.insert(0, package_dir)
 
 import wolfcrypt
@@ -72,7 +72,7 @@ setup(
     package_dir={"":package_dir},
 
     zip_safe=False,
-    cffi_modules=["./src/wolfcrypt/_build_ffi.py:ffibuilder"],
+    cffi_modules=["./wolfcrypt/_build_ffi.py:ffibuilder"],
 
     keywords="wolfssl, wolfcrypt, security, cryptography",
     classifiers=[
