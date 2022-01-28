@@ -230,6 +230,74 @@ if _lib.AES_ENABLED:
             return _lib.wc_AesCbcDecrypt(self._dec, destination,
                                          source, len(source))
 
+if _lib.AESGCM_STREAM:
+    class _AesGcmStream(object):
+        """
+        AES GCM Stream
+        """
+        block_size = 16
+        _key_sizes = [16, 24, 32]
+        _native_type = "Aes *"
+
+        def __init__(self, key, IV):
+            key = t2b(key)
+            IV = t2b(IV)
+            if len(key) not in self._key_sizes:
+                raise ValueError("key must be %s in length, not %d" %
+                                 (self._key_sizes, len(key)))
+            self._native_object = _ffi.new(self._native_type)
+            _lib.wc_AesInit(self._native_object, _ffi.NULL, -2)
+            self._authIn = _ffi.new("byte[%d]" % self.block_size)
+            ret = _lib.wc_AesGcmInit(self._native_object, key, len(key), IV, len(IV))
+            if ret < 0:
+                raise WolfCryptError("Init error (%d)" % ret)
+
+        def update(self, data):
+            """
+            Updates the stream with another segment of data.
+            """
+            ret = 0
+            data = t2b(data)
+            self._buf = _ffi.new("byte[%d]" % (len(data)))
+            ret = self._update(data)
+            if ret < 0:
+                raise WolfCryptError("Decryption error (%d)" % ret)
+            return bytes(self._buf)
+
+    class AesGcmStreamEncrypt(_AesGcmStream):
+        """
+        AES GCM Streaming Encryption
+        """
+        def _update(self, data):
+            return _lib.wc_AesGcmEncryptUpdate(self._native_object, self._buf, data, len(data), self._authIn, self.block_size)
+
+        def final(self):
+            """
+            Finalize the stream and return an authentication tag for the stream.
+            """
+            authTag = _ffi.new("byte[%d]" % self.block_size)
+            ret = _lib.wc_AesGcmEncryptFinal(self._native_object, authTag, self.block_size)
+            if ret < 0:
+                raise WolfCryptError("Encryption error (%d)" % ret)
+            return _ffi.buffer(authTag)[:]
+
+
+    class AesGcmStreamDecrypt(_AesGcmStream):
+        """
+        AES GCM Streaming Decryption
+        """
+        def _update(self, data):
+            return _lib.wc_AesGcmDecryptUpdate(self._native_object, self._buf, data, len(data), self._authIn, self.block_size)
+
+        def final(self, authTag):
+            """
+            Finalize the stream and verify using the provided authentication tag.
+            """
+            authTag = t2b(authTag)
+            ret = _lib.wc_AesGcmDecryptFinal(self._native_object, authTag, self.block_size)
+            if ret < 0:
+                raise WolfCryptError("Decryption error (%d)" % ret)
+
 if _lib.CHACHA_ENABLED:
     class ChaCha(_Cipher):
         """

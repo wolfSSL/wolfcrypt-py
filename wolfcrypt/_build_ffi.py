@@ -102,6 +102,7 @@ FIPS_VERSION = 0
 ERROR_STRINGS_ENABLED = 1
 ASN_ENABLED = 1
 WC_RNG_SEED_CB_ENABLED = 0
+AESGCM_STREAM = 1
 
 # detect native features based on options.h defines
 if featureDetection:
@@ -126,6 +127,7 @@ if featureDetection:
     ERROR_STRINGS_ENABLED = 0 if '#define NO_ERROR_STRINGS' in optionsHeaderStr else 1
     ASN_ENABLED = 0 if '#define NO_ASN' in optionsHeaderStr else 1
     WC_RNG_SEED_CB_ENABLED = 1 if '#define WC_RNG_SEED_CB' in optionsHeaderStr else 0
+    AESGCM_STREAM = 1 if '#define WOLFSSL_AESGCM_STREAM' in optionsHeaderStr else 0
 
     if '#define HAVE_FIPS' in optionsHeaderStr:
         FIPS_ENABLED = 1
@@ -202,6 +204,7 @@ extern "C" {
     int FIPS_VERSION = """ + str(FIPS_VERSION) + """;
     int ASN_ENABLED = """ + str(ASN_ENABLED) + """;
     int WC_RNG_SEED_CB_ENABLED = """ + str(WC_RNG_SEED_CB_ENABLED) + """;
+    int AESGCM_STREAM = """ + str(AESGCM_STREAM) + """;
     """,
     include_dirs=[wolfssl_inc_path()],
     library_dirs=[wolfssl_lib_path()],
@@ -231,6 +234,7 @@ _cdef = """
     extern int FIPS_VERSION;
     extern int ASN_ENABLED;
     extern int WC_RNG_SEED_CB_ENABLED;
+    extern int AESGCM_STREAM;
 
     typedef unsigned char byte;
     typedef unsigned int word32;
@@ -320,6 +324,27 @@ if AES_ENABLED:
     int wc_AesSetKey(Aes*, const byte*, word32, const byte*, int);
     int wc_AesCbcEncrypt(Aes*, byte*, const byte*, word32);
     int wc_AesCbcDecrypt(Aes*, byte*, const byte*, word32);
+    """
+
+if AES_ENABLED and AESGCM_STREAM:
+    _cdef += """
+    int  wc_AesInit(Aes* aes, void* heap, int devId);
+    int wc_AesGcmInit(Aes* aes, const byte* key, word32 len,
+        const byte* iv, word32 ivSz);
+    int wc_AesGcmEncryptInit(Aes* aes, const byte* key, word32 len,
+        const byte* iv, word32 ivSz);
+    int wc_AesGcmEncryptInit_ex(Aes* aes, const byte* key, word32 len,
+        byte* ivOut, word32 ivOutSz);
+    int wc_AesGcmEncryptUpdate(Aes* aes, byte* out, const byte* in,
+        word32 sz, const byte* authIn, word32 authInSz);
+    int wc_AesGcmEncryptFinal(Aes* aes, byte* authTag,
+        word32 authTagSz);
+    int wc_AesGcmDecryptInit(Aes* aes, const byte* key, word32 len,
+        const byte* iv, word32 ivSz);
+    int wc_AesGcmDecryptUpdate(Aes* aes, byte* out, const byte* in,
+        word32 sz, const byte* authIn, word32 authInSz);
+    int wc_AesGcmDecryptFinal(Aes* aes, const byte* authTag,
+        word32 authTagSz);
     """
 
 if CHACHA_ENABLED:
