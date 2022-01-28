@@ -142,7 +142,7 @@ def make_flags(prefix):
         flags.append("-DWOLFSSL_AES=yes")
         flags.append("-DWOLFSSL_DES3=yes")
         flags.append("-DWOLFSSL_CHACHA=yes")
-        flags.append("-DWOLFSSL_AESGCM=no")
+        flags.append("-DWOLFSSL_AESGCM=yes")
         flags.append("-DWOLFSSL_SHA=yes")
         flags.append("-DWOLFSSL_SHA384=yes")
         flags.append("-DWOLFSSL_SHA512=yes")
@@ -164,7 +164,7 @@ def make_flags(prefix):
         flags.append("-DWOLFSSL_EXTENDED_MASTER=no")
         flags.append("-DWOLFSSL_ERROR_STRINGS=no")
         # Part of hack for missing CMake option
-        flags.append("-DCMAKE_C_FLAGS=\"/DWOLFSSL_KEY_GEN=1 /DWOLFCRYPT_ONLY=1\"")
+        flags.append("-DCMAKE_C_FLAGS=\"/DWOLFSSL_KEY_GEN=1 /DWOLFCRYPT_ONLY=1 /DWOLFSSL_AESGCM_STREAM=1\"")
 
         return " ".join(flags)
     else:
@@ -186,7 +186,9 @@ def make_flags(prefix):
         flags.append("--enable-des3")
         flags.append("--enable-chacha")
 
-        flags.append("--disable-aesgcm")
+        flags.append("--enable-aesgcm-stream")
+
+        flags.append("--enable-aesgcm")
 
         # hashes and MACs
         flags.append("--enable-sha")
@@ -232,6 +234,8 @@ def cmake_hack():
     contents.insert(27, "#define WOLFSSL_KEY_GEN\n")
     contents.insert(28, "#undef WOLFCRYPT_ONLY\n")
     contents.insert(29, "#define WOLFCRYPT_ONLY\n")
+    contents.insert(30, "#undef WOLFSSL_AESGCM_STREAM\n")
+    contents.insert(31, "#define WOLFSSL_AESGCM_STREAM\n")
 
     with open(options_file, "w") as f:
         contents = "".join(contents)
@@ -272,9 +276,9 @@ def build_wolfssl(version="master"):
     else:
         libfile = os.path.join(prefix, 'lib/libwolfssl.la')
 
-    rebuild = ensure_wolfssl_src(version)
+    ensure_wolfssl_src(version)
 
-    if rebuild or not os.path.isfile(libfile):
+    if not os.path.isfile(libfile):
         make(make_flags(prefix))
 
 if __name__ == "__main__":

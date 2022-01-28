@@ -11,5 +11,6 @@ Summary
    digest
    mac
    random
+   streaming
 
 .. include:: ../LICENSING.rst
