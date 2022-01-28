@@ -92,11 +92,13 @@ class _Cipher(object):
         if mode not in _FEEDBACK_MODES:
             raise ValueError("this mode is not supported")
 
-        if mode == MODE_CBC:
+        if mode == MODE_CBC or mode == MODE_CTR:
             if IV is None:
                 raise ValueError("this mode requires an 'IV' string")
         else:
             raise ValueError("this mode is not supported by this cipher")
+
+        self.mode = mode
 
         if self.key_size:
             if self.key_size != len(key):
@@ -218,17 +220,31 @@ if _lib.AES_ENABLED:
             if direction == _ENCRYPTION:
                 return _lib.wc_AesSetKey(
                     self._enc, self._key, len(self._key), self._IV, _ENCRYPTION)
-
+            if self.mode == MODE_CTR:
+                return _lib.wc_AesSetKey(
+                    self._dec, self._key, len(self._key), self._IV, _ENCRYPTION)
             return _lib.wc_AesSetKey(
                 self._dec, self._key, len(self._key), self._IV, _DECRYPTION)
 
         def _encrypt(self, destination, source):
-            return _lib.wc_AesCbcEncrypt(self._enc, destination,
-                                         source, len(source))
+            if self.mode == MODE_CBC:
+                return _lib.wc_AesCbcEncrypt(self._enc, destination,
+                        source, len(source))
+            elif self.mode == MODE_CTR:
+                return _lib.wc_AesCtrEncrypt(self._enc, destination,
+                        source, len(source))
+            else:
+                raise ValueError("Invalid mode associated to cipher")
 
         def _decrypt(self, destination, source):
-            return _lib.wc_AesCbcDecrypt(self._dec, destination,
-                                         source, len(source))
+            if self.mode == MODE_CBC:
+                return _lib.wc_AesCbcDecrypt(self._dec, destination,
+                        source, len(source))
+            elif self.mode == MODE_CTR:
+                return _lib.wc_AesCtrEncrypt(self._dec, destination,
+                        source, len(source))
+            else:
+                raise ValueError("Invalid mode associated to cipher")
 
 if _lib.CHACHA_ENABLED:
     class ChaCha(_Cipher):

@@ -51,14 +51,15 @@ if _lib.ED448_ENABLED:
     from wolfcrypt.ciphers import (Ed448Private, Ed448Public)
 
 from wolfcrypt.ciphers import (
-    MODE_ECB, MODE_CBC, WolfCryptError
+    MODE_CTR, MODE_ECB, MODE_CBC, WolfCryptError
 )
 
 
 @pytest.fixture
 def vectors():
-    TestVector = namedtuple("TestVector", """key iv plaintext ciphertext raw_key
-                                             pkcs8_key pem""")
+    TestVector = namedtuple("TestVector", """key iv plaintext ciphertext 
+                ciphertext_ctr raw_key
+                pkcs8_key pem""")
     TestVector.__new__.__defaults__ = (None,) * len(TestVector._fields)
 
     # test vector dictionary
@@ -69,7 +70,9 @@ def vectors():
             key="0123456789abcdef",
             iv="1234567890abcdef",
             plaintext=t2b("now is the time "),
-            ciphertext=h2b("959492575f4281532ccc9d4677a233cb")
+            ciphertext=h2b("959492575f4281532ccc9d4677a233cb"),
+            #ciphertext_ctr = b'(u(\xdd\xf4\x84\xb1\x05]\xeb\xbeu\x1e\xb5+\x8a'
+            ciphertext_ctr = h2b('287528ddf484b1055debbe751eb52b8a')
         )
     if _lib.CHACHA_ENABLED:
         vectorArray[ChaCha]=TestVector(
@@ -235,12 +238,12 @@ def cipher_new(cipher_cls, vectors):
         MODE_CBC,
         vectors[cipher_cls].iv)
 
-
 def test_block_cipher(cipher_cls, vectors):
     key = vectors[cipher_cls].key
     iv = vectors[cipher_cls].iv
     plaintext = vectors[cipher_cls].plaintext
     ciphertext = vectors[cipher_cls].ciphertext
+    ciphertext_ctr = vectors[cipher_cls].ciphertext_ctr
 
     with pytest.raises(ValueError):
         cipher_cls.new(key[:-1], MODE_CBC, iv)  # invalid key length
@@ -257,10 +260,20 @@ def test_block_cipher(cipher_cls, vectors):
     with pytest.raises(ValueError):
         cipher_cls.new(key, MODE_CBC, iv[:-1])  # invalid iv length
 
+
+    # Test AES in counter mode
+    if ciphertext_ctr is not None:
+        cipher_obj = cipher_cls.new(key, MODE_CTR, iv)
+        res = cipher_obj.encrypt(plaintext)
+        assert res == ciphertext_ctr
+        cipher_obj = cipher_cls.new(key, MODE_CTR, iv)
+        assert plaintext == cipher_obj.decrypt(res)
+
     # single encryption
     cipher_obj = cipher_new(cipher_cls, vectors)
 
     assert cipher_obj.encrypt(plaintext) == ciphertext
+
 
     # many encryptions
     cipher_obj = cipher_new(cipher_cls, vectors)

@@ -184,6 +184,7 @@ def make_flags(prefix):
 
         # symmetric ciphers
         flags.append("--enable-aes")
+        flags.append("--enable-aesctr")
         flags.append("--enable-des3")
         flags.append("--enable-chacha")
 
