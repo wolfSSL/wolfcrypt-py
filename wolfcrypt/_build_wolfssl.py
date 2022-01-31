@@ -33,7 +33,6 @@ def local_path(path):
     current = os.path.abspath(os.getcwd())
     return os.path.abspath(os.path.join(current, path))
 
-
 WOLFSSL_SRC_PATH = local_path("lib/wolfssl")
 
 
@@ -121,8 +120,10 @@ def checkout_version(version):
 def ensure_wolfssl_src(ref):
     """ Ensure that wolfssl sources are presents and up-to-date
     """
-    if not os.path.isdir(WOLFSSL_SRC_PATH):
-        os.mkdir(WOLFSSL_SRC_PATH)
+    if not os.path.isdir("lib"):
+        os.mkdir("lib")
+        with chdir("lib"):
+            subprocess.run(["git", "clone", "--depth=1", "https://github.com/wolfssl/wolfssl"])
 
     if not os.path.isdir(os.path.join(WOLFSSL_SRC_PATH, "wolfssl")):
         subprocess.run(["git", "submodule", "update", "--init", "--depth=1"])
