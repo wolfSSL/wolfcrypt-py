@@ -381,11 +381,21 @@ if RSA_ENABLED:
                             RsaKey* key);
     int wc_RsaPublicEncrypt(const byte*, word32, byte*, word32,
                             RsaKey*, WC_RNG*);
-
+    int wc_RsaPublicEncrypt_ex(const byte* in, word32 inLen, byte* out,
+               word32 outLen, RsaKey* key, WC_RNG* rng, int type,
+               enum wc_HashType hash, int mgf, byte* label, word32 labelSz);
+    int wc_RsaPrivateDecrypt_ex(const byte* in, word32 inLen,
+               byte* out, word32 outLen, RsaKey* key, int type,
+               enum wc_HashType hash, int mgf, byte* label, word32 labelSz);
+    int wc_RsaPSS_Sign(const byte* in, word32 inLen, byte* out, word32 outLen,
+                       enum wc_HashType hash, int mgf, RsaKey* key, WC_RNG* rng);
+    int wc_RsaPSS_Verify(byte* in, word32 inLen, byte* out, word32 outLen,
+                           enum wc_HashType hash, int mgf, RsaKey* key);
+    int wc_RsaPSS_CheckPadding(const byte* in, word32 inSz, byte* sig,
+                           word32 sigSz, enum wc_HashType hashType);
     int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
     int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
     """
-
 
     if RSA_BLINDING_ENABLED:
         _cdef += """

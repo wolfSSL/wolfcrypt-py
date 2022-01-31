@@ -153,6 +153,7 @@ def make_flags(prefix):
         flags.append("-DWOLFSSL_SHA224=no")
         flags.append("-DWOLFSSL_POLY1305=no")
         flags.append("-DWOLFSSL_RSA=yes")
+        flags.append("-DWOLFSSL_RSA_PSS=yes")
         flags.append("-DWOLFSSL_ECC=yes")
         flags.append("-DWOLFSSL_ED25519=yes")
         flags.append("-DWOLFSSL_ED448=yes")
@@ -205,6 +206,7 @@ def make_flags(prefix):
 
         # asymmetric ciphers
         flags.append("--enable-rsa")
+        flags.append("--enable-rsapss")
         flags.append("--enable-ecc")
         flags.append("--enable-ed25519")
         flags.append("--enable-ed448")

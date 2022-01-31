@@ -82,6 +82,39 @@ ECC_BRAINPOOLP320R1 = 25
 ECC_BRAINPOOLP384R1 = 26
 ECC_BRAINPOOLP512R1 = 27
 
+RSA_PKCSV15_PAD = 0
+RSA_OAEP_PAD = 1
+RSA_PSS_PAD = 2
+RSA_NO_PSA = 3
+
+MGF1NONE = 0
+MGF1SHA1 = 26
+MGF1SHA224 = 4
+MGF1SHA256 = 1
+MGF1SHA384 = 2
+MGF1SHA512 = 3
+
+BLOCK_TYPE_1 = 1
+BLOCK_TYPE_2 = 2
+
+HASH_TYPE_NONE = 0
+HASH_TYPE_MD2 = 1
+HASH_TYPE_MD4 = 2
+HASH_TYPE_MD5 = 3
+HASH_TYPE_SHA = 4
+HASH_TYPE_SHA224 = 5
+HASH_TYPE_SHA256 = 6
+HASH_TYPE_SHA384 = 7
+HASH_TYPE_SHA512 = 8
+HASH_TYPE_MD5_SHA = 9
+HASH_TYPE_SHA3_224 = 10
+HASH_TYPE_SHA3_256 = 11
+HASH_TYPE_SHA3_384 = 12
+HASH_TYPE_SHA3_512 = 13
+HASH_TYPE_BLAKE2B = 14
+HASH_TYPE_BLAKE2S = 15
+
+
 
 class _Cipher(object):
     """
@@ -473,6 +506,23 @@ if _lib.RSA_ENABLED:
 
             return _ffi.buffer(ciphertext)[:]
 
+        def encrypt_oaep(self, plaintext, hash_type, mgf, label):
+            plaintext = t2b(plaintext)
+            label = t2b(label)
+            ciphertext = _ffi.new("byte[%d]" % self.output_size)
+
+            ret = _lib.wc_RsaPublicEncrypt_ex(plaintext, len(plaintext),
+                                              ciphertext, self.output_size,
+                                              self.native_object,
+                                              self._random.native_object,
+                                              RSA_OAEP_PAD, hash_type, mgf,
+                                              label, len(label))
+
+            if ret != self.output_size:  # pragma: no cover
+                raise WolfCryptError("Encryption error (%d)" % ret)
+
+            return _ffi.buffer(ciphertext)[:]
+
         def verify(self, signature):
             """
             Verifies **signature**, using the public key data in the
@@ -493,6 +543,32 @@ if _lib.RSA_ENABLED:
                 raise WolfCryptError("Verify error (%d)" % ret)
 
             return _ffi.buffer(plaintext, ret)[:]
+
+        def verify_pss(self, plaintext, signature, hash_type, mgf):
+            """
+            Verifies **signature**, using the public key data in the
+            object. The signature's length must be equal to:
+
+                **self.output_size**
+
+            Returns a string containing the plaintext.
+            """
+            plaintext = t2b(plaintext)
+            signature = t2b(signature)
+            verify = _ffi.new("byte[%d]" % self.output_size)
+
+            ret = _lib.wc_RsaPSS_Verify(signature, len(signature),
+                                        verify, self.output_size,
+                                        hash_type, mgf,
+                                        self.native_object)
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("Verify error (%d)" % ret)
+            ret = _lib.wc_RsaPSS_CheckPadding(plaintext, len(plaintext),
+                                         verify, ret, hash_type) 
+
+            return ret
+
 
 
     class RsaPrivate(RsaPublic):
@@ -597,6 +673,28 @@ if _lib.RSA_ENABLED:
 
             return _ffi.buffer(plaintext, ret)[:]
 
+        def decrypt_oaep(self, ciphertext, hash_type, mgf, label):
+            """
+            Decrypts **ciphertext**, using the private key data in the
+            object. The ciphertext's length must be equal to:
+
+                **self.output_size**
+
+            Returns a string containing the plaintext.
+            """
+            ciphertext = t2b(ciphertext)
+            label = t2b(label)
+            plaintext = _ffi.new("byte[%d]" % self.output_size)
+            ret = _lib.wc_RsaPrivateDecrypt_ex(ciphertext, len(ciphertext),
+                                               plaintext, self.output_size,
+                                               self.native_object, RSA_OAEP_PAD,
+                                               hash_type, mgf, label, len(label))
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("Decryption error (%d)" % ret)
+
+            return _ffi.buffer(plaintext, ret)[:]
+
         def sign(self, plaintext):
             """
             Signs **plaintext**, using the private key data in the object.
@@ -611,6 +709,29 @@ if _lib.RSA_ENABLED:
 
             ret = _lib.wc_RsaSSL_Sign(plaintext, len(plaintext),
                                       signature, self.output_size,
+                                      self.native_object,
+                                      self._random.native_object)
+
+            if ret != self.output_size:  # pragma: no cover
+                raise WolfCryptError("Signature error (%d)" % ret)
+
+            return _ffi.buffer(signature, self.output_size)[:]
+
+        def sign_pss(self, plaintext, hash_type, mgf):
+            """
+            Signs **plaintext**, using the private key data in the object.
+            The plaintext's length must not be greater than:
+
+                **self.output_size - self.RSA_MIN_PAD_SIZE**
+
+            Returns a string containing the signature.
+            """
+            plaintext = t2b(plaintext)
+            signature = _ffi.new("byte[%d]" % self.output_size)
+
+            ret = _lib.wc_RsaPSS_Sign(plaintext, len(plaintext),
+                                      signature, self.output_size,
+                                      hash_type, mgf,
                                       self.native_object,
                                       self._random.native_object)
 
