@@ -71,7 +71,6 @@ def vectors():
             iv="1234567890abcdef",
             plaintext=t2b("now is the time "),
             ciphertext=h2b("959492575f4281532ccc9d4677a233cb"),
-            #ciphertext_ctr = b'(u(\xdd\xf4\x84\xb1\x05]\xeb\xbeu\x1e\xb5+\x8a'
             ciphertext_ctr = h2b('287528ddf484b1055debbe751eb52b8a')
         )
     if _lib.CHACHA_ENABLED:
