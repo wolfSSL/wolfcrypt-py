@@ -26,8 +26,21 @@ import sys
 from setuptools import setup
 from setuptools.command.build_ext import build_ext
 
-import wolfcrypt
-from wolfcrypt._build_wolfssl import build_wolfssl
+import re
+VERSIONFILE = "wolfcrypt/_version.py"
+verstrline = open(VERSIONFILE, "rt").read()
+VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
+mo = re.search(VSRE, verstrline, re.M)
+if mo:
+    verstr = mo.group(1)
+else:
+    raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
+VSRE = r"^__wolfssl_version__ = ['\"]([^'\"]*)['\"]"
+mo = re.search(VSRE, verstrline, re.M)
+if mo:
+    wolfverstr = mo.group(1)
+else:
+    raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
 
 
 # long_description
@@ -38,30 +51,15 @@ with open("LICENSING.rst") as licensing_file:
     long_description = long_description.replace(".. include:: LICENSING.rst\n",
                                                 licensing_file.read())
 
-
-class cffiBuilder(build_ext, object):
-
-    def build_extension(self, ext):
-        """ Compile manually the wolfcrypt-py extension, bypass setuptools
-        """
-
-        # if USE_LOCAL_WOLFSSL environment variable has been defined,
-        # do not clone and compile wolfSSL from GitHub
-        if os.environ.get("USE_LOCAL_WOLFSSL") is None:
-            build_wolfssl(wolfcrypt.__wolfssl_version__)
-
-        super(cffiBuilder, self).build_extension(ext)
-
-
 setup(
-    name=wolfcrypt.__title__,
-    version=wolfcrypt.__version__,
-    description=wolfcrypt.__summary__,
+    name="wolfcrypt",
+    version=verstr,
+    description="Python module that encapsulates wolfSSL's crypto engine API.",
     long_description=long_description,
-    author=wolfcrypt.__author__,
-    author_email=wolfcrypt.__email__,
-    url=wolfcrypt.__uri__,
-    license=wolfcrypt.__license__,
+    author="wolfSSL Inc.",
+    author_email="info@wolfssl.com",
+    url="https://github.com/wolfssl/wolfcrypt-py",
+    license="GPLv2 or Commercial License",
 
     packages=["wolfcrypt"],
 
@@ -83,6 +81,5 @@ setup(
     ],
 
     setup_requires=["cffi"],
-    install_requires=["cffi"],
-    cmdclass={"build_ext" : cffiBuilder}
+    install_requires=["cffi"]
 )
