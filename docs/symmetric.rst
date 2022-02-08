@@ -18,12 +18,14 @@ interface:
 
 .. autoclass:: _Cipher
     :members:
+    :inherited-members:
 
 AES
 ~~~
 
 .. autoclass:: Aes
     :members:
+    :inherited-members:
 
 **Example:**
 
@@ -43,6 +45,7 @@ Triple DES
 
 .. autoclass:: Des3
     :members:
+    :inherited-members:
 
 **Example:**
 
