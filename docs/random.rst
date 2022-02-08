@@ -14,6 +14,7 @@ vectors can result in major security issues depending on the algorithms in use.
 
 .. autoclass:: Random
     :members:
+    :inherited-members:
 
 
 Example

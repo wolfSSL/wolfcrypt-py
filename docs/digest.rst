@@ -22,6 +22,8 @@ interface:
 
 .. autoclass:: _Hash
     :members:
+    :inherited-members:
+
 
 SHA-1
 ~~~~~
@@ -32,17 +34,25 @@ SHA-1
     are strongly suggested to use SHA-2 over SHA-1.
 
 .. autoclass:: Sha
+    :members:
+    :inherited-members:
 
 SHA-2 family
 ~~~~~~~~~~~~
 
 .. autoclass:: Sha256
+    :members:
+    :inherited-members:
 
 
 .. autoclass:: Sha384
+    :members:
+    :inherited-members:
 
 
 .. autoclass:: Sha512
+   :members:
+   :inherited-members:
 
 
 Example
