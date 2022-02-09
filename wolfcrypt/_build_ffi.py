@@ -103,6 +103,7 @@ ERROR_STRINGS_ENABLED = 1
 ASN_ENABLED = 1
 WC_RNG_SEED_CB_ENABLED = 0
 AESGCM_STREAM = 1
+RSA_PSS_ENABLED = 1
 
 # detect native features based on options.h defines
 if featureDetection:
@@ -128,6 +129,7 @@ if featureDetection:
     ASN_ENABLED = 0 if '#define NO_ASN' in optionsHeaderStr else 1
     WC_RNG_SEED_CB_ENABLED = 1 if '#define WC_RNG_SEED_CB' in optionsHeaderStr else 0
     AESGCM_STREAM = 1 if '#define WOLFSSL_AESGCM_STREAM' in optionsHeaderStr else 0
+    RSA_PSS_ENABLED = 1 if '#define WC_RSA_PSS' in optionsHeaderStr else 0
 
     if '#define HAVE_FIPS' in optionsHeaderStr:
         FIPS_ENABLED = 1
@@ -205,6 +207,7 @@ extern "C" {
     int ASN_ENABLED = """ + str(ASN_ENABLED) + """;
     int WC_RNG_SEED_CB_ENABLED = """ + str(WC_RNG_SEED_CB_ENABLED) + """;
     int AESGCM_STREAM = """ + str(AESGCM_STREAM) + """;
+    int RSA_PSS_ENABLED = """ + str(RSA_PSS_ENABLED) + """;
     """,
     include_dirs=[wolfssl_inc_path()],
     library_dirs=[wolfssl_lib_path()],
@@ -235,6 +238,7 @@ _cdef = """
     extern int ASN_ENABLED;
     extern int WC_RNG_SEED_CB_ENABLED;
     extern int AESGCM_STREAM;
+    extern int RSA_PSS_ENABLED;
 
     typedef unsigned char byte;
     typedef unsigned int word32;
@@ -368,6 +372,34 @@ if HMAC_ENABLED:
 
 if RSA_ENABLED:
     _cdef += """
+    static const int WC_RSA_PKCSV15_PAD;
+    static const int WC_RSA_OAEP_PAD;
+    static const int WC_RSA_PSS_PAD;
+    static const int WC_RSA_NO_PAD;
+
+    static const int WC_MGF1NONE;
+    static const int WC_MGF1SHA1;
+    static const int WC_MGF1SHA224;
+    static const int WC_MGF1SHA256;
+    static const int WC_MGF1SHA384;
+    static const int WC_MGF1SHA512;
+
+    static const int WC_HASH_TYPE_NONE;
+    static const int WC_HASH_TYPE_MD2;
+    static const int WC_HASH_TYPE_MD4;
+    static const int WC_HASH_TYPE_MD5;
+    static const int WC_HASH_TYPE_SHA;
+    static const int WC_HASH_TYPE_SHA224;
+    static const int WC_HASH_TYPE_SHA256;
+    static const int WC_HASH_TYPE_SHA384;
+    static const int WC_HASH_TYPE_SHA512;
+    static const int WC_HASH_TYPE_MD5_SHA;
+    static const int WC_HASH_TYPE_SHA3_224;
+    static const int WC_HASH_TYPE_SHA3_256;
+    static const int WC_HASH_TYPE_SHA3_384;
+    static const int WC_HASH_TYPE_SHA3_512;
+    static const int WC_HASH_TYPE_BLAKE2B;
+    static const int WC_HASH_TYPE_BLAKE2S;
     typedef struct {...; } RsaKey;
 
     int wc_InitRsaKey(RsaKey* key, void*);
@@ -381,11 +413,25 @@ if RSA_ENABLED:
                             RsaKey* key);
     int wc_RsaPublicEncrypt(const byte*, word32, byte*, word32,
                             RsaKey*, WC_RNG*);
-
-    int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
-    int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
+    int wc_RsaPublicEncrypt_ex(const byte* in, word32 inLen, byte* out,
+               word32 outLen, RsaKey* key, WC_RNG* rng, int type,
+               enum wc_HashType hash, int mgf, byte* label, word32 labelSz);
+    int wc_RsaPrivateDecrypt_ex(const byte* in, word32 inLen,
+               byte* out, word32 outLen, RsaKey* key, int type,
+               enum wc_HashType hash, int mgf, byte* label, word32 labelSz);
     """
 
+    if RSA_PSS_ENABLED:
+        _cdef += """
+        int wc_RsaPSS_Sign(const byte* in, word32 inLen, byte* out, word32 outLen,
+                           enum wc_HashType hash, int mgf, RsaKey* key, WC_RNG* rng);
+        int wc_RsaPSS_Verify(byte* in, word32 inLen, byte* out, word32 outLen,
+                               enum wc_HashType hash, int mgf, RsaKey* key);
+        int wc_RsaPSS_CheckPadding(const byte* in, word32 inSz, byte* sig,
+                               word32 sigSz, enum wc_HashType hashType);
+        int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
+        int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
+        """
 
     if RSA_BLINDING_ENABLED:
         _cdef += """

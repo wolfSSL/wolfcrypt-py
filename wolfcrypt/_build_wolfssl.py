@@ -153,6 +153,7 @@ def make_flags(prefix):
         flags.append("-DWOLFSSL_SHA224=no")
         flags.append("-DWOLFSSL_POLY1305=no")
         flags.append("-DWOLFSSL_RSA=yes")
+        flags.append("-DWOLFSSL_RSA_PSS=yes")
         flags.append("-DWOLFSSL_ECC=yes")
         flags.append("-DWOLFSSL_ED25519=yes")
         flags.append("-DWOLFSSL_ED448=yes")
@@ -165,7 +166,7 @@ def make_flags(prefix):
         flags.append("-DWOLFSSL_EXTENDED_MASTER=no")
         flags.append("-DWOLFSSL_ERROR_STRINGS=no")
         # Part of hack for missing CMake option
-        flags.append("-DCMAKE_C_FLAGS=\"/DWOLFSSL_KEY_GEN=1 /DWOLFCRYPT_ONLY=1 /DWOLFSSL_AESGCM_STREAM=1\"")
+        flags.append("-DCMAKE_C_FLAGS=\"/DWOLFSSL_KEY_GEN=1 /DWOLFCRYPT_ONLY=1 /DWOLFSSL_AESGCM_STREAM=1 /DWOLFSSL_AES_COUNTER=1\"")
 
         return " ".join(flags)
     else:
@@ -205,6 +206,7 @@ def make_flags(prefix):
 
         # asymmetric ciphers
         flags.append("--enable-rsa")
+        flags.append("--enable-rsapss")
         flags.append("--enable-ecc")
         flags.append("--enable-ed25519")
         flags.append("--enable-ed448")
@@ -238,6 +240,8 @@ def cmake_hack():
     contents.insert(29, "#define WOLFCRYPT_ONLY\n")
     contents.insert(30, "#undef WOLFSSL_AESGCM_STREAM\n")
     contents.insert(31, "#define WOLFSSL_AESGCM_STREAM\n")
+    contents.insert(32, "#undef WOLFSSL_AES_COUNTER\n")
+    contents.insert(33, "#define WOLFSSL_AES_COUNTER\n")
 
     with open(options_file, "w") as f:
         contents = "".join(contents)

@@ -39,7 +39,7 @@ if _lib.CHACHA_ENABLED:
     from wolfcrypt.ciphers import ChaCha
 
 if _lib.RSA_ENABLED:
-    from wolfcrypt.ciphers import (RsaPrivate, RsaPublic)
+    from wolfcrypt.ciphers import (RsaPrivate, RsaPublic, HASH_TYPE_SHA256, MGF1SHA256, HASH_TYPE_SHA, MGF1SHA1)
 
 if _lib.ECC_ENABLED:
     from wolfcrypt.ciphers import (EccPrivate, EccPublic)
@@ -382,6 +382,23 @@ if _lib.RSA_ENABLED:
         assert 1024 / 8 == len(ciphertext) == rsa_private.output_size
         assert plaintext == rsa_private.decrypt(ciphertext)
 
+    def test_rsa_encrypt_decrypt_pad_oaep(rsa_private, rsa_public):
+        plaintext = t2b("Everyone gets Friday off.")
+
+        # normal usage, encrypt with public, decrypt with private
+        ciphertext = rsa_public.encrypt_oaep(plaintext, HASH_TYPE_SHA, MGF1SHA1, "")
+
+        assert 1024 / 8 == len(ciphertext) == rsa_public.output_size
+        assert plaintext == rsa_private.decrypt_oaep(ciphertext, HASH_TYPE_SHA, MGF1SHA1, "")
+
+        # private object holds both private and public info, so it can also encrypt
+        # using the known public key.
+        ciphertext = rsa_private.encrypt_oaep(plaintext, HASH_TYPE_SHA, MGF1SHA1, "")
+
+        assert 1024 / 8 == len(ciphertext) == rsa_private.output_size
+        assert plaintext == rsa_private.decrypt_oaep(ciphertext, HASH_TYPE_SHA, MGF1SHA1, "")
+
+
     def test_rsa_pkcs8_encrypt_decrypt(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -414,6 +431,23 @@ if _lib.RSA_ENABLED:
 
         assert 1024 / 8 == len(signature) == rsa_private.output_size
         assert plaintext == rsa_private.verify(signature)
+
+    if _lib.RSA_PSS_ENABLED:
+        def test_rsa_pss_sign_verify(rsa_private, rsa_public):
+            plaintext = t2b("Everyone gets Friday off yippee.")
+
+            # normal usage, sign with private, verify with public
+            signature = rsa_private.sign_pss(plaintext, HASH_TYPE_SHA256, MGF1SHA256)
+
+            assert 1024 / 8 == len(signature) == rsa_private.output_size
+            assert 0 == rsa_public.verify_pss(plaintext, signature, HASH_TYPE_SHA256, MGF1SHA256)
+
+            # private object holds both private and public info, so it can also verify
+            # using the known public key.
+            signature = rsa_private.sign_pss(plaintext, HASH_TYPE_SHA256, MGF1SHA256)
+
+            assert 1024 / 8 == len(signature) == rsa_private.output_size
+            assert 0 == rsa_private.verify_pss(plaintext, signature, HASH_TYPE_SHA256, MGF1SHA256)
 
     def test_rsa_sign_verify_pem(rsa_private_pem, rsa_public_pem):
         plaintext = t2b("Everyone gets Friday off.")
