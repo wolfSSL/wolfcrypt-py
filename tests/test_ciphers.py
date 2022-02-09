@@ -432,21 +432,22 @@ if _lib.RSA_ENABLED:
         assert 1024 / 8 == len(signature) == rsa_private.output_size
         assert plaintext == rsa_private.verify(signature)
 
-    def test_rsa_pss_sign_verify(rsa_private, rsa_public):
-        plaintext = t2b("Everyone gets Friday off yippee.")
+    if _lib.RSA_PSS_ENABLED:
+        def test_rsa_pss_sign_verify(rsa_private, rsa_public):
+            plaintext = t2b("Everyone gets Friday off yippee.")
 
-        # normal usage, sign with private, verify with public
-        signature = rsa_private.sign_pss(plaintext, HASH_TYPE_SHA256, MGF1SHA256)
+            # normal usage, sign with private, verify with public
+            signature = rsa_private.sign_pss(plaintext, HASH_TYPE_SHA256, MGF1SHA256)
 
-        assert 1024 / 8 == len(signature) == rsa_private.output_size
-        assert 0 == rsa_public.verify_pss(plaintext, signature, HASH_TYPE_SHA256, MGF1SHA256)
+            assert 1024 / 8 == len(signature) == rsa_private.output_size
+            assert 0 == rsa_public.verify_pss(plaintext, signature, HASH_TYPE_SHA256, MGF1SHA256)
 
-        # private object holds both private and public info, so it can also verify
-        # using the known public key.
-        signature = rsa_private.sign_pss(plaintext, HASH_TYPE_SHA256, MGF1SHA256)
+            # private object holds both private and public info, so it can also verify
+            # using the known public key.
+            signature = rsa_private.sign_pss(plaintext, HASH_TYPE_SHA256, MGF1SHA256)
 
-        assert 1024 / 8 == len(signature) == rsa_private.output_size
-        assert 0 == rsa_private.verify_pss(plaintext, signature, HASH_TYPE_SHA256, MGF1SHA256)
+            assert 1024 / 8 == len(signature) == rsa_private.output_size
+            assert 0 == rsa_private.verify_pss(plaintext, signature, HASH_TYPE_SHA256, MGF1SHA256)
 
     def test_rsa_sign_verify_pem(rsa_private_pem, rsa_public_pem):
         plaintext = t2b("Everyone gets Friday off.")

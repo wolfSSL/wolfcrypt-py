@@ -372,6 +372,34 @@ if HMAC_ENABLED:
 
 if RSA_ENABLED:
     _cdef += """
+    static const int WC_RSA_PKCSV15_PAD;
+    static const int WC_RSA_OAEP_PAD;
+    static const int WC_RSA_PSS_PAD;
+    static const int WC_RSA_NO_PAD;
+
+    static const int WC_MGF1NONE;
+    static const int WC_MGF1SHA1;
+    static const int WC_MGF1SHA224;
+    static const int WC_MGF1SHA256;
+    static const int WC_MGF1SHA384;
+    static const int WC_MGF1SHA512;
+
+    static const int WC_HASH_TYPE_NONE;
+    static const int WC_HASH_TYPE_MD2;
+    static const int WC_HASH_TYPE_MD4;
+    static const int WC_HASH_TYPE_MD5;
+    static const int WC_HASH_TYPE_SHA;
+    static const int WC_HASH_TYPE_SHA224;
+    static const int WC_HASH_TYPE_SHA256;
+    static const int WC_HASH_TYPE_SHA384;
+    static const int WC_HASH_TYPE_SHA512;
+    static const int WC_HASH_TYPE_MD5_SHA;
+    static const int WC_HASH_TYPE_SHA3_224;
+    static const int WC_HASH_TYPE_SHA3_256;
+    static const int WC_HASH_TYPE_SHA3_384;
+    static const int WC_HASH_TYPE_SHA3_512;
+    static const int WC_HASH_TYPE_BLAKE2B;
+    static const int WC_HASH_TYPE_BLAKE2S;
     typedef struct {...; } RsaKey;
 
     int wc_InitRsaKey(RsaKey* key, void*);
@@ -392,37 +420,9 @@ if RSA_ENABLED:
                byte* out, word32 outLen, RsaKey* key, int type,
                enum wc_HashType hash, int mgf, byte* label, word32 labelSz);
     """
+
     if RSA_PSS_ENABLED:
         _cdef += """
-        static const int WC_RSA_PKCSV15_PAD;
-        static const int WC_RSA_OAEP_PAD;
-        static const int WC_RSA_PSS_PAD;
-        static const int WC_RSA_NO_PAD;
-
-        static const int WC_MGF1NONE;
-        static const int WC_MGF1SHA1;
-        static const int WC_MGF1SHA224;
-        static const int WC_MGF1SHA256;
-        static const int WC_MGF1SHA384;
-        static const int WC_MGF1SHA512;
-
-        static const int WC_HASH_TYPE_NONE;
-        static const int WC_HASH_TYPE_MD2;
-        static const int WC_HASH_TYPE_MD4;
-        static const int WC_HASH_TYPE_MD5;
-        static const int WC_HASH_TYPE_SHA;
-        static const int WC_HASH_TYPE_SHA224;
-        static const int WC_HASH_TYPE_SHA256;
-        static const int WC_HASH_TYPE_SHA384;
-        static const int WC_HASH_TYPE_SHA512;
-        static const int WC_HASH_TYPE_MD5_SHA;
-        static const int WC_HASH_TYPE_SHA3_224;
-        static const int WC_HASH_TYPE_SHA3_256;
-        static const int WC_HASH_TYPE_SHA3_384;
-        static const int WC_HASH_TYPE_SHA3_512;
-        static const int WC_HASH_TYPE_BLAKE2B;
-        static const int WC_HASH_TYPE_BLAKE2S;
-
         int wc_RsaPSS_Sign(const byte* in, word32 inLen, byte* out, word32 outLen,
                            enum wc_HashType hash, int mgf, RsaKey* key, WC_RNG* rng);
         int wc_RsaPSS_Verify(byte* in, word32 inLen, byte* out, word32 outLen,
