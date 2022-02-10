@@ -124,6 +124,7 @@ def checkout_version(version):
 def ensure_wolfssl_src(ref):
     """ Ensure that wolfssl sources are presents and up-to-date
     """
+
     if not os.path.isdir("lib"):
         os.mkdir("lib")
         with chdir("lib"):
@@ -316,15 +317,10 @@ def generate_libwolfssl():
         get_platform(), version))
     make(make_flags(prefix))
 
-
-if get_libwolfssl() == 0:
-    generate_libwolfssl()
-    get_libwolfssl()
-
 # detect features if user has built against local wolfSSL library
 # if they are not, we are controlling build options above
 local_wolfssl = os.environ.get("USE_LOCAL_WOLFSSL")
-if local_wolfssl is not None:
+if local_wolfssl:
     # Try to do native wolfSSL/wolfCrypt feature detection.
     # Open <wolfssl/options.h> header to parse for #define's
     # This will throw a FileNotFoundError if not able to find options.h
@@ -341,6 +337,11 @@ else:
     featureDetection = 0
     sys.stderr.write("\nDEBUG: Skipping native feature detection, build not "
                      "using USE_LOCAL_WOLFSSL\n")
+    if get_libwolfssl() == 0:
+        generate_libwolfssl()
+        get_libwolfssl()
+
+
 
 # default values
 MPAPI_ENABLED = 1
