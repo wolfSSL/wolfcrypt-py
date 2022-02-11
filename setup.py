@@ -23,8 +23,9 @@
 
 import os
 import sys
-from setuptools import setup
-from setuptools.command.build_ext import build_ext
+from setuptools import setup, find_packages
+
+os.chdir(os.path.dirname(sys.argv[0]) or ".")
 
 import re
 VERSIONFILE = "wolfcrypt/_version.py"
@@ -61,11 +62,7 @@ setup(
     url="https://github.com/wolfssl/wolfcrypt-py",
     license="GPLv2 or Commercial License",
 
-    packages=["wolfcrypt"],
-
-    zip_safe=False,
-    cffi_modules=["./wolfcrypt/_build_ffi.py:ffibuilder"],
-
+    packages=find_packages(),
     keywords="wolfssl, wolfcrypt, security, cryptography",
     classifiers=[
         u"License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
@@ -80,6 +77,7 @@ setup(
         u"Topic :: Software Development"
     ],
 
-    setup_requires=["cffi"],
-    install_requires=["cffi"]
+    setup_requires=["cffi>=1.0.0"],
+    install_requires=["cffi>=1.0.0"],
+    cffi_modules=["./wolfcrypt/_build_ffi.py:ffibuilder"]
 )
