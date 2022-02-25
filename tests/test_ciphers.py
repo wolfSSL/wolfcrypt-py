@@ -334,12 +334,28 @@ if _lib.RSA_ENABLED:
         return RsaPrivate(vectors[RsaPrivate].key)
 
     @pytest.fixture
+    def rsa_private_oaep(vectors):
+        return RsaPrivate(vectors[RsaPrivate].key, hash_type=HASH_TYPE_SHA)
+
+    @pytest.fixture
+    def rsa_private_pss(vectors):
+        return RsaPrivate(vectors[RsaPrivate].key, hash_type=HASH_TYPE_SHA256)
+
+    @pytest.fixture
     def rsa_private_pkcs8(vectors):
         return RsaPrivate(vectors[RsaPrivate].pkcs8_key)
 
     @pytest.fixture
     def rsa_public(vectors):
         return RsaPublic(vectors[RsaPublic].key)
+
+    @pytest.fixture
+    def rsa_public_oaep(vectors):
+        return RsaPublic(vectors[RsaPublic].key, hash_type=HASH_TYPE_SHA)
+
+    @pytest.fixture
+    def rsa_public_pss(vectors):
+        return RsaPublic(vectors[RsaPublic].key, hash_type=HASH_TYPE_SHA256)
 
     @pytest.fixture
     def rsa_private_pem(vectors):
@@ -382,21 +398,21 @@ if _lib.RSA_ENABLED:
         assert 1024 / 8 == len(ciphertext) == rsa_private.output_size
         assert plaintext == rsa_private.decrypt(ciphertext)
 
-    def test_rsa_encrypt_decrypt_pad_oaep(rsa_private, rsa_public):
+    def test_rsa_encrypt_decrypt_pad_oaep(rsa_private_oaep, rsa_public_oaep):
         plaintext = t2b("Everyone gets Friday off.")
 
         # normal usage, encrypt with public, decrypt with private
-        ciphertext = rsa_public.encrypt_oaep(plaintext, HASH_TYPE_SHA, MGF1SHA1, "")
+        ciphertext = rsa_public_oaep.encrypt_oaep(plaintext)
 
-        assert 1024 / 8 == len(ciphertext) == rsa_public.output_size
-        assert plaintext == rsa_private.decrypt_oaep(ciphertext, HASH_TYPE_SHA, MGF1SHA1, "")
+        assert 1024 / 8 == len(ciphertext) == rsa_public_oaep.output_size
+        assert plaintext == rsa_private_oaep.decrypt_oaep(ciphertext)
 
         # private object holds both private and public info, so it can also encrypt
         # using the known public key.
-        ciphertext = rsa_private.encrypt_oaep(plaintext, HASH_TYPE_SHA, MGF1SHA1, "")
+        ciphertext = rsa_private_oaep.encrypt_oaep(plaintext)
 
-        assert 1024 / 8 == len(ciphertext) == rsa_private.output_size
-        assert plaintext == rsa_private.decrypt_oaep(ciphertext, HASH_TYPE_SHA, MGF1SHA1, "")
+        assert 1024 / 8 == len(ciphertext) == rsa_private_oaep.output_size
+        assert plaintext == rsa_private_oaep.decrypt_oaep(ciphertext)
 
 
     def test_rsa_pkcs8_encrypt_decrypt(rsa_private_pkcs8, rsa_public):
@@ -433,21 +449,21 @@ if _lib.RSA_ENABLED:
         assert plaintext == rsa_private.verify(signature)
 
     if _lib.RSA_PSS_ENABLED:
-        def test_rsa_pss_sign_verify(rsa_private, rsa_public):
+        def test_rsa_pss_sign_verify(rsa_private_pss, rsa_public_pss):
             plaintext = t2b("Everyone gets Friday off yippee.")
 
             # normal usage, sign with private, verify with public
-            signature = rsa_private.sign_pss(plaintext, HASH_TYPE_SHA256, MGF1SHA256)
+            signature = rsa_private_pss.sign_pss(plaintext)
 
-            assert 1024 / 8 == len(signature) == rsa_private.output_size
-            assert 0 == rsa_public.verify_pss(plaintext, signature, HASH_TYPE_SHA256, MGF1SHA256)
+            assert 1024 / 8 == len(signature) == rsa_private_pss.output_size
+            assert 0 == rsa_public_pss.verify_pss(plaintext, signature)
 
             # private object holds both private and public info, so it can also verify
             # using the known public key.
-            signature = rsa_private.sign_pss(plaintext, HASH_TYPE_SHA256, MGF1SHA256)
+            signature = rsa_private_pss.sign_pss(plaintext)
 
-            assert 1024 / 8 == len(signature) == rsa_private.output_size
-            assert 0 == rsa_private.verify_pss(plaintext, signature, HASH_TYPE_SHA256, MGF1SHA256)
+            assert 1024 / 8 == len(signature) == rsa_private_pss.output_size
+            assert 0 == rsa_private_pss.verify_pss(plaintext, signature)
 
     def test_rsa_sign_verify_pem(rsa_private_pem, rsa_public_pem):
         plaintext = t2b("Everyone gets Friday off.")
