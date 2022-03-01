@@ -308,36 +308,39 @@ if _lib.AESGCM_STREAM:
                 raise WolfCryptError("AAD can only be set before encrypt() or decrypt() is called")
             self._aad = t2b(data)
 
+        def get_aad(self):
+            return self._aad
+
         def encrypt(self, data):
             """
             Add more data to the encryption stream
             """
             data = t2b(data)
+            aad = bytes()
             if self._mode is None:
                 self._mode = _ENCRYPTION
+                aad = self._aad
             elif self._mode == _DECRYPTION:
                 raise WolfCryptError("Class instance already in use for decryption")
             self._buf = _ffi.new("byte[%d]" % (len(data)))
-            ret = _lib.wc_AesGcmEncryptUpdate(self._native_object, self._buf, data, len(data), self._aad, len(self._aad))
+            ret = _lib.wc_AesGcmEncryptUpdate(self._native_object, self._buf, data, len(data), aad, len(aad))
             if ret < 0:
                 raise WolfCryptError("Decryption error (%d)" % ret)
-            # Reset aad after first packet
-            self._aad = bytes()
             return bytes(self._buf)
 
         def decrypt(self, data):
             """
             Add more data to the decryption stream
             """
+            aad = bytes()
             data = t2b(data)
             if self._mode is None:
                 self._mode = _DECRYPTION
+                aad = self._aad
             elif self._mode == _ENCRYPTION:
                 raise WolfCryptError("Class instance already in use for decryption")
             self._buf = _ffi.new("byte[%d]" % (len(data)))
-            ret = _lib.wc_AesGcmDecryptUpdate(self._native_object, self._buf, data, len(data), self._aad, len(self._aad))
-            # Reset after first packet
-            self._aad = bytes()
+            ret = _lib.wc_AesGcmDecryptUpdate(self._native_object, self._buf, data, len(data), aad, len(aad))
             if ret < 0:
                 raise WolfCryptError("Decryption error (%d)" % ret)
             return bytes(self._buf)
