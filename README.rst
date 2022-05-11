@@ -11,7 +11,7 @@ wolfcrypt: the wolfSSL Crypto Engine
 lightweight, portable, C-language-based crypto library
 targeted at IoT, embedded, and RTOS environments primarily because of its size,
 speed, and feature set. It works seamlessly in desktop, enterprise, and cloud
-environments as well. It is the crypto engine behind `wolfSSl's embedded ssl
+environments as well. It is the crypto engine behind `wolfSSL's embedded ssl
 library <https://wolfssl.com/wolfSSL/Products-wolfssl.html>`_.
 
 Compiling
