@@ -44,7 +44,11 @@ class Random(object):
 
     def __del__(self):
         if self.native_object:
-            self._delete(self.native_object)
+            try:
+                self._delete(self.native_object)
+            except AttributeError:
+                # Can occur during interpreter shutdown
+                pass
 
     def byte(self):
         """
