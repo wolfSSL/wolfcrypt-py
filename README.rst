@@ -30,12 +30,14 @@ Install the following on Windows:
 Then from the command line install tox and CFFI using:
 
 .. code-block:: sh
-    pip install tox cffi
+
+   pip install tox cffi
 
 You can then build the source distribution packages using:
 
 .. code-block:: sh
-    python setup.py sdist
+
+   python setup.py sdist
 
 
 Linux
