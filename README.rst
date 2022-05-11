@@ -82,3 +82,26 @@ Testing
     >>> from wolfcrypt.hashes import Sha256
     >>> Sha256('wolfcrypt').hexdigest()
     b'96e02e7b1cbcd6f104fe1fdb4652027a5505b68652b70095c6318f9dce0d1844'
+
+Testing ``wolfcrypt``'s source code with ``tox``
+------------------------------------------------
+
+To run the unit tests in the source code, you'll need ``tox`` and a few other
+requirements.
+
+1. Make sure that the testing requirements are installed:
+
+.. code-block:: console
+
+    $ sudo -H pip install -r requirements/test.txt
+
+
+2. Run ``tox``:
+
+.. code-block:: console
+
+    $ tox
+    ...
+    _________________________________ summary _________________________________
+    py3: commands succeeded
+    congratulations :)
