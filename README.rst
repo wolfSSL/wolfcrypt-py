@@ -1,9 +1,6 @@
 wolfcrypt: the wolfSSL Crypto Engine
 ====================================
 
-.. image:: https://travis-ci.org/wolfSSL/wolfcrypt-py.svg?branch=master
-    :target: https://travis-ci.org/wolfSSL/wolfcrypt-py
-
 **wolfCrypt Python**, a.k.a. ``wolfcrypt`` is a Python module that encapsulates
 **wolfSSL's wolfCrypt API**.
 
