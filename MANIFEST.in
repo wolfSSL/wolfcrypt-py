@@ -1,5 +1,6 @@
 include LICENSING.rst
 include README.rst
+include ChangeLog.rst
 
 recursive-include tests *
 recursive-include requirements *
