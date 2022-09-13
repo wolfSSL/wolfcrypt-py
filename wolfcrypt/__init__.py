@@ -36,22 +36,23 @@ __all__ = [
     "ciphers", "hashes", "random", "pwdbased"
 ]
 
-try:
+import os
+import sys
+
+top_level_py = os.path.basename(sys.argv[0])
+
+# The code below is intended to only be used after the CFFI is built, so we
+# don't want it invoked whilst building the CFFI with build_ffi.py or setup.py.
+if top_level_py not in ["setup.py", "build_ffi.py"]:
     from wolfcrypt._ffi import ffi as _ffi
     from wolfcrypt._ffi import lib as _lib
-except ImportError:
-    # FFI not built. Not running initialization code.
-    pass
-else:
-    from wolfcrypt.exceptions import WolfCryptError
 
     if hasattr(_lib, 'WC_RNG_SEED_CB_ENABLED'):
         if _lib.WC_RNG_SEED_CB_ENABLED:
             ret = _lib.wc_SetSeed_Cb(_ffi.addressof(_lib, "wc_GenerateSeed"))
             if ret < 0:
                 raise WolfCryptError("wc_SetSeed_Cb failed (%d)" % ret)
-    if _lib.FIPS_ENABLED and (_lib.FIPS_VERSION > 5 or (_lib.FIPS_VERSION == 5
-        and _lib.FIPS_VERSION >= 1)):
+    if _lib.FIPS_ENABLED and _lib.FIPS_VERSION >= 5:
         ret = _lib.wolfCrypt_SetPrivateKeyReadEnable_fips(1,
                                                           _lib.WC_KEYTYPE_ALL);
         if ret < 0:
