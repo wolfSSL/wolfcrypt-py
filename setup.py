@@ -80,5 +80,7 @@ setup(
 
     setup_requires=["cffi>=1.0.0"],
     install_requires=["cffi>=1.0.0"],
-    cffi_modules=["./wolfcrypt/_build_ffi.py:ffibuilder"]
+    cffi_modules=["./scripts/build_ffi.py:ffibuilder"],
+
+    package_data={"wolfcrypt": ["*.dll"]}
 )
