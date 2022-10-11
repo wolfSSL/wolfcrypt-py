@@ -450,7 +450,7 @@ if _lib.RSA_ENABLED:
 
     if _lib.RSA_PSS_ENABLED:
         def test_rsa_pss_sign_verify(rsa_private_pss, rsa_public_pss):
-            plaintext = t2b("Everyone gets Friday off yippee.")
+            plaintext = t2b("Everyone gets Friday off.")
 
             # normal usage, sign with private, verify with public
             signature = rsa_private_pss.sign_pss(plaintext)

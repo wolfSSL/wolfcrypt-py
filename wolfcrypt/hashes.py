@@ -377,3 +377,17 @@ if _lib.HMAC_ENABLED:
             """
             _type = _TYPE_SHA512
             digest_size = Sha512.digest_size
+
+def hash_type_to_cls(hash_type):
+    if _lib.SHA_ENABLED and hash_type == _lib.WC_HASH_TYPE_SHA:
+        hash_cls = Sha
+    elif _lib.SHA256_ENABLED and hash_type == _lib.WC_HASH_TYPE_SHA256:
+        hash_cls = Sha256
+    elif _lib.SHA384_ENABLED and hash_type == _lib.WC_HASH_TYPE_SHA384:
+        hash_cls = Sha384
+    elif _lib.SHA512_ENABLED and hash_type == _lib.WC_HASH_TYPE_SHA512:
+        hash_cls = Sha512
+    else:
+        hash_cls = None
+
+    return hash_cls

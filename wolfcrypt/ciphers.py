@@ -25,6 +25,7 @@ from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import t2b
 from wolfcrypt.random import Random
 from wolfcrypt.asn import pem_to_der
+from wolfcrypt.hashes import hash_type_to_cls
 
 from wolfcrypt.exceptions import WolfCryptError
 
@@ -597,6 +598,14 @@ if _lib.RSA_ENABLED:
 
                 Returns a string containing the plaintext.
                 """
+                if not self._hash_type:
+                    raise WolfCryptError(("Hash type not set. Cannot verify a "
+                        "PSS signature without a hash type."))
+
+                hash_cls = hash_type_to_cls(self._hash_type)
+                if not hash_cls:
+                    raise WolfCryptError("Unsupported PSS hash type.")
+
                 plaintext = t2b(plaintext)
                 signature = t2b(signature)
                 if self._mgf is None:
@@ -610,7 +619,9 @@ if _lib.RSA_ENABLED:
 
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptError("Verify error (%d)" % ret)
-                ret = _lib.wc_RsaPSS_CheckPadding(plaintext, len(plaintext),
+
+                digest = hash_cls.new(plaintext).digest()
+                ret = _lib.wc_RsaPSS_CheckPadding(digest, len(digest),
                                                   verify, ret, self._hash_type)
 
                 return ret
@@ -620,11 +631,11 @@ if _lib.RSA_ENABLED:
     class RsaPrivate(RsaPublic):
         if _lib.KEYGEN_ENABLED:
             @classmethod
-            def make_key(cls, size, rng=Random()):
+            def make_key(cls, size, rng=Random(), hash_type=None):
                 """
                 Generates a new key pair of desired length **size**.
                 """
-                rsa = cls(None)
+                rsa = cls(hash_type=hash_type)
                 if rsa == None:  # pragma: no cover
                     raise WolfCryptError("Invalid key error (%d)" % ret)
 
@@ -776,11 +787,22 @@ if _lib.RSA_ENABLED:
 
                 Returns a string containing the signature.
                 """
+                if not self._hash_type:
+                    raise WolfCryptError(("Hash type not set. Cannot verify a "
+                        "PSS signature without a hash type."))
+
+                hash_cls = hash_type_to_cls(self._hash_type)
+                if not hash_cls:
+                    raise WolfCryptError("Unsupported PSS hash type.")
+
                 plaintext = t2b(plaintext)
+                digest = hash_cls.new(plaintext).digest()
+
                 signature = _ffi.new("byte[%d]" % self.output_size)
                 if self._mgf is None:
                     self._get_mgf()
-                ret = _lib.wc_RsaPSS_Sign(plaintext, len(plaintext),
+
+                ret = _lib.wc_RsaPSS_Sign(digest, len(digest),
                                           signature, self.output_size,
                                           self._hash_type, self._mgf,
                                           self.native_object,
