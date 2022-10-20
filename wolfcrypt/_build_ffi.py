@@ -513,7 +513,6 @@ _cdef = """
     int wc_RNG_GenerateBlock(WC_RNG*, byte*, word32);
     int wc_RNG_GenerateByte(WC_RNG*, byte*);
     int wc_FreeRng(WC_RNG*);
-    int wc_GenerateSeed(OS_Seed* os, byte* seed, word32 sz);
 
     int wc_GetPkcs8TraditionalOffset(byte* input, word32* inOutIdx, word32 sz);
 """
@@ -875,6 +874,7 @@ if WC_RNG_SEED_CB_ENABLED:
     typedef int (*wc_RngSeed_Cb)(OS_Seed* os, byte* seed, word32 sz);
 
     int wc_SetSeed_Cb(wc_RngSeed_Cb cb);
+    int wc_GenerateSeed(OS_Seed* os, byte* seed, word32 sz);
     """
 
 if FIPS_ENABLED and (FIPS_VERSION > 5 or (FIPS_VERSION == 5 and FIPS_VERSION >= 1)):
