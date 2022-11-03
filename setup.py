@@ -57,6 +57,7 @@ setup(
     version=verstr,
     description="Python module that encapsulates wolfSSL's crypto engine API.",
     long_description=long_description,
+    long_description_content_type='text/x-rst',
     author="wolfSSL Inc.",
     author_email="info@wolfssl.com",
     url="https://github.com/wolfssl/wolfcrypt-py",
