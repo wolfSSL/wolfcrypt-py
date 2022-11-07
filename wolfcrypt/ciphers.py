@@ -273,7 +273,7 @@ if _lib.AES_ENABLED:
             else:
                 raise ValueError("Invalid mode associated to cipher")
 
-if _lib.AESGCM_STREAM:
+if _lib.AESGCM_STREAM_ENABLED:
     class AesGcmStream(object):
         """
         AES GCM Stream
@@ -1003,7 +1003,8 @@ if _lib.ECC_ENABLED:
             if ret < 0:
                 raise WolfCryptError("Key generation error (%d)" % ret)
 
-            if _lib.ECC_TIMING_RESISTANCE_ENABLED:
+            if _lib.ECC_TIMING_RESISTANCE_ENABLED and (not _lib.FIPS_ENABLED or
+               _lib.FIPS_VERSION > 2):
                 ret = _lib.wc_ecc_set_rng(ecc.native_object, rng.native_object)
                 if ret < 0:
                     raise WolfCryptError("Error setting ECC RNG (%d)" % ret)
