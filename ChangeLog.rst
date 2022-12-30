@@ -1,3 +1,19 @@
+wolfCrypt-py Release 5.5.4 (December 30, 2022)
+==========================================
+
+* Update to wolfSSL version 5.5.4
+
+wolfCrypt-py Release 5.5.3 (November 7, 2022)
+==========================================
+
+* Add ChangeLog file
+* Add optional hash_type parameter to RSA from_pem functions
+* Improve the RSA PSS code
+* Gate inclusion of wc_GenerateSeed in C wrapper on WC_RNG_SEED_CB_ENABLED
+* Make several improvements to the CFFI build process
+* Update to wolfSSL version 5.5.3
+
+
 wolfCrypt-py Release 5.4.0 (July 13, 2022)
 ==========================================
 
@@ -40,3 +56,4 @@ Fixes
 -----
 
 * Documentation improvements
+
