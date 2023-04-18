@@ -167,7 +167,7 @@ def ensure_wolfssl_src(ref):
     return checkout_version(version)
 
 
-def make_flags(prefix):
+def make_flags(prefix, fips):
     """ Returns compilation flags.
     """
     if sys.platform == "win32":
@@ -177,6 +177,10 @@ def make_flags(prefix):
         flags.append("-DWOLFSSL_EXAMPLES=no")
         flags.append("-DBUILD_SHARED_LIBS=no")
         flags.append("-DWOLFSSL_USER_SETTINGS=yes")
+        if fips:
+            flags.append("-DCMAKE_CXX_FLAGS=-I" + local_path("../IDE/WIN10"))
+        else:
+            flags.append("-DCMAKE_CXX_FLAGS=-I" + local_path("../IDE/WIN"))
         return " ".join(flags)
     else:
         flags = []
@@ -287,10 +291,10 @@ def get_libwolfssl():
         else:
             return True
 
-def generate_libwolfssl():
+def generate_libwolfssl(fips):
     ensure_wolfssl_src(version)
     prefix = os.path.join(WOLFSSL_SRC_PATH, get_platform(), version)
-    make(make_flags(prefix))
+    make(make_flags(prefix, fips))
 
 def get_features(local_wolfssl, features):
     fips = False
@@ -947,7 +951,7 @@ def main(ffibuilder):
     if not local_wolfssl:
         print("Building wolfSSL...")
         if not get_libwolfssl():
-            generate_libwolfssl()
+            generate_libwolfssl(features["FIPS"])
 
     build_ffi(local_wolfssl, features)
 
