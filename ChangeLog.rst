@@ -1,3 +1,10 @@
+wolfCrypt-py Release 5.6.0 (May 2, 2022)
+==========================================
+
+* Add user settings path for scripts/user_settings_asm.sh during cmake
+* Update to wolfSSL version 5.6.0
+
+
 wolfCrypt-py Release 5.5.4 (December 30, 2022)
 ==========================================
 
