@@ -1,6 +1,6 @@
 # When bumping the C library version, reset the POST count to 0
 
-__wolfssl_version__ = "v5.6.0-stable"
+__wolfssl_version__ = "v5.6.6-stable"
 
 # We're using implicit post releases [PEP 440] to bump package version
 # while maintaining the C library version intact for better reference.
@@ -8,5 +8,5 @@ __wolfssl_version__ = "v5.6.0-stable"
 #
 # MAJOR.MINOR.BUILD-POST
 
-__version__ = "5.6.0-0"
+__version__ = "5.6.6-0"
 
