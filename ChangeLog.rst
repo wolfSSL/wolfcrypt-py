@@ -1,3 +1,9 @@
+wolfCrypt-py Release 5.7.2 (Sep 6, 2024)
+==========================================
+
+* Update to wolfSSL version 5.7.2
+
+
 wolfCrypt-py Release 5.6.6 (Jan 23, 2024)
 ==========================================
 
