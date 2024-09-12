@@ -215,7 +215,7 @@ def make_flags(prefix, fips):
 
         flags.append("--disable-md5")
         flags.append("--disable-sha224")
-        flags.append("--disable-poly1305")
+        flags.append("--enable-poly1305")
 
         # asymmetric ciphers
         flags.append("--enable-rsa")
@@ -367,6 +367,7 @@ def get_features(local_wolfssl, features):
     features["WC_RNG_SEED_CB"] = 1 if '#define WC_RNG_SEED_CB' in defines else 0
     features["AESGCM_STREAM"] = 1 if '#define WOLFSSL_AESGCM_STREAM' in defines else 0
     features["RSA_PSS"] = 1 if '#define WC_RSA_PSS' in defines else 0
+    features["CHACHA20_POLY1305"] = 1 if '#define HAVE_CHACHA' & '#define HAVE_POLY1305' in defines else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -439,6 +440,8 @@ def build_ffi(local_wolfssl, features):
         #include <wolfssl/wolfcrypt/ed25519.h>
         #include <wolfssl/wolfcrypt/ed448.h>
         #include <wolfssl/wolfcrypt/curve25519.h>
+        #include <wolfssl/wolfcrypt/poly1305.h>
+        #include <wolfssl/wolfcrypt/chacha20_poly1305.h>
     """
 
     init_source_string = """
@@ -474,6 +477,7 @@ def build_ffi(local_wolfssl, features):
         int WC_RNG_SEED_CB_ENABLED = """ + str(features["WC_RNG_SEED_CB"]) + """;
         int AESGCM_STREAM_ENABLED = """ + str(features["AESGCM_STREAM"]) + """;
         int RSA_PSS_ENABLED = """ + str(features["RSA_PSS"]) + """;
+        int CHACHA20_POLY1305_ENABLED = """ + str(features["CHACHA20_POLY1305"]) + """;
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -508,6 +512,7 @@ def build_ffi(local_wolfssl, features):
         extern int WC_RNG_SEED_CB_ENABLED;
         extern int AESGCM_STREAM_ENABLED;
         extern int RSA_PSS_ENABLED;
+        extern int CHACHA20_POLY1305_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -625,13 +630,32 @@ def build_ffi(local_wolfssl, features):
             word32 authTagSz);
         """
 
+
     if features["CHACHA"]:
         cdef += """
         typedef struct { ...; } ChaCha;
-
         int wc_Chacha_SetKey(ChaCha*, const byte*, word32);
         int wc_Chacha_SetIV(ChaCha*, const byte*, word32);
         int wc_Chacha_Process(ChaCha*, byte*, const byte*,word32);
+        """
+
+    if features["CHACHA20_POLY1305"]:
+        cdef += """
+        typedef struct { ...; } ChaChaPoly_Aead;
+        int wc_ChaCha20Poly1305_Encrypt(const byte inKey, const byte inIV, const byte* inAAD,
+            word32 inAADLen, const byte* inPlaintext, word32 inPlaintextLen, byte* outCiphertext,
+            byte outAuthTag);
+        int wc_ChaCha20Poly1305_Decrypt( const byte inKey, const byte inIV, const byte* inAAD,
+            word32 inAADLen, const byte* inCiphertext, word32 inCiphertextLen,
+            const byte inAuthTag, byte* outPlaintext);
+        int wc_ChaCha20Poly1305_UpdateAad(ChaChaPoly_Aead* aead,
+            const byte* inAAD, word32 inAADLen);
+        int wc_ChaCha20Poly1305_Init(ChaChaPoly_Aead* aead, const byte inKey, const byte inIV,
+            int isEncrypt);
+        int wc_ChaCha20Poly1305_UpdateData(ChaChaPoly_Aead* aead,
+            const byte* inData, byte* outData, word32 dataLen);
+        int wc_ChaCha20Poly1305_Final(byte*, word32);
+        int wc_ChaCha20Poly1305_CheckTag(const byte* authtag, const byte* authTagChk);
         """
 
     if features["HMAC"]:
@@ -927,6 +951,7 @@ def main(ffibuilder):
         "WC_RNG_SEED_CB": 0,
         "AESGCM_STREAM": 1,
         "RSA_PSS": 1,
+        "CHACHA20_POLY1305": 1
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.

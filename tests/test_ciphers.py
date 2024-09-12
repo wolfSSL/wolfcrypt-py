@@ -35,6 +35,9 @@ if _lib.DES3_ENABLED:
 if _lib.AES_ENABLED:
     from wolfcrypt.ciphers import Aes
 
+if _lib.CHACHA20_POLY1305_ENABLED:
+    from wolfcrypt.ciphers import ChaCha20Poly1305
+
 if _lib.CHACHA_ENABLED:
     from wolfcrypt.ciphers import ChaCha
 
@@ -67,6 +70,14 @@ def vectors():
 
     if _lib.AES_ENABLED:
         vectorArray[Aes]=TestVector(
+            key="0123456789abcdef",
+            iv="1234567890abcdef",
+            plaintext=t2b("now is the time "),
+            ciphertext=h2b("959492575f4281532ccc9d4677a233cb"),
+            ciphertext_ctr = h2b('287528ddf484b1055debbe751eb52b8a')
+        )
+    if _lib.CHACHA20_POLY1305_ENABLED:
+        vectorArray[ChaCha20Poly1305]=TestVector(
             key="0123456789abcdef",
             iv="1234567890abcdef",
             plaintext=t2b("now is the time "),
@@ -325,7 +336,18 @@ if _lib.CHACHA_ENABLED:
         dec = chacha_obj.decrypt(cyt)
         assert plaintext == dec
 
+if _lib.CHACHA20_POLY1305_ENABLED:
+    @pytest.fixture
+    def chacha20_poly1305_obj(vectors):
+        r = ChaCha20Poly1305(vectors[ChaCha20Poly1305].key, vectors[ChaCha20Poly1305].iv)
+        return r
 
+    @pytest.fixture
+    def test_chacha20_poly1305_enc_dec(chacha20_poly1305_obj):
+        plaintext = t2b("Everyone gets Friday off.")
+        cyt = chacha20_poly1305_obj.encrypt(plaintext)
+        dec = chacha20_poly1305_obj.decrypt(cyt)
+        assert plaintext == dec
 
 
 if _lib.RSA_ENABLED:
