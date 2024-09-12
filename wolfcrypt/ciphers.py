@@ -369,6 +369,7 @@ if _lib.AESGCM_STREAM_ENABLED:
                     raise WolfCryptError("Decryption error (%d)" % ret)
 
 
+
 if _lib.CHACHA_ENABLED:
     class ChaCha(_Cipher):
         """
@@ -423,6 +424,115 @@ if _lib.CHACHA_ENABLED:
             self._IV_nonce = t2b(nonce)
             self._IV_counter = counter
             self._set_key(0)
+
+if _lib.CHACHA20_POLY1305_ENABLED:
+    class ChaCha20Poly1305(object):
+        """
+        ChaCha20 Poly1305
+        """
+        block_size = 16
+        _key_sizes = [16, 24, 32]
+        _native_type = "ChaCha *"
+        _aad = bytes()
+        _tag_bytes = 16
+        _mode = None
+        generatedCipherText = bytes()
+        generatedPlainText = bytes()
+
+        def __init__(self, key, IV, isEncrypt):
+            """
+            tag_bytes is the number of bytes to use for the authentication tag during encryption
+            """
+            key = t2b(key)
+            IV = t2b(IV)
+            isEncrypt = True
+            if len(key) not in self._key_sizes:
+                raise ValueError("key must be %s in length, not %d" %
+                                 (self._key_sizes, len(key)))
+            self._native_object = _ffi.new(self._native_type)
+            _lib.wc_AesInit(self._native_object, _ffi.NULL, -2)
+            ret = _lib.wc_ChaCha20Poly1305_Init(self._native_object, self._aad, len(self._aad),
+                                                key, len(key), IV, len(IV), isEncrypt)
+            if ret < 0:
+                raise WolfCryptError("Init error (%d)" % ret)
+
+        def set_aad(self, data):
+            """
+            Set the additional authentication data for the stream
+            """
+            if self._mode is not None:
+                raise WolfCryptError("AAD can only be set before encrypt() or decrypt() is called")
+            self._aad = t2b(data)
+
+        def get_aad(self):
+            return self._aad
+
+        def encrypt(self, data):
+            """
+            Add more data to the encryption stream
+            """
+            data = t2b(data)
+            aad = bytes()
+            if self._mode is None:
+                self._mode = _ENCRYPTION
+                aad = self._aad
+            elif self._mode == _DECRYPTION:
+                raise WolfCryptError("Class instance already in use for decryption")
+            self._buf = _ffi.new("byte[%d]" % (len(data)))
+            ret = _lib.wc_ChaCha20Poly1305_UpdateData(self._native_type, aad, len(aad))
+            if ret < 0:
+                raise WolfCryptError("Decryption error (%d)" % ret)
+            return bytes(self._buf)
+
+        def decrypt(self, data):
+            """
+            Add more data to the decryption stream
+            """
+            aad = bytes()
+            data = t2b(data)
+            if self._mode is None:
+                self._mode = _DECRYPTION
+                aad = self._aad
+            elif self._mode == _ENCRYPTION:
+                raise WolfCryptError("Class instance already in use for decryption")
+            self._buf = _ffi.new("byte[%d]" % (len(data)))
+            ret = _lib.wc_ChaCha20Poly1305_Decrypt(self._key, self_IV, aad, len(aad),
+                                                   generatedCipherText, len(generatedCipherText),
+                                                   authTag, generatedPlainText)
+            if ret < 0:
+                raise WolfCryptError("Decryption error (%d)" % ret)
+            return bytes(self._buf)
+
+        def checkTag(self, authTag):
+            """
+            Check the authentication tag for the stream
+            """
+            authTag = t2b(authTag)
+            ret = _lib.wc_ChaCha20Poly1305_CheckTag(authTag, len(authTag))
+            if ret < 0:
+                raise WolfCryptError("Decryption error (%d)" % ret)
+
+        def final(self, authTag=None):
+            """
+            When encrypting, finalize the stream and return an authentication tag for the stream.
+            When decrypting, verify the authentication tag for the stream.
+            The authTag parameter is only used for decrypting.
+            """
+            if self._mode is None:
+                raise WolfCryptError("Final called with no encryption or decryption")
+            elif self._mode == _ENCRYPTION:
+                authTag = _ffi.new("byte[%d]" % self._tag_bytes)
+                ret = _lib.wc_ChaCha20Poly1305_Final(self._native_type, authTag)
+                if ret < 0:
+                    raise WolfCryptError("Encryption error (%d)" % ret)
+                return _ffi.buffer(authTag)[:]
+            else:
+                if authTag is None:
+                    raise WolfCryptError("authTag parameter required")
+                authTag = t2b(authTag)
+                ret = _lib.wc_ChaCha20Poly1305_Final(self._native_type, authTag)
+                if ret < 0:
+                    raise WolfCryptError("Decryption error (%d)" % ret)
 
 if _lib.DES3_ENABLED:
     class Des3(_Cipher):
