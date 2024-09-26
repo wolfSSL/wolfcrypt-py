@@ -642,19 +642,19 @@ def build_ffi(local_wolfssl, features):
     if features["CHACHA20_POLY1305"]:
         cdef += """
         typedef struct { ...; } ChaChaPoly_Aead;
-        int wc_ChaCha20Poly1305_Encrypt(const byte inKey, const byte inIV, const byte* inAAD,
+        int wc_ChaCha20Poly1305_Encrypt(const byte* inKey, const byte* inIV, const byte* inAAD,
             word32 inAADLen, const byte* inPlaintext, word32 inPlaintextLen, byte* outCiphertext,
-            byte outAuthTag);
-        int wc_ChaCha20Poly1305_Decrypt( const byte inKey, const byte inIV, const byte* inAAD,
+            byte* outAuthTag);
+        int wc_ChaCha20Poly1305_Decrypt(const byte* inKey, const byte* inIV, const byte* inAAD,
             word32 inAADLen, const byte* inCiphertext, word32 inCiphertextLen,
-            const byte inAuthTag, byte* outPlaintext);
+            const byte* inAuthTag, byte* outPlaintext);
         int wc_ChaCha20Poly1305_UpdateAad(ChaChaPoly_Aead* aead,
             const byte* inAAD, word32 inAADLen);
-        int wc_ChaCha20Poly1305_Init(ChaChaPoly_Aead* aead, const byte inKey, const byte inIV,
+        int wc_ChaCha20Poly1305_Init(ChaChaPoly_Aead* aead, const byte* inKey, const byte* inIV,
             int isEncrypt);
         int wc_ChaCha20Poly1305_UpdateData(ChaChaPoly_Aead* aead,
             const byte* inData, byte* outData, word32 dataLen);
-        int wc_ChaCha20Poly1305_Final(byte*, word32);
+        int wc_ChaCha20Poly1305_Final(ChaChaPoly_Aead* aead, byte* outTag);
         int wc_ChaCha20Poly1305_CheckTag(const byte* authtag, const byte* authTagChk);
         """
 
