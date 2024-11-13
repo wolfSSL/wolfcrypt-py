@@ -1,3 +1,10 @@
+wolfCrypt-py Release 5.7.4 (Nov 13, 2024)
+==========================================
+
+* Add support for ChaCha20-Poly1305
+* Update to wolfSSL version 5.7.4
+
+
 wolfCrypt-py Release 5.7.2 (Sep 6, 2024)
 ==========================================
 
