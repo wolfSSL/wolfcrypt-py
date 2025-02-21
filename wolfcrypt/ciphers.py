@@ -1,6 +1,6 @@
 # ciphers.py
 #
-# Copyright (C) 2006-2022 wolfSSL Inc.
+# Copyright (C) 2006-2025 wolfSSL Inc.
 #
 # This file is part of wolfSSL. (formerly known as CyaSSL)
 #
@@ -1668,3 +1668,288 @@ if _lib.ED448_ENABLED:
                 raise WolfCryptError("Signature error (%d)" % ret)
 
             return _ffi.buffer(signature, signature_size[0])[:]
+
+
+if _lib.ML_KEM_ENABLED:
+    from enum import IntEnum
+
+    class MlKemType(IntEnum):
+        """
+        `MlKemType` specifies supported ML-KEM types.
+
+        `MlKemType` is arguments for constructors and some initialization functions for `MlKemPublic` and `MlKemPrivate`.
+
+        Followings are all possible values:
+
+        - `ML_KEM_512`
+        - `ML_KEM_768`
+        - `ML_KEM_1024`
+        """
+
+        ML_KEM_512 = _lib.WC_ML_KEM_512
+        ML_KEM_768 = _lib.WC_ML_KEM_768
+        ML_KEM_1024 = _lib.WC_ML_KEM_1024
+
+    class _MlKemBase(object):
+        INVALID_DEVID = _lib.INVALID_DEVID
+
+        def __init__(self, mlkem_type):
+            self.init_done = False
+            self.native_object = _ffi.new("KyberKey *")
+            ret = _lib.wc_KyberKey_Init(
+                mlkem_type, self.native_object, _ffi.NULL, self.INVALID_DEVID
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_Init() error (%d)" % ret)
+
+            self.init_done = True
+
+        def __del__(self):
+            if self.init_done:
+                _lib.wc_KyberKey_Free(self.native_object)
+
+        @property
+        def ct_size(self):
+            """
+            :return: cipher text size in bytes
+            :rtype: int
+            """
+            len = _ffi.new("word32 *")
+            ret = _lib.wc_KyberKey_CipherTextSize(self.native_object, len)
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_CipherTextSize() error (%d)" % ret)
+
+            return len[0]
+
+        @property
+        def ss_size(self):
+            """
+            :return: shared secret size in bytes
+            :rtype: int
+            """
+            len = _ffi.new("word32 *")
+            ret = _lib.wc_KyberKey_SharedSecretSize(self.native_object, len)
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_SharedSecretSize() error (%d)" % ret)
+
+            return len[0]
+
+        @property
+        def _pub_key_size(self):
+            len = _ffi.new("word32 *")
+            ret = _lib.wc_KyberKey_PublicKeySize(self.native_object, len)
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_PublicKeySize() error (%d)" % ret)
+
+            return len[0]
+
+        def _encode_pub_key(self):
+            pub_key_size = self._pub_key_size
+            pub_key = _ffi.new(f"unsigned char[{pub_key_size}]")
+            ret = _lib.wc_KyberKey_EncodePublicKey(
+                self.native_object, pub_key, pub_key_size
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_EncodePublicKey() error (%d)" % ret)
+
+            return _ffi.buffer(pub_key, pub_key_size)[:]
+
+    class MlKemPublic(_MlKemBase):
+        @property
+        def key_size(self):
+            """
+            :return: public key size in bytes
+            :rtype: int
+            """
+            return self._pub_key_size
+
+        def encode_key(self):
+            """
+            :return: exported public key
+            :rtype: bytes
+            """
+            return self._encode_pub_key()
+
+        def decode_key(self, pub_key):
+            """
+            :param pub_key: public key to be imported
+            :type pub_key: bytes or str
+            """
+            pub_key_bytestype = t2b(pub_key)
+            ret = _lib.wc_KyberKey_DecodePublicKey(
+                self.native_object,
+                _ffi.from_buffer(pub_key_bytestype),
+                len(pub_key_bytestype),
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_DecodePublicKey() error (%d)" % ret)
+
+        def encapsulate(self, rng=Random()):
+            """
+            :param rng: random number generator for an encupsulation
+            :type rng: Random
+            :return: tuple of a shared secret (first element) and the cipher text (second element)
+            :rtype: tuple[bytes, bytes]
+            """
+            ct_size = self.ct_size
+            ss_size = self.ss_size
+            ct = _ffi.new(f"unsigned char[{ct_size}]")
+            ss = _ffi.new(f"unsigned char[{ss_size}]")
+            ret = _lib.wc_KyberKey_Encapsulate(
+                self.native_object, ct, ss, rng.native_object
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_Encapsulate() error (%d)" % ret)
+
+            return _ffi.buffer(ss, ss_size)[:], _ffi.buffer(ct, ct_size)[:]
+
+        def encapsulate_with_random(self, rand):
+            """
+            :param rand: random number for an encapsulation
+            :type rand: bytes
+            :return: tuple of a shared secret (first element) and the cipher text (second element)
+            :rtype: tuple[bytes, bytes]
+            """
+            ct_size = self.ct_size
+            ss_size = self.ss_size
+            ct = _ffi.new(f"unsigned char[{ct_size}]")
+            ss = _ffi.new(f"unsigned char[{ss_size}]")
+            ret = _lib.wc_KyberKey_EncapsulateWithRandom(
+                self.native_object, ct, ss, _ffi.from_buffer(rand), len(rand)
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError(
+                    "wc_KyberKey_EncapsulateWithRandom() error (%d)" % ret
+                )
+
+            return _ffi.buffer(ss, ss_size)[:], _ffi.buffer(ct, ct_size)[:]
+
+    class MlKemPrivate(_MlKemBase):
+        @classmethod
+        def make_key(cls, mlkem_type, rng=Random()):
+            """
+            :param mlkem_type: ML-KEM type
+            :type mlkem_type: MlKemType
+            :param rng: random number generator for a key generation
+            :type rng: Random
+            :return: `MlKemPrivate` object
+            :rtype: MlKemPrivate
+            """
+            mlkem_priv = cls(mlkem_type)
+            ret = _lib.wc_KyberKey_MakeKey(mlkem_priv.native_object, rng.native_object)
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_MakeKey() error (%d)" % ret)
+
+            return mlkem_priv
+
+        @classmethod
+        def make_key_with_random(cls, mlkem_type, rand):
+            """
+            :param mlkem_type: ML-KEM type
+            :type mlkem_type: MlKemType
+            :param rand: random number for a key generation
+            :type rand: bytes
+            :return: `MlKemPrivate` object
+            :rtype: MlKemPrivate
+            """
+            mlkem_priv = cls(mlkem_type)
+            ret = _lib.wc_KyberKey_MakeKeyWithRandom(
+                mlkem_priv.native_object, _ffi.from_buffer(rand), len(rand)
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_MakeKeyWithRandom() error (%d)" % ret)
+
+            return mlkem_priv
+
+        @property
+        def pub_key_size(self):
+            """
+            :return: public key size in bytes
+            :rtype: int
+            """
+            return self._pub_key_size
+
+        @property
+        def priv_key_size(self):
+            """
+            :return: private key size in bytes
+            :rtype: int
+            """
+            len = _ffi.new("word32 *")
+            ret = _lib.wc_KyberKey_PrivateKeySize(self.native_object, len)
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_PrivateKeySize() error (%d)" % ret)
+
+            return len[0]
+
+        def encode_pub_key(self):
+            """
+            :return: exported public key
+            :rtype: bytes
+            """
+            return self._encode_pub_key()
+
+        def encode_priv_key(self):
+            """
+            :return: exported private key
+            :rtype: bytes
+            """
+            priv_key_size = self.priv_key_size
+            priv_key = _ffi.new(f"unsigned char[{priv_key_size}]")
+            ret = _lib.wc_KyberKey_EncodePrivateKey(
+                self.native_object, priv_key, priv_key_size
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_EncodePrivateKey() error (%d)" % ret)
+
+            return _ffi.buffer(priv_key, priv_key_size)[:]
+
+        def decode_key(self, priv_key: tuple[bytes, str]):
+            """
+            :param priv_key: private key to be imported
+            :type priv_key: bytes or str
+            """
+            priv_key_bytestype = t2b(priv_key)
+            ret = _lib.wc_KyberKey_DecodePrivateKey(
+                self.native_object,
+                _ffi.from_buffer(priv_key_bytestype),
+                len(priv_key_bytestype),
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_KyberKey_DecodePrivateKey() error (%d)" % ret)
+
+        def decapsulate(self, ct):
+            """
+            :param ct: cipher text
+            :type ct: bytes or str
+            :return: shared secret
+            :rtype: bytes
+            """
+            ss_size = self.ss_size
+            ss = _ffi.new(f"unsigned char[{ss_size}]")
+            ct_bytestype = t2b(ct)
+            ret = _lib.wc_KyberKey_Decapsulate(
+                self.native_object,
+                ss,
+                _ffi.from_buffer(ct_bytestype),
+                len(ct_bytestype),
+            )
+
+            if ret < 0:  # pragma: no cover
+                self.native_object = None
+                raise WolfCryptError("wc_KyberKey_Decapsulate() error (%d)" % ret)
+
+            return _ffi.buffer(ss, ss_size)[:]
