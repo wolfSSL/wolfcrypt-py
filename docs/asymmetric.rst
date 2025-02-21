@@ -81,3 +81,35 @@ ECC
 .. autoclass:: EccPrivate
     :members:
     :inherited-members:
+
+ML-KEM
+------
+
+.. autoclass:: MlKemType
+    :show-inheritance:
+
+.. autoclass:: MlKemPublic
+    :private-members:
+    :members:
+    :inherited-members:
+    
+.. autoclass:: MlKemPrivate
+    :members:
+    :inherited-members:
+
+**Example:**
+
+>>> from wolfcrypt.ciphers import MlKemType, MlKemPrivate, MlKemPublic
+>>> 
+>>> mlkem_type = MlKemType.ML_KEM_512
+>>> 
+>>> mlkem_priv = MlKemPrivate.make_key(mlkem_type)
+>>> pub_key = mlkem_priv.encode_pub_key()
+>>> 
+>>> mlkem_pub = MlKemPublic(mlkem_type)
+>>> mlkem_pub.decode_key(pub_key)
+>>> ss_send, ct = mlkem_pub.encapsulate()
+>>> 
+>>> ss_recv = mlkem_priv.decapsulate(ct)
+>>> ss_send == ss_recv
+True

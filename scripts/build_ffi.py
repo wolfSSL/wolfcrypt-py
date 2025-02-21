@@ -232,6 +232,9 @@ def make_flags(prefix, fips):
         flags.append("--enable-pwdbased")
         flags.append("--enable-pkcs7")
 
+        # ML-KEM
+        flags.append("--enable-kyber")
+
         # disabling other configs enabled by default
         flags.append("--disable-oldtls")
         flags.append("--disable-oldnames")
@@ -442,6 +445,8 @@ def build_ffi(local_wolfssl, features):
         #include <wolfssl/wolfcrypt/curve25519.h>
         #include <wolfssl/wolfcrypt/poly1305.h>
         #include <wolfssl/wolfcrypt/chacha20_poly1305.h>
+        #include <wolfssl/wolfcrypt/kyber.h>
+        #include <wolfssl/wolfcrypt/wc_kyber.h>
     """
 
     init_source_string = """
@@ -478,6 +483,7 @@ def build_ffi(local_wolfssl, features):
         int AESGCM_STREAM_ENABLED = """ + str(features["AESGCM_STREAM"]) + """;
         int RSA_PSS_ENABLED = """ + str(features["RSA_PSS"]) + """;
         int CHACHA20_POLY1305_ENABLED = """ + str(features["CHACHA20_POLY1305"]) + """;
+        int ML_KEM_ENABLED = """ + str(features["ML_KEM"]) + """;
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -513,6 +519,7 @@ def build_ffi(local_wolfssl, features):
         extern int AESGCM_STREAM_ENABLED;
         extern int RSA_PSS_ENABLED;
         extern int CHACHA20_POLY1305_ENABLED;
+        extern int ML_KEM_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -922,6 +929,30 @@ def build_ffi(local_wolfssl, features):
         int wolfCrypt_GetPrivateKeyReadEnable_fips(enum wc_KeyType);
         """
 
+    if features["ML_KEM"]:
+        cdef += """
+        static const int WC_ML_KEM_512;
+        static const int WC_ML_KEM_768;
+        static const int WC_ML_KEM_1024;
+        static const int INVALID_DEVID;
+        typedef struct {...; } KyberKey;
+        int wc_KyberKey_CipherTextSize(KyberKey* key, word32* len);
+        int wc_KyberKey_SharedSecretSize(KyberKey* key, word32* len);
+        int wc_KyberKey_PrivateKeySize(KyberKey* key, word32* len);
+        int wc_KyberKey_PublicKeySize(KyberKey* key, word32* len);
+        int wc_KyberKey_Init(int type, KyberKey* key, void* heap, int devId);
+        void wc_KyberKey_Free(KyberKey* key);
+        int wc_KyberKey_MakeKey(KyberKey* key, WC_RNG* rng);
+        int wc_KyberKey_MakeKeyWithRandom(KyberKey* key, const unsigned char* rand, int len);
+        int wc_KyberKey_EncodePublicKey(KyberKey* key, unsigned char* out, word32 len);
+        int wc_KyberKey_DecodePublicKey(KyberKey* key, const unsigned char* in, word32 len);
+        int wc_KyberKey_Encapsulate(KyberKey* key, unsigned char* ct, unsigned char* ss, WC_RNG* rng);
+        int wc_KyberKey_EncapsulateWithRandom(KyberKey* key, unsigned char* ct, unsigned char* ss, const unsigned char* rand, int len);
+        int wc_KyberKey_Decapsulate(KyberKey* key, unsigned char* ss, const unsigned char* ct, word32 len);
+        int wc_KyberKey_EncodePrivateKey(KyberKey* key, unsigned char* out, word32 len);
+        int wc_KyberKey_DecodePrivateKey(KyberKey* key, const unsigned char* in, word32 len); 
+        """
+
     ffibuilder.cdef(cdef)
 
 def main(ffibuilder):
@@ -951,7 +982,8 @@ def main(ffibuilder):
         "WC_RNG_SEED_CB": 0,
         "AESGCM_STREAM": 1,
         "RSA_PSS": 1,
-        "CHACHA20_POLY1305": 1
+        "CHACHA20_POLY1305": 1,
+        "ML_KEM": 1
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
