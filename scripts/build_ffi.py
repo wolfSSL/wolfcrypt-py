@@ -233,7 +233,6 @@ def make_flags(prefix, fips):
         flags.append("--enable-pkcs7")
 
         # ML-KEM
-        flags.append("--enable-experimental")
         flags.append("--enable-kyber")
 
         # disabling other configs enabled by default
