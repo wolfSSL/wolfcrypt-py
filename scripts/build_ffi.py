@@ -235,6 +235,9 @@ def make_flags(prefix, fips):
         # ML-KEM
         flags.append("--enable-kyber")
 
+        # ML-DSA
+        flags.append("--enable-dilithium")
+
         # disabling other configs enabled by default
         flags.append("--disable-oldtls")
         flags.append("--disable-oldnames")
@@ -447,6 +450,7 @@ def build_ffi(local_wolfssl, features):
         #include <wolfssl/wolfcrypt/chacha20_poly1305.h>
         #include <wolfssl/wolfcrypt/kyber.h>
         #include <wolfssl/wolfcrypt/wc_kyber.h>
+        #include <wolfssl/wolfcrypt/dilithium.h>
     """
 
     init_source_string = """
@@ -484,6 +488,7 @@ def build_ffi(local_wolfssl, features):
         int RSA_PSS_ENABLED = """ + str(features["RSA_PSS"]) + """;
         int CHACHA20_POLY1305_ENABLED = """ + str(features["CHACHA20_POLY1305"]) + """;
         int ML_KEM_ENABLED = """ + str(features["ML_KEM"]) + """;
+        int ML_DSA_ENABLED = """ + str(features["ML_DSA"]) + """;
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -520,6 +525,7 @@ def build_ffi(local_wolfssl, features):
         extern int RSA_PSS_ENABLED;
         extern int CHACHA20_POLY1305_ENABLED;
         extern int ML_KEM_ENABLED;
+        extern int ML_DSA_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -950,7 +956,28 @@ def build_ffi(local_wolfssl, features):
         int wc_KyberKey_EncapsulateWithRandom(KyberKey* key, unsigned char* ct, unsigned char* ss, const unsigned char* rand, int len);
         int wc_KyberKey_Decapsulate(KyberKey* key, unsigned char* ss, const unsigned char* ct, word32 len);
         int wc_KyberKey_EncodePrivateKey(KyberKey* key, unsigned char* out, word32 len);
-        int wc_KyberKey_DecodePrivateKey(KyberKey* key, const unsigned char* in, word32 len); 
+        int wc_KyberKey_DecodePrivateKey(KyberKey* key, const unsigned char* in, word32 len);
+        """
+
+    if features["ML_DSA"]:
+        cdef += """
+        static const int WC_ML_DSA_44;
+        static const int WC_ML_DSA_65;
+        static const int WC_ML_DSA_87;
+        typedef struct {...; } dilithium_key;
+        int wc_dilithium_init_ex(dilithium_key* key, void* heap, int devId);
+        int wc_dilithium_set_level(dilithium_key* key, byte level);
+        void wc_dilithium_free(dilithium_key* key);
+        int wc_dilithium_priv_size(dilithium_key* key);
+        int wc_dilithium_pub_size(dilithium_key* key);
+        int wc_dilithium_sig_size(dilithium_key* key);
+        int wc_dilithium_make_key(dilithium_key* key, WC_RNG* rng);
+        int wc_dilithium_export_private(dilithium_key* key, byte* out, word32* outLen);
+        int wc_dilithium_import_private(const byte* priv, word32 privSz, dilithium_key* key);
+        int wc_dilithium_export_public(dilithium_key* key, byte* out, word32* outLen);
+        int wc_dilithium_import_public(const byte* in, word32 inLen, dilithium_key* key);
+        int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
+        int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
         """
 
     ffibuilder.cdef(cdef)
@@ -983,7 +1010,8 @@ def main(ffibuilder):
         "AESGCM_STREAM": 1,
         "RSA_PSS": 1,
         "CHACHA20_POLY1305": 1,
-        "ML_KEM": 1
+        "ML_KEM": 1,
+        "ML_DSA": 1
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
