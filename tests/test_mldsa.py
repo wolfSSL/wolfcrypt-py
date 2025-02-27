@@ -22,19 +22,19 @@
 
 from wolfcrypt._ffi import lib as _lib
 
-if hasattr(_lib, "ML_DSA_ENABLED") and _lib.ML_DSA_ENABLED:
-    from binascii import unhexlify as h2b
-
+if _lib.ML_DSA_ENABLED:
     import pytest
 
-    from wolfcrypt.mldsa import MlDsaPrivate, MlDsaPublic, MlDsaType
+    from wolfcrypt.ciphers import MlDsaPrivate, MlDsaPublic, MlDsaType
     from wolfcrypt.random import Random
 
     @pytest.fixture
     def rng():
         return Random()
 
-    @pytest.fixture(params=[MlDsaType.ML_DSA_44, MlDsaType.ML_DSA_65, MlDsaType.ML_DSA_87])
+    @pytest.fixture(
+        params=[MlDsaType.ML_DSA_44, MlDsaType.ML_DSA_65, MlDsaType.ML_DSA_87]
+    )
     def mldsa_type(request):
         return request.param
 
@@ -45,71 +45,75 @@ if hasattr(_lib, "ML_DSA_ENABLED") and _lib.ML_DSA_ENABLED:
         mldsa_pub = MlDsaPublic(mldsa_type)
         assert isinstance(mldsa_pub, MlDsaPublic)
 
-    def test_key_sizes(mldsa_type):
-        mldsa_priv = MlDsaPrivate(mldsa_type)
+    def test_size_properties(mldsa_type):
+        refvals = {
+            MlDsaType.ML_DSA_44: {
+                "sig_size": 2420,
+                "pub_key_size": 1312,
+                "priv_key_size": 2560,
+            },
+            MlDsaType.ML_DSA_65: {
+                "sig_size": 3309,
+                "pub_key_size": 1952,
+                "priv_key_size": 4032,
+            },
+            MlDsaType.ML_DSA_87: {
+                "sig_size": 4627,
+                "pub_key_size": 2592,
+                "priv_key_size": 4896,
+            },
+        }
 
-        # Check that key sizes are returned correctly
-        assert mldsa_priv.priv_key_size > 0
-        assert mldsa_priv.pub_key_size > 0
-        assert mldsa_priv.sig_size > 0
-
-        # Public key should have the same pub_key_size
         mldsa_pub = MlDsaPublic(mldsa_type)
-        assert mldsa_pub.pub_key_size == mldsa_priv.pub_key_size
-        assert mldsa_pub.sig_size == mldsa_priv.sig_size
+        assert mldsa_pub.sig_size == refvals[mldsa_type]["sig_size"]
+        assert mldsa_pub.key_size == refvals[mldsa_type]["pub_key_size"]
 
-    """
-    def test_key_generation(mldsa_type, rng):
-        # Test key generation
+        mldsa_priv = MlDsaPrivate(mldsa_type)
+        assert mldsa_priv.sig_size == refvals[mldsa_type]["sig_size"]
+        assert mldsa_priv.pub_key_size == refvals[mldsa_type]["pub_key_size"]
+        assert mldsa_priv.priv_key_size == refvals[mldsa_type]["priv_key_size"]
+
+    def test_initializations(mldsa_type, rng):
         mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
-        assert isinstance(mldsa_priv, MlDsaPrivate)
+        assert type(mldsa_priv) is MlDsaPrivate
 
-        # Export keys
+        mldsa_priv2 = MlDsaPrivate(mldsa_type)
+        assert type(mldsa_priv2) is MlDsaPrivate
+
+        mldsa_pub = MlDsaPublic(mldsa_type)
+        assert type(mldsa_pub) is MlDsaPublic
+
+    def test_key_import_export(mldsa_type, rng):
+        # Generate key pair and export keys
+        mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
         priv_key = mldsa_priv.encode_priv_key()
         pub_key = mldsa_priv.encode_pub_key()
-
-        # Check key sizes
         assert len(priv_key) == mldsa_priv.priv_key_size
         assert len(pub_key) == mldsa_priv.pub_key_size
-    """
 
-    """
-    def test_key_import_export(mldsa_type, rng):
-        # Generate a key pair
-        mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
-
-        # Export keys
-        priv_key = mldsa_priv.encode_priv_key()
-        pub_key = mldsa_priv.encode_pub_key()
-
-        # Import private key
+        # Export key pair from imported one
         mldsa_priv2 = MlDsaPrivate(mldsa_type)
-        mldsa_priv2.decode_key(priv_key)
-
-        # Export keys from imported private key
+        mldsa_priv2.decode_key(priv_key, pub_key)
         priv_key2 = mldsa_priv2.encode_priv_key()
         pub_key2 = mldsa_priv2.encode_pub_key()
-
-        # Keys should match
         assert priv_key == priv_key2
         assert pub_key == pub_key2
 
-        # Import public key
+        # Export private key from imported one
+        mldsa_priv3 = MlDsaPrivate(mldsa_type)
+        mldsa_priv3.decode_key(priv_key)
+        priv_key3 = mldsa_priv3.encode_priv_key()
+        assert priv_key == priv_key3
+
+        # Export public key from imported one
         mldsa_pub = MlDsaPublic(mldsa_type)
         mldsa_pub.decode_key(pub_key)
-
-        # Export public key from imported public key
         pub_key3 = mldsa_pub.encode_key()
-
-        # Public keys should match
         assert pub_key == pub_key3
-    """
 
     def test_sign_verify(mldsa_type, rng):
-        # Generate a key pair
+        # Generate a key pair and export public key
         mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
-
-        # Export public key
         pub_key = mldsa_priv.encode_pub_key()
 
         # Import public key
@@ -119,32 +123,14 @@ if hasattr(_lib, "ML_DSA_ENABLED") and _lib.ML_DSA_ENABLED:
         # Sign a message
         message = b"This is a test message for ML-DSA signature"
         signature = mldsa_priv.sign(message, rng)
+        assert len(signature) == mldsa_priv.sig_size
 
-        # Verify the signature
+        # Verify the signature by MlDsaPrivate
+        assert mldsa_priv.verify(signature, message)
+
+        # Verify the signature by MlDsaPublic
         assert mldsa_pub.verify(signature, message)
 
         # Verify with wrong message
         wrong_message = b"This is a wrong message for ML-DSA signature"
         assert not mldsa_pub.verify(signature, wrong_message)
-
-    """
-    def test_der_encoding(mldsa_type, rng):
-        # Generate a key pair
-        mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
-
-        # Export keys in DER format
-        priv_key_der = mldsa_priv.encode_priv_key_der()
-        pub_key_der = mldsa_priv.encode_pub_key_der()
-
-        # Check that DER encoded keys are longer than raw keys
-        assert len(priv_key_der) > mldsa_priv.priv_key_size
-        assert len(pub_key_der) > mldsa_priv.pub_key_size
-
-        # Test public key DER encoding from public key object
-        mldsa_pub = MlDsaPublic(mldsa_type)
-        mldsa_pub.decode_key(mldsa_priv.encode_pub_key())
-        pub_key_der2 = mldsa_pub.encode_key_der()
-
-        # DER encoded public keys should match
-        assert pub_key_der == pub_key_der2
-    """

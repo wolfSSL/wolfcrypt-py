@@ -113,3 +113,37 @@ ML-KEM
 >>> ss_recv = mlkem_priv.decapsulate(ct)
 >>> ss_send == ss_recv
 True
+
+ML-DSA
+------
+
+.. autoclass:: MlDsaType
+    :show-inheritance:
+
+.. autoclass:: MlDsaPublic
+    :private-members:
+    :members:
+    :inherited-members:
+    
+.. autoclass:: MlDsaPrivate
+    :members:
+    :inherited-members:
+
+**Example:**
+
+>>> from wolfcrypt.ciphers import MlDsaType, MlDsaPrivate, MlDsaPublic
+>>> 
+>>> mldsa_type = MlDsaType.ML_DSA_44
+>>> 
+>>> mldsa_priv = MlDsaPrivate.make_key(mldsa_type)
+>>> pub_key = mldsa_priv.encode_pub_key()
+>>> 
+>>> mldsa_pub = MlDsaPublic(mldsa_type)
+>>> mldsa_pub.decode_key(pub_key)
+>>> 
+>>> msg = "This is an example message"
+>>> 
+>>> sig = mldsa_priv.sign(msg)
+>>> 
+>>> mldsa_pub.verify(sig, msg)
+True

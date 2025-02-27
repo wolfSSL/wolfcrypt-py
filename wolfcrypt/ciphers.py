@@ -20,6 +20,8 @@
 
 # pylint: disable=no-member,no-name-in-module
 
+from enum import IntEnum
+
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import t2b
@@ -1671,8 +1673,6 @@ if _lib.ED448_ENABLED:
 
 
 if _lib.ML_KEM_ENABLED:
-    from enum import IntEnum
-
     class MlKemType(IntEnum):
         """
         `MlKemType` specifies supported ML-KEM types.
@@ -1953,3 +1953,277 @@ if _lib.ML_KEM_ENABLED:
                 raise WolfCryptError("wc_KyberKey_Decapsulate() error (%d)" % ret)
 
             return _ffi.buffer(ss, ss_size)[:]
+
+
+if _lib.ML_DSA_ENABLED:
+    class MlDsaType(IntEnum):
+        """
+        `MlDsaType` specifies supported ML-DSA types.
+
+        `MlDsaType` is arguments for constructors and some initialization functions for `MlDsaPublic` and `MlDsaPrivate`.
+
+        Followings are all possible values:
+
+        - `ML_DSA_44`
+        - `ML_DSA_65`
+        - `ML_DSA_87`
+        """
+
+        ML_DSA_44 = _lib.WC_ML_DSA_44
+        ML_DSA_65 = _lib.WC_ML_DSA_65
+        ML_DSA_87 = _lib.WC_ML_DSA_87
+
+    class _MlDsaBase(object):
+        INVALID_DEVID = _lib.INVALID_DEVID
+
+        def __init__(self, mldsa_type):
+            self._init_done = False
+            self.native_object = _ffi.new("dilithium_key *")
+            ret = _lib.wc_dilithium_init_ex(
+                self.native_object, _ffi.NULL, self.INVALID_DEVID
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_dilithium_init_ex() error (%d)" % ret)
+
+            self._init_done = True
+
+            ret = _lib.wc_dilithium_set_level(self.native_object, mldsa_type)
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_dilithium_set_level() error (%d)" % ret)
+
+        def __del__(self):
+            if self._init_done:
+                _lib.wc_dilithium_free(self.native_object)
+
+        @property
+        def _pub_key_size(self):
+            size = _ffi.new("int *")
+            ret = _lib.wc_MlDsaKey_GetPubLen(self.native_object, size)
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_MlDsaKey_GetPubLen() error (%d)" % ret)
+
+            return size[0]
+
+        @property
+        def sig_size(self):
+            """
+            :return: signature size in bytes
+            :rtype: int
+            """
+            size = _ffi.new("int *")
+            ret = _lib.wc_MlDsaKey_GetSigLen(self.native_object, size)
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_MlDsaKey_GetSigLen() error (%d)" % ret)
+
+            return size[0]
+
+        def _decode_pub_key(self, pub_key):
+            pub_key_bytestype = t2b(pub_key)
+            ret = _lib.wc_dilithium_import_public(
+                _ffi.from_buffer(pub_key_bytestype),
+                len(pub_key_bytestype),
+                self.native_object,
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_dilithium_import_public() error (%d)" % ret)
+
+        def _encode_pub_key(self):
+            in_size = self._pub_key_size
+            pub_key = _ffi.new(f"byte[{in_size}]")
+            out_size = _ffi.new("word32 *")
+            out_size[0] = in_size
+            ret = _lib.wc_dilithium_export_public(self.native_object, pub_key, out_size)
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_dilithium_export_public() error (%d)" % ret)
+
+            if in_size != out_size[0]:
+                raise WolfCryptError(
+                    "in_size=%d and out_size=%d don't match" % (in_size, out_size[0])
+                )
+
+            return _ffi.buffer(pub_key, out_size[0])[:]
+
+        def verify(self, signature, message):
+            """
+            :param signature: signature to be verified
+            :type signature: bytes or str
+            :param message: message to be verified
+            :type message: bytes or str
+            :return: True if the verification is successful, False otherwise
+            :rtype: bool
+            """
+            sig_bytestype = t2b(signature)
+            msg_bytestype = t2b(message)
+            res = _ffi.new("int *")
+
+            ret = _lib.wc_dilithium_verify_msg(
+                _ffi.from_buffer(sig_bytestype),
+                len(sig_bytestype),
+                _ffi.from_buffer(msg_bytestype),
+                len(msg_bytestype),
+                res,
+                self.native_object,
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_dilithium_verify_msg() error (%d)" % ret)
+
+            return res[0] == 1
+
+    class MlDsaPrivate(_MlDsaBase):
+        @classmethod
+        def make_key(cls, mldsa_type, rng=Random()):
+            """
+            :param mldsa_type: ML-DSA type
+            :type mldsa_type: MlDsaType
+            :param rng: random number generator for a key generation
+            :type rng: Random
+            :return: `MlDsaPrivate` object
+            :rtype: MlDsaPrivate
+            """
+            mldsa_priv = cls(mldsa_type)
+            ret = _lib.wc_dilithium_make_key(
+                mldsa_priv.native_object, rng.native_object
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_dilithium_make_key() error (%d)" % ret)
+
+            return mldsa_priv
+
+        @property
+        def pub_key_size(self):
+            """
+            :return: public key size in bytes
+            :rtype: int
+            """
+            return self._pub_key_size
+
+        @property
+        def priv_key_size(self):
+            """
+            :return: private key size in bytes
+            :rtype: int
+            """
+            size = _ffi.new("int *")
+            ret = _lib.wc_MlDsaKey_GetPrivLen(self.native_object, size)
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_MlDsaKey_GetPrivLen() error (%d)" % ret)
+
+            key_pair_size = size[0]
+
+            return key_pair_size - self.pub_key_size
+
+        def encode_pub_key(self):
+            """
+            :return: exported public key
+            :rtype: bytes
+            """
+            return self._encode_pub_key()
+
+        def encode_priv_key(self):
+            """
+            :return: exported private key
+            :rtype: bytes
+            """
+            in_size = self.priv_key_size
+            priv_key = _ffi.new(f"byte[{in_size}]")
+            out_size = _ffi.new("word32 *")
+            out_size[0] = in_size
+            ret = _lib.wc_dilithium_export_private(
+                self.native_object, priv_key, out_size
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_dilithium_export_private() error (%d)" % ret)
+
+            if in_size != out_size[0]:
+                raise WolfCryptError(
+                    "in_size=%d and out_size=%d don't match" % (in_size, out_size[0])
+                )
+
+            return _ffi.buffer(priv_key, out_size[0])[:]
+
+        def decode_key(self, priv_key, pub_key=None):
+            """
+            :param priv_key: private key to be imported
+            :type priv_key: bytes or str
+            :param pub_key: public key to be imported
+            :type pub_key: bytes or str or None
+            """
+            priv_key_bytestype = t2b(priv_key)
+            ret = _lib.wc_dilithium_import_private(
+                _ffi.from_buffer(priv_key_bytestype),
+                len(priv_key_bytestype),
+                self.native_object,
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_dilithium_import_private() error (%d)" % ret)
+
+            if pub_key is not None:
+                self._decode_pub_key(pub_key)
+
+        def sign(self, message, rng=Random()):
+            """
+            :param message: message to be signed
+            :type message: bytes or str
+            :param rng: random number generator for sign
+            :type rng: Random
+            :return: signature
+            :rtype: bytes
+            """
+            msg_bytestype = t2b(message)
+            in_size = self.sig_size
+            signature = _ffi.new(f"byte[{in_size}]")
+            out_size = _ffi.new("word32 *")
+            out_size[0] = in_size
+
+            ret = _lib.wc_dilithium_sign_msg(
+                _ffi.from_buffer(msg_bytestype),
+                len(msg_bytestype),
+                signature,
+                out_size,
+                self.native_object,
+                rng.native_object,
+            )
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_dilithium_sign_msg() error (%d)" % ret)
+
+            if in_size != out_size[0]:
+                raise WolfCryptError(
+                    "in_size=%d and out_size=%d don't match" % (in_size, out_size[0])
+                )
+
+            return _ffi.buffer(signature, out_size[0])[:]
+
+    class MlDsaPublic(_MlDsaBase):
+        @property
+        def key_size(self):
+            """
+            :return: public key size in bytes
+            :rtype: int
+            """
+            return self._pub_key_size
+
+        def decode_key(self, pub_key):
+            """
+            :param pub_key: public key to be imported
+            :type pub_key: bytes or str
+            """
+            return self._decode_pub_key(pub_key)
+
+        def encode_key(self):
+            """
+            :return: exported public key
+            :rtype: bytes
+            """
+            return self._encode_pub_key()
