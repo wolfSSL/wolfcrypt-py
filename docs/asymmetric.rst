@@ -141,7 +141,7 @@ ML-DSA
 >>> mldsa_pub = MlDsaPublic(mldsa_type)
 >>> mldsa_pub.decode_key(pub_key)
 >>> 
->>> msg = "This is an example message"
+>>> msg = b"This is an example message"
 >>> 
 >>> sig = mldsa_priv.sign(msg)
 >>> 
