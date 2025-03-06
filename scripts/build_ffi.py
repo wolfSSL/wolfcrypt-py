@@ -374,7 +374,7 @@ def get_features(local_wolfssl, features):
     features["AESGCM_STREAM"] = 1 if '#define WOLFSSL_AESGCM_STREAM' in defines else 0
     features["RSA_PSS"] = 1 if '#define WC_RSA_PSS' in defines else 0
     features["CHACHA20_POLY1305"] = 1 if '#define HAVE_CHACHA' and '#define HAVE_POLY1305' in defines else 0
-    features["ML_DSA"] = 1 if '#define WOLFSSL_WC_DILITHIUM' in defines else 0
+    features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
