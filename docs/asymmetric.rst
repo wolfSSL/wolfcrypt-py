@@ -113,3 +113,53 @@ ML-KEM
 >>> ss_recv = mlkem_priv.decapsulate(ct)
 >>> ss_send == ss_recv
 True
+
+ML-DSA
+------
+
+.. autoclass:: MlDsaType
+    :show-inheritance:
+
+.. autoclass:: MlDsaPublic
+    :private-members:
+    :members:
+    :inherited-members:
+    
+.. autoclass:: MlDsaPrivate
+    :members:
+    :inherited-members:
+
+**Example:**
+
+>>> ######## Simple Usage
+>>> from wolfcrypt.ciphers import MlDsaType, MlDsaPrivate, MlDsaPublic
+>>> 
+>>> mldsa_type = MlDsaType.ML_DSA_44
+>>> 
+>>> mldsa_priv = MlDsaPrivate.make_key(mldsa_type)
+>>> pub_key = mldsa_priv.encode_pub_key()
+>>> 
+>>> mldsa_pub = MlDsaPublic(mldsa_type)
+>>> mldsa_pub.decode_key(pub_key)
+>>> 
+>>> msg = b"This is an example message"
+>>> 
+>>> sig = mldsa_priv.sign(msg)
+>>> mldsa_pub.verify(sig, msg)
+True
+>>> 
+>>> ######## Export and Import Keys
+>>> exported_key_pair = mldsa_priv.encode_priv_key(), mldsa_priv.encode_pub_key()
+>>> exported_pub_key = mldsa_pub.encode_key()
+>>> exported_key_pair[1] == exported_pub_key
+True
+>>> 
+>>> mldsa_priv2 = MlDsaPrivate(mldsa_type)
+>>> mldsa_priv2.decode_key(exported_key_pair[0], exported_key_pair[1])
+>>> 
+>>> mldsa_pub2 = MlDsaPublic(mldsa_type)
+>>> mldsa_pub2.decode_key(exported_pub_key)
+>>> 
+>>> sig2 = mldsa_priv2.sign(msg)
+>>> mldsa_pub2.verify(sig2, msg)
+True
