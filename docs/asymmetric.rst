@@ -131,6 +131,7 @@ ML-DSA
 
 **Example:**
 
+>>> ######## Simple Usage
 >>> from wolfcrypt.ciphers import MlDsaType, MlDsaPrivate, MlDsaPublic
 >>> 
 >>> mldsa_type = MlDsaType.ML_DSA_44
@@ -144,6 +145,21 @@ ML-DSA
 >>> msg = b"This is an example message"
 >>> 
 >>> sig = mldsa_priv.sign(msg)
->>> 
 >>> mldsa_pub.verify(sig, msg)
+True
+>>> 
+>>> ######## Export and Import Keys
+>>> exported_key_pair = mldsa_priv.encode_priv_key(), mldsa_priv.encode_pub_key()
+>>> exported_pub_key = mldsa_pub.encode_key()
+>>> exported_key_pair[1] == exported_pub_key
+True
+>>> 
+>>> mldsa_priv2 = MlDsaPrivate(mldsa_type)
+>>> mldsa_priv2.decode_key(exported_key_pair[0], exported_key_pair[1])
+>>> 
+>>> mldsa_pub2 = MlDsaPublic(mldsa_type)
+>>> mldsa_pub2.decode_key(exported_pub_key)
+>>> 
+>>> sig2 = mldsa_priv2.sign(msg)
+>>> mldsa_pub2.verify(sig2, msg)
 True
