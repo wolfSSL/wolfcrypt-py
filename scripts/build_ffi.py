@@ -449,8 +449,8 @@ def build_ffi(local_wolfssl, features):
         #include <wolfssl/wolfcrypt/curve25519.h>
         #include <wolfssl/wolfcrypt/poly1305.h>
         #include <wolfssl/wolfcrypt/chacha20_poly1305.h>
-        #include <wolfssl/wolfcrypt/kyber.h>
-        #include <wolfssl/wolfcrypt/wc_kyber.h>
+        #include <wolfssl/wolfcrypt/mlkem.h>
+        #include <wolfssl/wolfcrypt/wc_mlkem.h>
         #include <wolfssl/wolfcrypt/dilithium.h>
     """
 
