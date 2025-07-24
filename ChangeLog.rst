@@ -1,3 +1,10 @@
+wolfCrypt-py Release 5.8.2 (Jul 24, 2025)
+==========================================
+
+* Add support for ML-KEM
+* Add support for ML-DSA
+* Update to wolfSSL version 5.8.2
+
 wolfCrypt-py Release 5.7.4 (Nov 13, 2024)
 ==========================================
 
