@@ -17,7 +17,8 @@
 #define WOLFSSL_SHA512
 #define WOLFSSL_SHA3
 #define WOLFSSL_SHA224
-#define WOLFSSL_NO_SHAKE256
+#define WOLFSSL_SHAKE128
+#define WOLFSSL_SHAKE256
 #define NO_MD5
 #define HAVE_HKDF
 #define NO_OLD_TLS
@@ -45,6 +46,10 @@
 #define FP_MAX_BITS 16384
 #define WC_RSA_BLINDING
 #define ECC_TIMING_RESISTANT
+#define WOLFSSL_HAVE_MLKEM
+#define WOLFSSL_WC_MLKEM
+#define HAVE_DILITHIUM
+#define WOLFSSL_WC_DILITHIUM
 
 /* PKCS7 requirements */
 #define HAVE_PKCS7
