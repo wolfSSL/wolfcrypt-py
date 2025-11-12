@@ -293,16 +293,24 @@ if _lib.AES_SIV_ENABLED:
             """
             Encrypt plaintext data using the nonce provided. The associated
             data is not encrypted but is included in the authentication tag.
-            
+
+            Associated data may be provided as single str or bytes, or as a
+            list of str or bytes in case of multiple blocks.
+
             Returns a tuple of the IV and ciphertext.
             """
-            associated_data = t2b(associated_data)
+            # Prepare the associated data blocks. Make sure to hold on to the
+            # returned references until the C function has been called in order
+            # to prevent garbage collection of them until the function is done.
+            associated_data, _refs = (
+                AesSiv._prepare_associated_data(associated_data))
             nonce = t2b(nonce)
             plaintext = t2b(plaintext)
             siv = _ffi.new("byte[%d]" % AesSiv.block_size)
             ciphertext = _ffi.new("byte[%d]" % len(plaintext))
-            ret = _lib.wc_AesSivEncrypt(self._key, len(self._key), associated_data, len(associated_data),
-                nonce, len(nonce), plaintext, len(plaintext), siv, ciphertext)
+            ret = _lib.wc_AesSivEncrypt_ex(self._key, len(self._key),
+                associated_data, len(associated_data), nonce, len(nonce),
+                plaintext, len(plaintext), siv, ciphertext)
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("AES-SIV encryption error (%d)" % ret)
             return _ffi.buffer(siv)[:], _ffi.buffer(ciphertext)[:]
@@ -312,9 +320,16 @@ if _lib.AES_SIV_ENABLED:
             Decrypt the ciphertext using the nonce and SIV provided.
             The integrity of the associated data is checked.
 
+            Associated data may be provided as single str or bytes, or as a
+            list of str or bytes in case of multiple blocks.
+
             Returns the decrypted plaintext.
             """
-            associated_data = t2b(associated_data)
+            # Prepare the associated data blocks. Make sure to hold on to the
+            # returned references until the C function has been called in order
+            # to prevent garbage collection of them until the function is done.
+            associated_data, _refs = (
+                AesSiv._prepare_associated_data(associated_data))
             nonce = t2b(nonce)
             siv = t2b(siv)
             if len(siv) != AesSiv.block_size:
@@ -322,11 +337,50 @@ if _lib.AES_SIV_ENABLED:
                                  (AesSiv.block_size, len(siv)))
             ciphertext = t2b(ciphertext)
             plaintext = _ffi.new("byte[%d]" % len(ciphertext))
-            ref = _lib.wc_AesSivDecrypt(self._key, len(self._key), associated_data, len(associated_data),
-                    nonce, len(nonce), ciphertext, len(ciphertext), siv, plaintext)
+            ref = _lib.wc_AesSivDecrypt_ex(self._key, len(self._key),
+                associated_data, len(associated_data), nonce, len(nonce),
+                ciphertext, len(ciphertext), siv, plaintext)
             if ref < 0:
                 raise WolfCryptError("AES-SIV decryption error (%d)" % ref)
             return _ffi.buffer(plaintext)[:]
+
+        @staticmethod
+        def _prepare_associated_data(associated_data):
+            """
+            Prepare associated data for sending to C library.
+
+            Associated data may be provided as single str or bytes, or as a
+            list of str or bytes in case of multiple blocks.
+
+            The result is a tuple of the list of cffi cdata pointers to
+            AesSivAssoc structures, as well as the converted associated
+            data blocks. The caller **must** hold on to these until the
+            C function has been called, in order to make sure that the memory
+            is not freed by the FFI garbage collector before the data is read.
+            """
+            if (isinstance(associated_data, str) or isinstance(associated_data, bytes)):
+                # A single block is provided.
+                # Make sure we have bytes.
+                associated_data = t2b(associated_data)
+                result = _ffi.new("AesSivAssoc[1]")
+                result[0].assoc = _ffi.from_buffer(associated_data)
+                result[0].assocSz = len(associated_data)
+            else:
+                # It is assumed that a list is provided.
+                num_blocks = len(associated_data)
+                if (num_blocks > 126):
+                    raise WolfCryptError("AES-SIV does not support more than 126 blocks "
+                                         "of associated data, got: %d" % num_blocks)
+                # Make sure we have bytes.
+                associated_data = [t2b(block) for block in associated_data]
+                result = _ffi.new("AesSivAssoc[]", num_blocks)
+                for index, block in enumerate(associated_data):
+                    result[index].assoc = _ffi.from_buffer(block)
+                    result[index].assocSz = len(block)
+            # Return the converted associated data blocks so the caller can
+            # hold on to them until the function has been called.
+            return result, associated_data
+
 
 if _lib.AESGCM_STREAM_ENABLED:
     class AesGcmStream(object):

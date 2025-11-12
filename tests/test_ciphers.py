@@ -61,7 +61,7 @@ from wolfcrypt.ciphers import (
 
 @pytest.fixture
 def vectors():
-    TestVector = namedtuple("TestVector", """key iv plaintext ciphertext 
+    TestVector = namedtuple("TestVector", """key iv plaintext ciphertext
                 ciphertext_ctr raw_key
                 pkcs8_key pem""")
     TestVector.__new__.__defaults__ = (None,) * len(TestVector._fields)
@@ -778,20 +778,15 @@ TEST_VECTOR_CIPHERTEXT_RFC5297 = bytes.fromhex(
 
 
 @pytest.mark.skipif(not _lib.AES_SIV_ENABLED, reason="AES-SIV not enabled")
-@pytest.mark.skip(reason=("Associated data in test vector consists of "
-                          "multiple blocks which is unsupported"))
 def test_aessiv_encrypt_kat_rfc5297():
     """
     Known-answer test using test vectors from RFC-5297.
     """
     aessiv = AesSiv(TEST_VECTOR_KEY_RFC5297)
-    # This is probably not the correct way of handling the associated data.
-    # The function wc_AesSivEncrypt_ex supports this but it is currently not
-    # exposed.
-    associated_data = (
-        TEST_VECTOR_ASSOCIATED_DATA_1_RFC5297
-        + TEST_VECTOR_ASSOCIATED_DATA_2_RFC5297
-    )
+    associated_data = [
+        TEST_VECTOR_ASSOCIATED_DATA_1_RFC5297,
+        TEST_VECTOR_ASSOCIATED_DATA_2_RFC5297,
+    ]
     siv, ciphertext = aessiv.encrypt(
         associated_data,
         TEST_VECTOR_NONCE_RFC5297,
@@ -802,19 +797,14 @@ def test_aessiv_encrypt_kat_rfc5297():
 
 
 @pytest.mark.skipif(not _lib.AES_SIV_ENABLED, reason="AES-SIV not enabled")
-@pytest.mark.skip(reason=("Associated data in test vector consists "
-                          "of multiple blocks which is unsupported"))
 def test_aessiv_decrypt_kat_rfc5297():
     """
     Known-answer test using test vectors from RFC-5297.
     """
     aessiv = AesSiv(TEST_VECTOR_KEY_RFC5297)
-    # This is probably not the correct way of handling the associated data.
-    # The function wc_AesSivEncrypt_ex supports this but it is currently not
-    # exposed.
     associated_data = (
-        TEST_VECTOR_ASSOCIATED_DATA_1_RFC5297
-        + TEST_VECTOR_ASSOCIATED_DATA_2_RFC5297
+        TEST_VECTOR_ASSOCIATED_DATA_1_RFC5297,
+        TEST_VECTOR_ASSOCIATED_DATA_2_RFC5297,
     )
     plaintext = aessiv.decrypt(
         associated_data,
@@ -850,6 +840,9 @@ TEST_VECTOR_CIPHERTEXT_OPENSSL = bytes.fromhex(
 def test_aessiv_encrypt_kat_openssl():
     """
     Known-answer test using test vectors from OpenSSL.
+
+    This also tests calling AesSiv with a single associated data block, not
+    provided as a list of blocks.
     """
     aessiv = AesSiv(TEST_VECTOR_KEY_OPENSSL)
     siv, ciphertext = aessiv.encrypt(
@@ -865,6 +858,9 @@ def test_aessiv_encrypt_kat_openssl():
 def test_aessiv_decrypt_kat_openssl():
     """
     Known-answer test using test vectors from OpenSSL.
+
+    This also tests calling AesSiv with a single associated data block, not
+    provided as a list of blocks.
     """
     aessiv = AesSiv(TEST_VECTOR_KEY_OPENSSL)
     plaintext = aessiv.decrypt(

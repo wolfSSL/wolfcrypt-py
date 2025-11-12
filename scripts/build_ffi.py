@@ -651,7 +651,10 @@ def build_ffi(local_wolfssl, features):
 
     if features["AES"] and features["AES_SIV"]:
         cdef += """
-        typedef struct { ...; } AesSivAssoc;
+        typedef struct AesSivAssoc_s {
+            const byte* assoc;
+            word32 assocSz;
+        } AesSivAssoc;
         int wc_AesSivEncrypt(const byte* key, word32 keySz, const byte* assoc,
                              word32 assocSz, const byte* nonce, word32 nonceSz,
                              const byte* in, word32 inSz, byte* siv, byte* out);
