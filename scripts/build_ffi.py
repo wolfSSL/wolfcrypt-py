@@ -376,6 +376,7 @@ def get_features(local_wolfssl, features):
     features["CHACHA20_POLY1305"] = 1 if '#define HAVE_CHACHA' and '#define HAVE_POLY1305' in defines else 0
     features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
+    features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -491,6 +492,7 @@ def build_ffi(local_wolfssl, features):
         int CHACHA20_POLY1305_ENABLED = """ + str(features["CHACHA20_POLY1305"]) + """;
         int ML_KEM_ENABLED = """ + str(features["ML_KEM"]) + """;
         int ML_DSA_ENABLED = """ + str(features["ML_DSA"]) + """;
+        int HKDF_ENABLED = """ + str(features["HKDF"]) + """;
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -528,6 +530,7 @@ def build_ffi(local_wolfssl, features):
         extern int CHACHA20_POLY1305_ENABLED;
         extern int ML_KEM_ENABLED;
         extern int ML_DSA_ENABLED;
+        extern int HKDF_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -884,6 +887,26 @@ def build_ffi(local_wolfssl, features):
         int wc_ed448_priv_size(ed448_key* key);
         """
 
+    if features["HKDF"]:
+        cdef += """
+        int wc_HKDF(int type, const byte* inKey, word32 inKeySz,
+                    const byte* salt, word32 saltSz,
+                    const byte* info, word32 infoSz,
+                    byte* out, word32 outSz);
+        int wc_HKDF_Extract(int type, const byte* salt, word32 saltSz,
+                            const byte* inKey, word32 inKeySz, byte* out);
+        int wc_HKDF_Extract_ex(int type, const byte* salt, word32 saltSz,
+                               const byte* inKey, word32 inKeySz, byte* out,
+                               void* heap, int devId);
+        int wc_HKDF_Expand(int type, const byte* inKey, word32 inKeySz,
+                           const byte* info, word32 infoSz,
+                           byte* out, word32 outSz);
+        int wc_HKDF_Expand_ex(int type, const byte* inKey, word32 inKeySz,
+                              const byte* info, word32 infoSz,
+                              byte* out, word32 outSz,
+                              void* heap, int devId);
+        """
+
     if features["PWDBASED"]:
         cdef += """
         int wc_PBKDF2(byte* output, const byte* passwd, int pLen,
@@ -1018,7 +1041,8 @@ def main(ffibuilder):
         "RSA_PSS": 1,
         "CHACHA20_POLY1305": 1,
         "ML_KEM": 1,
-        "ML_DSA": 1
+        "ML_DSA": 1,
+        "HKDF": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
