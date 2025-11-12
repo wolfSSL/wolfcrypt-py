@@ -275,6 +275,59 @@ if _lib.AES_ENABLED:
             else:
                 raise ValueError("Invalid mode associated to cipher")
 
+if _lib.AES_SIV_ENABLED:
+    class AesSiv(object):
+        """
+        AES-SIV (Synthetic Initialization Vector) implementation as described in RFC 5297.
+        """
+        _key_sizes = [16, 24, 32]
+        block_size = 16
+
+        def __init__(self, key):
+            self._key = t2b(key)
+            if len(self._key) not in AesSiv._key_sizes:
+                raise ValueError("key must be %s in length, not %d" %
+                                 (AesSiv._key_sizes, len(self._key)))
+
+        def encrypt(self, associated_data, nonce, plaintext):
+            """
+            Encrypt plaintext data using the nonce provided. The associated
+            data is not encrypted but is included in the authentication tag.
+            
+            Returns a tuple of the IV and ciphertext.
+            """
+            associated_data = t2b(associated_data)
+            nonce = t2b(nonce)
+            plaintext = t2b(plaintext)
+            siv = _ffi.new("byte[%d]" % AesSiv.block_size)
+            ciphertext = _ffi.new("byte[%d]" % len(plaintext))
+            ret = _lib.wc_AesSivEncrypt(self._key, len(self._key), associated_data, len(associated_data),
+                nonce, len(nonce), plaintext, len(plaintext), siv, ciphertext)
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("AES-SIV encryption error (%d)" % ret)
+            return _ffi.buffer(siv)[:], _ffi.buffer(ciphertext)[:]
+
+        def decrypt(self, associated_data, nonce, siv, ciphertext):
+            """
+            Decrypt the ciphertext using the nonce and SIV provided.
+            The integrity of the associated data is checked.
+
+            Returns the decrypted plaintext.
+            """
+            associated_data = t2b(associated_data)
+            nonce = t2b(nonce)
+            siv = t2b(siv)
+            if len(siv) != AesSiv.block_size:
+                raise ValueError("SIV must be %s in length, not %d" %
+                                 (AesSiv.block_size, len(siv)))
+            ciphertext = t2b(ciphertext)
+            plaintext = _ffi.new("byte[%d]" % len(ciphertext))
+            ref = _lib.wc_AesSivDecrypt(self._key, len(self._key), associated_data, len(associated_data),
+                    nonce, len(nonce), ciphertext, len(ciphertext), siv, plaintext)
+            if ref < 0:
+                raise WolfCryptError("AES-SIV decryption error (%d)" % ref)
+            return _ffi.buffer(plaintext)[:]
+
 if _lib.AESGCM_STREAM_ENABLED:
     class AesGcmStream(object):
         """
