@@ -205,6 +205,7 @@ def make_flags(prefix, fips):
         flags.append("--enable-aesgcm-stream")
 
         flags.append("--enable-aesgcm")
+        flags.append("--enable-aessiv")
 
         # hashes and MACs
         flags.append("--enable-sha")
@@ -358,6 +359,7 @@ def get_features(local_wolfssl, features):
     features["SHA3"] = 1 if '#define WOLFSSL_SHA3' in defines else 0
     features["DES3"] = 0 if '#define NO_DES3' in defines else 1
     features["AES"] = 0 if '#define NO_AES' in defines else 1
+    features["AES_SIV"] = 1 if '#define WOLFSSL_AES_SIV' in defines else 0
     features["CHACHA"] = 1 if '#define HAVE_CHACHA' in defines else 0
     features["HMAC"] = 0 if '#define NO_HMAC' in defines else 1
     features["RSA"] = 0 if '#define NO_RSA' in defines else 1
@@ -472,6 +474,7 @@ def build_ffi(local_wolfssl, features):
         int SHA3_ENABLED = """ + str(features["SHA3"]) + """;
         int DES3_ENABLED = """ + str(features["DES3"]) + """;
         int AES_ENABLED = """ + str(features["AES"]) + """;
+        int AES_SIV_ENABLED = """ + str(features["AES_SIV"]) + """;
         int CHACHA_ENABLED = """ + str(features["CHACHA"]) + """;
         int HMAC_ENABLED = """ + str(features["HMAC"]) + """;
         int RSA_ENABLED = """ + str(features["RSA"]) + """;
@@ -509,6 +512,7 @@ def build_ffi(local_wolfssl, features):
         extern int SHA3_ENABLED;
         extern int DES3_ENABLED;
         extern int AES_ENABLED;
+        extern int AES_SIV_ENABLED;
         extern int CHACHA_ENABLED;
         extern int HMAC_ENABLED;
         extern int RSA_ENABLED;
@@ -645,6 +649,25 @@ def build_ffi(local_wolfssl, features):
             word32 authTagSz);
         """
 
+    if features["AES"] and features["AES_SIV"]:
+        cdef += """
+        typedef struct AesSivAssoc_s {
+            const byte* assoc;
+            word32 assocSz;
+        } AesSivAssoc;
+        int wc_AesSivEncrypt(const byte* key, word32 keySz, const byte* assoc,
+                             word32 assocSz, const byte* nonce, word32 nonceSz,
+                             const byte* in, word32 inSz, byte* siv, byte* out);
+        int wc_AesSivDecrypt(const byte* key, word32 keySz, const byte* assoc,
+                             word32 assocSz, const byte* nonce, word32 nonceSz,
+                             const byte* in, word32 inSz, byte* siv, byte* out);
+        int wc_AesSivEncrypt_ex(const byte* key, word32 keySz, const AesSivAssoc* assoc,
+                                word32 numAssoc, const byte* nonce, word32 nonceSz,
+                                const byte* in, word32 inSz, byte* siv, byte* out);
+        int wc_AesSivDecrypt_ex(const byte* key, word32 keySz, const AesSivAssoc* assoc,
+                                word32 numAssoc, const byte* nonce, word32 nonceSz,
+                                const byte* in, word32 inSz, byte* siv, byte* out);
+        """
 
     if features["CHACHA"]:
         cdef += """
@@ -1000,6 +1023,7 @@ def main(ffibuilder):
         "SHA3": 1,
         "DES3": 1,
         "AES": 1,
+        "AES_SIV": 1,
         "HMAC": 1,
         "RSA": 1,
         "RSA_BLINDING": 1,
