@@ -346,10 +346,10 @@ def get_features(local_wolfssl, features):
         e = "No options.h or user_settings.h found for feature detection."
         raise RuntimeError(e)
 
-    defines = ""
+    defines = []
     for file in defines_files:
         with open(file, 'r') as f:
-            defines += f.read()
+            defines += f.read().splitlines()
 
     features["MPAPI"] = 1 if '#define WOLFSSL_PUBLIC_MP' in defines else 0
     features["SHA"] = 0 if '#define NO_SHA' in defines else 1
