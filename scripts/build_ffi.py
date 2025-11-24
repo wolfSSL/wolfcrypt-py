@@ -546,8 +546,6 @@ def build_ffi(local_wolfssl, features):
         int wc_RNG_GenerateBlock(WC_RNG*, byte*, word32);
         int wc_RNG_GenerateByte(WC_RNG*, byte*);
         int wc_FreeRng(WC_RNG*);
-
-        int wc_GetPkcs8TraditionalOffset(byte* input, word32* inOutIdx, word32 sz);
     """
 
     if not features["FIPS"] or features["FIPS_VERSION"] > 2:
@@ -742,6 +740,8 @@ def build_ffi(local_wolfssl, features):
 
         int wc_InitRsaKey(RsaKey* key, void*);
         int wc_FreeRsaKey(RsaKey* key);
+
+        int wc_GetPkcs8TraditionalOffset(byte* input, word32* inOutIdx, word32 sz);
 
         int wc_RsaPrivateKeyDecode(const byte*, word32*, RsaKey*, word32);
         int wc_RsaPublicKeyDecode(const byte*, word32*, RsaKey*, word32);
@@ -957,13 +957,17 @@ def build_ffi(local_wolfssl, features):
         } DerBuffer;
         typedef struct { ...; } EncryptedInfo;
 
+        word32 wc_EncodeSignature(byte* out, const byte* digest, word32 digSz,
+                                  int hashOID);
+        """
+
+    if features["KEYGEN"]:
+        cdef += """
         int wc_PemToDer(const unsigned char* buff, long longSz, int type,
                         DerBuffer** pDer, void* heap, EncryptedInfo* info,
                         int* keyFormat);
         int wc_DerToPemEx(const byte* der, word32 derSz, byte* output, word32 outSz,
                           byte *cipher_info, int type);
-        word32 wc_EncodeSignature(byte* out, const byte* digest, word32 digSz,
-                                  int hashOID);
         """
 
     if features["WC_RNG_SEED_CB"]:
