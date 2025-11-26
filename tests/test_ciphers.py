@@ -734,8 +734,14 @@ if _lib.ED448_ENABLED:
 
 
 @pytest.mark.skipif(not _lib.AES_SIV_ENABLED, reason="AES-SIV not enabled")
-def test_aessiv_encrypt_decrypt():
-    key = random.randbytes(32)
+@pytest.mark.parametrize("key_size", [256 // 8, 384 // 8, 512 // 8])
+def test_aessiv_encrypt_decrypt(key_size):
+    """
+    Test that data encrypted by AES-SIV can be decrypted.
+
+    :param key_size: AES-SIV key size in bytes.
+    """
+    key = random.randbytes(key_size)
     aessiv = AesSiv(key)
     associated_data = random.randbytes(16)
     nonce = random.randbytes(12)
