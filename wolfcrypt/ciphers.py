@@ -280,7 +280,8 @@ if _lib.AES_SIV_ENABLED:
         """
         AES-SIV (Synthetic Initialization Vector) implementation as described in RFC 5297.
         """
-        _key_sizes = [16, 24, 32]
+        # RFC 5297 defines key sizes of 256-, 384-, or 512 bits.
+        _key_sizes = [32, 48, 64]
         block_size = 16
 
         def __init__(self, key):
