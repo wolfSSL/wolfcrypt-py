@@ -741,8 +741,6 @@ def build_ffi(local_wolfssl, features):
         int wc_InitRsaKey(RsaKey* key, void*);
         int wc_FreeRsaKey(RsaKey* key);
 
-        int wc_GetPkcs8TraditionalOffset(byte* input, word32* inOutIdx, word32 sz);
-
         int wc_RsaPrivateKeyDecode(const byte*, word32*, RsaKey*, word32);
         int wc_RsaPublicKeyDecode(const byte*, word32*, RsaKey*, word32);
         int wc_RsaEncryptSize(RsaKey*);
@@ -959,6 +957,12 @@ def build_ffi(local_wolfssl, features):
 
         word32 wc_EncodeSignature(byte* out, const byte* digest, word32 digSz,
                                   int hashOID);
+        """
+
+    if features["ASN"] or features["RSA"]:
+        # This ASN function is used by the RSA binding as well.
+        cdef += """
+        int wc_GetPkcs8TraditionalOffset(byte* input, word32* inOutIdx, word32 sz);
         """
 
     if features["KEYGEN"]:
