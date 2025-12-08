@@ -957,21 +957,17 @@ def build_ffi(local_wolfssl, features):
 
         word32 wc_EncodeSignature(byte* out, const byte* digest, word32 digSz,
                                   int hashOID);
+        int wc_PemToDer(const unsigned char* buff, long longSz, int type,
+                        DerBuffer** pDer, void* heap, EncryptedInfo* info,
+                        int* keyFormat);
+        int wc_DerToPemEx(const byte* der, word32 derSz, byte* output, word32 outSz,
+                        byte *cipher_info, int type);
         """
 
     if features["ASN"] or features["RSA"]:
         # This ASN function is used by the RSA binding as well.
         cdef += """
         int wc_GetPkcs8TraditionalOffset(byte* input, word32* inOutIdx, word32 sz);
-        """
-
-    if features["KEYGEN"]:
-        cdef += """
-        int wc_PemToDer(const unsigned char* buff, long longSz, int type,
-                        DerBuffer** pDer, void* heap, EncryptedInfo* info,
-                        int* keyFormat);
-        int wc_DerToPemEx(const byte* der, word32 derSz, byte* output, word32 outSz,
-                          byte *cipher_info, int type);
         """
 
     if features["WC_RNG_SEED_CB"]:
