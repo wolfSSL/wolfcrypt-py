@@ -1,3 +1,16 @@
+wolfCrypt-py Release 5.8.4 (Jan 7, 2026)
+==========================================
+
+* Add support for HKDF
+* Add support for AES-SIV
+* Fix Windows build for ML-KEM, ML-DSA, and SHAKE
+* Fix header parsing in build_ffi.py for feature detection logic
+* Improve support for minimal wolfSSL configurations
+* Fix function availability detection for RSA and ASN features
+* Detect ML-KEM availability for USE_LOCAL_WOLFSSL
+* Update to wolfSSL version 5.8.4
+
+
 wolfCrypt-py Release 5.8.2 (Jul 24, 2025)
 ==========================================
 
