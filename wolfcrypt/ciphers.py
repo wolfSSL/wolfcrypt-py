@@ -553,18 +553,20 @@ if _lib.CHACHA20_POLY1305_ENABLED:
             """
             tag_bytes is the number of bytes to use for the authentication tag during encryption
             """
-            #key = t2b(key)
-            #IV = t2b(IV)
-            #aad = t2b(aad)
-            self._key = key
-            self._IV = IV
-            self._aad = aad
-            if len(key) not in self._key_sizes:
+            self._key = t2b(key)
+            self._IV = t2b(IV)
+            self._aad = t2b(aad)
+            if len(self._key) not in self._key_sizes:
                 raise ValueError("key must be %s in length, not %d" %
-                                 (self._key_sizes, len(key)))
+                                 (self._key_sizes, len(self._key)))
             self._native_object = _ffi.new(self._native_type)
             self._mode = None
-            ret = _lib.wc_ChaCha20Poly1305_Init(self._native_object, key, IV, 1)
+            ret = _lib.wc_ChaCha20Poly1305_Init(
+                self._native_object,
+                _ffi.from_buffer(self._key),
+                _ffi.from_buffer(self._IV),
+                1
+            )
             if ret < 0:
                 raise WolfCryptError("Init error (%d)" % ret)
 
@@ -583,41 +585,54 @@ if _lib.CHACHA20_POLY1305_ENABLED:
             """
             Add more data to the encryption stream
             """
-
-            #inPlainText = t2b(inPlainText)
+            inPlainText = t2b(inPlainText)
             if self._mode is None:
                 self._mode = _ENCRYPTION
                 aad = self._aad
             elif self._mode == _DECRYPTION:
                 raise WolfCryptError("Class instance already in use for decryption")
-            outGeneratedCipherText = _ffi.new("byte[%d]" % (len(inPlainText))) #array of output data (inPlainText) in bytes
+            outGeneratedCipherText = _ffi.new("byte[%d]" % (len(inPlainText)))
             outGeneratedAuthTag = _ffi.new("byte[%d]" % self._tag_bytes)
-            ret = _lib.wc_ChaCha20Poly1305_Encrypt(self._key, self._IV, aad, len(aad),
-                                                   inPlainText, len(inPlainText),
-                                                   outGeneratedCipherText,
-                                                   outGeneratedAuthTag) #outputs are generatedCipherText and generatedAuthTag
+            ret = _lib.wc_ChaCha20Poly1305_Encrypt(
+                _ffi.from_buffer(self._key),
+                _ffi.from_buffer(self._IV),
+                _ffi.from_buffer(aad),
+                len(aad),
+                _ffi.from_buffer(inPlainText),
+                len(inPlainText),
+                outGeneratedCipherText,
+                outGeneratedAuthTag
+            )
 
             if ret < 0:
-                raise WolfCryptError("Decryption error (%d)" % ret)
+                raise WolfCryptError("Encryption error (%d)" % ret)
             return bytes(outGeneratedCipherText), bytes(outGeneratedAuthTag)
 
-        def decrypt(self, inGeneratedAuthTag, inGeneratedCipher):#plain text is the output and should be hello world
+        def decrypt(self, inGeneratedAuthTag, inGeneratedCipher):
             """
             Add more data to the decryption stream
             """
-            inGeneratedCipher = t2b(inGeneratedCipher) #Should be the chipher from encrypt
+            inGeneratedCipher = t2b(inGeneratedCipher)
+            inGeneratedAuthTag = t2b(inGeneratedAuthTag)
             if self._mode is None:
                 self._mode = _DECRYPTION
                 aad = self._aad
             elif self._mode == _ENCRYPTION:
                 raise WolfCryptError("Class instance already in use for decryption")
-            outPlainText= _ffi.new("byte[%d]" % (len(inGeneratedCipher)))#unsure what to put here
-            ret = _lib.wc_ChaCha20Poly1305_Decrypt(self._key, self._IV, aad, len(self._aad),
-                                                   inGeneratedCipher, len(inGeneratedCipher),
-                                                   inGeneratedAuthTag, outPlainText)
+            outPlainText = _ffi.new("byte[%d]" % (len(inGeneratedCipher)))
+            ret = _lib.wc_ChaCha20Poly1305_Decrypt(
+                _ffi.from_buffer(self._key),
+                _ffi.from_buffer(self._IV),
+                _ffi.from_buffer(aad),
+                len(aad),
+                _ffi.from_buffer(inGeneratedCipher),
+                len(inGeneratedCipher),
+                _ffi.from_buffer(inGeneratedAuthTag),
+                outPlainText
+            )
             if ret < 0:
                 raise WolfCryptError("Decryption error (%d)" % ret)
-            return bytes(outPlainText) # prettysure outplain text is the output
+            return bytes(outPlainText)
 
         def checkTag(self, authTag):
             """
