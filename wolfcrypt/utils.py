@@ -18,21 +18,18 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
-# pylint: disable=unused-import, undefined-variable
+# pylint: disable=unused-import
 
-import sys
 from binascii import hexlify as b2h, unhexlify as h2b  # noqa: F401
-
-
-_PY3 = sys.version_info[0] == 3
-_TEXT_TYPE = str if _PY3 else unicode  # noqa: F821
-_BINARY_TYPE = bytes if _PY3 else str
 
 
 def t2b(string):
     """
     Converts text to binary.
+
+    Passes through bytes, bytearray, and memoryview unchanged.
+    Encodes str to UTF-8 bytes.
     """
-    if isinstance(string, _BINARY_TYPE):
+    if isinstance(string, (bytes, bytearray, memoryview)):
         return string
-    return _TEXT_TYPE(string).encode("utf-8")
+    return str(string).encode("utf-8")
