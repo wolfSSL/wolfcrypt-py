@@ -50,6 +50,24 @@ if _lib.CHACHA20_POLY1305_ENABLED:
         with pytest.raises(ValueError):
             ChaCha20Poly1305(b"tooshort")
 
+    def test_encrypt_invalid_iv_length():
+        key = h2b("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f")
+        chacha = ChaCha20Poly1305(key)
+        with pytest.raises(ValueError):
+            chacha.encrypt(b"aad", b"short", b"plaintext")
+
+    def test_decrypt_invalid_iv_length():
+        key = h2b("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f")
+        chacha = ChaCha20Poly1305(key)
+        with pytest.raises(ValueError):
+            chacha.decrypt(b"aad", b"short", b"\x00" * 16, b"ciphertext")
+
+    def test_decrypt_invalid_tag_length():
+        key = h2b("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f")
+        chacha = ChaCha20Poly1305(key)
+        with pytest.raises(ValueError):
+            chacha.decrypt(b"aad", b"\x00" * 12, b"short", b"ciphertext")
+
     def test_decrypt_bad_tag():
         key = h2b("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f")
         iv = h2b("07000000404142434445464748")

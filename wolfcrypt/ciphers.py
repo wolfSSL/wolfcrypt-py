@@ -561,6 +561,8 @@ if _lib.CHACHA20_POLY1305_ENABLED:
             """
             aad = t2b(aad)
             iv = t2b(iv)
+            if len(iv) != 12:
+                raise ValueError("iv must be 12 bytes, got %d" % len(iv))
             plaintext = t2b(plaintext)
             ciphertext = _ffi.new("byte[%d]" % len(plaintext))
             authTag = _ffi.new("byte[%d]" % self._tag_bytes)
@@ -587,7 +589,12 @@ if _lib.CHACHA20_POLY1305_ENABLED:
             """
             aad = t2b(aad)
             iv = t2b(iv)
+            if len(iv) != 12:
+                raise ValueError("iv must be 12 bytes, got %d" % len(iv))
             authTag = t2b(authTag)
+            if len(authTag) != self._tag_bytes:
+                raise ValueError("authTag must be %d bytes, got %d" %
+                                 (self._tag_bytes, len(authTag)))
             ciphertext = t2b(ciphertext)
             plaintext = _ffi.new("byte[%d]" % len(ciphertext))
             ret = _lib.wc_ChaCha20Poly1305_Decrypt(
