@@ -559,6 +559,7 @@ def build_ffi(local_wolfssl, features):
 
         int mp_init (mp_int * a);
         int mp_to_unsigned_bin (mp_int * a, unsigned char *b);
+        int mp_to_unsigned_bin_len (mp_int * a, unsigned char *b, int c);
         int mp_read_unsigned_bin (mp_int * a, const unsigned char *b, int c);
         """
 
