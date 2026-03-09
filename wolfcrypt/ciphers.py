@@ -1390,11 +1390,11 @@ if _lib.ECC_ENABLED:
                 if ret != 0:  # pragma: no cover
                     raise WolfCryptError("Signature error (%d)" % ret)
 
-                ret = _lib.mp_to_unsigned_bin(R, R_bin)
+                ret = _lib.mp_to_unsigned_bin_len(R, R_bin, self.size)
                 if ret != 0:  # pragma: no cover
                     raise WolfCryptError("wolfCrypt error (%d)" % ret)
 
-                ret = _lib.mp_to_unsigned_bin(S, S_bin)
+                ret = _lib.mp_to_unsigned_bin_len(S, S_bin, self.size)
                 if ret != 0:  # pragma: no cover
                     raise WolfCryptError("wolfCrypt error (%d)" % ret)
 
