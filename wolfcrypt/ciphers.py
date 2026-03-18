@@ -811,8 +811,10 @@ if _lib.RSA_ENABLED:
                 ret = _lib.wc_RsaPSS_CheckPadding(digest, len(digest),
                                                   verify, ret, self._hash_type)
 
-                return ret
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptError("PSS padding check error (%d)" % ret)
 
+                return ret == 0
 
 
     class RsaPrivate(RsaPublic):
