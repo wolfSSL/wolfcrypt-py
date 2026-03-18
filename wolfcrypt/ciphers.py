@@ -530,8 +530,13 @@ if _lib.CHACHA_ENABLED:
             return _lib.wc_Chacha_Process(self._dec,
                                           destination, source, len(source))
 
+        _NONCE_SIZE = 12
+
         def set_iv(self, nonce, counter = 0):
             self._IV_nonce = t2b(nonce)
+            if len(self._IV_nonce) != self._NONCE_SIZE:
+                raise ValueError("nonce must be %d bytes, got %d" %
+                                 (self._NONCE_SIZE, len(self._IV_nonce)))
             self._IV_counter = counter
             self._set_key(0)
 
