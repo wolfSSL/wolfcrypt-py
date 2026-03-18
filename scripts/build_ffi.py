@@ -375,7 +375,7 @@ def get_features(local_wolfssl, features):
     features["WC_RNG_SEED_CB"] = 1 if '#define WC_RNG_SEED_CB' in defines else 0
     features["AESGCM_STREAM"] = 1 if '#define WOLFSSL_AESGCM_STREAM' in defines else 0
     features["RSA_PSS"] = 1 if '#define WC_RSA_PSS' in defines else 0
-    features["CHACHA20_POLY1305"] = 1 if '#define HAVE_CHACHA' and '#define HAVE_POLY1305' in defines else 0
+    features["CHACHA20_POLY1305"] = 1 if ('#define HAVE_CHACHA' in defines and '#define HAVE_POLY1305' in defines) else 0
     features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
