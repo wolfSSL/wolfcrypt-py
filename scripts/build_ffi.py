@@ -386,7 +386,7 @@ def get_features(local_wolfssl, features):
             raise RuntimeError(e)
 
         features["FIPS"] = 1
-        version_match = re.search(r'#define HAVE_FIPS_VERSION\s+(\d+)', defines)
+        version_match = re.search(r'#define HAVE_FIPS_VERSION\s+(\d+)', '\n'.join(defines))
         if version_match is not None:
             features["FIPS_VERSION"] = int(version_match.group(1))
         else:
