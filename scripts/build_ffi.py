@@ -756,6 +756,8 @@ def build_ffi(local_wolfssl, features):
         int wc_RsaPrivateDecrypt_ex(const byte* in, word32 inLen,
                    byte* out, word32 outLen, RsaKey* key, int type,
                    enum wc_HashType hash, int mgf, byte* label, word32 labelSz);
+        int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
+        int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
         """
 
         if features["RSA_PSS"]:
@@ -766,8 +768,6 @@ def build_ffi(local_wolfssl, features):
                                    enum wc_HashType hash, int mgf, RsaKey* key);
             int wc_RsaPSS_CheckPadding(const byte* in, word32 inSz, byte* sig,
                                    word32 sigSz, enum wc_HashType hashType);
-            int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
-            int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
             """
 
         if features["RSA_BLINDING"]:
