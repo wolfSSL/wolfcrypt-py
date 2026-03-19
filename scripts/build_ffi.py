@@ -375,7 +375,7 @@ def get_features(local_wolfssl, features):
     features["WC_RNG_SEED_CB"] = 1 if '#define WC_RNG_SEED_CB' in defines else 0
     features["AESGCM_STREAM"] = 1 if '#define WOLFSSL_AESGCM_STREAM' in defines else 0
     features["RSA_PSS"] = 1 if '#define WC_RSA_PSS' in defines else 0
-    features["CHACHA20_POLY1305"] = 1 if '#define HAVE_CHACHA' and '#define HAVE_POLY1305' in defines else 0
+    features["CHACHA20_POLY1305"] = 1 if ('#define HAVE_CHACHA' in defines and '#define HAVE_POLY1305' in defines) else 0
     features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
@@ -386,7 +386,7 @@ def get_features(local_wolfssl, features):
             raise RuntimeError(e)
 
         features["FIPS"] = 1
-        version_match = re.search(r'#define HAVE_FIPS_VERSION\s+(\d+)', defines)
+        version_match = re.search(r'#define HAVE_FIPS_VERSION\s+(\d+)', '\n'.join(defines))
         if version_match is not None:
             features["FIPS_VERSION"] = int(version_match.group(1))
         else:
@@ -756,6 +756,8 @@ def build_ffi(local_wolfssl, features):
         int wc_RsaPrivateDecrypt_ex(const byte* in, word32 inLen,
                    byte* out, word32 outLen, RsaKey* key, int type,
                    enum wc_HashType hash, int mgf, byte* label, word32 labelSz);
+        int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
+        int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
         """
 
         if features["RSA_PSS"]:
@@ -766,8 +768,6 @@ def build_ffi(local_wolfssl, features):
                                    enum wc_HashType hash, int mgf, RsaKey* key);
             int wc_RsaPSS_CheckPadding(const byte* in, word32 inSz, byte* sig,
                                    word32 sigSz, enum wc_HashType hashType);
-            int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
-            int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
             """
 
         if features["RSA_BLINDING"]:

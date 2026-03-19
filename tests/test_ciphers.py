@@ -456,14 +456,14 @@ if _lib.RSA_ENABLED:
             signature = rsa_private_pss.sign_pss(plaintext)
 
             assert 1024 / 8 == len(signature) == rsa_private_pss.output_size
-            assert 0 == rsa_public_pss.verify_pss(plaintext, signature)
+            assert rsa_public_pss.verify_pss(plaintext, signature) is True
 
             # private object holds both private and public info, so it can also verify
             # using the known public key.
             signature = rsa_private_pss.sign_pss(plaintext)
 
             assert 1024 / 8 == len(signature) == rsa_private_pss.output_size
-            assert 0 == rsa_private_pss.verify_pss(plaintext, signature)
+            assert rsa_private_pss.verify_pss(plaintext, signature) is True
 
     def test_rsa_sign_verify_pem(rsa_private_pem, rsa_public_pem):
         plaintext = t2b("Everyone gets Friday off.")

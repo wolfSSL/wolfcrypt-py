@@ -209,14 +209,7 @@ if _lib.SHA3_ENABLED:
         SHA3_384_DIGEST_SIZE = 48
         SHA3_512_DIGEST_SIZE = 64
 
-        def __init__(self):  # pylint: disable=W0231
-            self._native_object = _ffi.new(self._native_type)
-            self.digest_size = SHA3_384_DIGEST_SIZE
-            ret = self._init()
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptError("Sha3 init error (%d)" % ret)
-
-        def __init__(self, string, size=SHA3_384_DIGEST_SIZE):  # pylint: disable=W0231
+        def __init__(self, string=None, size=SHA3_384_DIGEST_SIZE):  # pylint: disable=W0231
             self._native_object = _ffi.new(self._native_type)
             self.digest_size = size
             ret = self._init()
@@ -224,6 +217,15 @@ if _lib.SHA3_ENABLED:
                 raise WolfCryptError("Sha3 init error (%d)" % ret)
             if string:
                 self.update(string)
+
+        @classmethod
+        def new(cls, string=None, size=SHA3_384_DIGEST_SIZE):
+            return cls(string, size)
+
+        def copy(self):
+            c = Sha3(size=self.digest_size)
+            _ffi.memmove(c._native_object, self._native_object, self._native_size)
+            return c
 
         def _init(self):
             if (self.digest_size != Sha3.SHA3_224_DIGEST_SIZE and
