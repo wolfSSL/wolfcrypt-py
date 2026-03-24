@@ -1026,6 +1026,7 @@ def build_ffi(local_wolfssl, features):
         int wc_dilithium_set_level(dilithium_key* key, byte level);
         void wc_dilithium_free(dilithium_key* key);
         int wc_dilithium_make_key(dilithium_key* key, WC_RNG* rng);
+        int wc_dilithium_make_key_from_seed(dilithium_key* key, const byte* seed);
         int wc_dilithium_export_private(dilithium_key* key, byte* out, word32* outLen);
         int wc_dilithium_import_private(const byte* priv, word32 privSz, dilithium_key* key);
         int wc_dilithium_export_public(dilithium_key* key, byte* out, word32* outLen);

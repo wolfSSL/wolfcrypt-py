@@ -2152,6 +2152,9 @@ if _lib.ML_DSA_ENABLED:
             return res[0] == 1
 
     class MlDsaPrivate(_MlDsaBase):
+        _SEED_LENGTH = 32
+        """The length of a private key generation seed."""
+        
         @classmethod
         def make_key(cls, mldsa_type, rng=Random()):
             """
@@ -2169,6 +2172,28 @@ if _lib.ML_DSA_ENABLED:
 
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("wc_dilithium_make_key() error (%d)" % ret)
+
+            return mldsa_priv
+
+        @classmethod
+        def make_key_from_seed(cls, mldsa_type, seed):
+            """
+            Deterministically generate the key from a seed.
+
+            :param mldsa_type: ML-DSA type
+            :type mldsa_type: MlDsaType
+            :param seed: the (32 byte) seed from which to deterministically create the key
+            :type seed: bytes
+            """
+            mldsa_priv = cls(mldsa_type)
+            assert isinstance(seed, bytes) and len(seed) == MlDsaPrivate._SEED_LENGTH, \
+                f"Seed for generating ML-DSA key must be {MlDsaPrivate._SEED_LENGTH} bytes"
+
+            ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object,
+                    _ffi.from_buffer(seed))
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_dilithium_make_key_from_seed() error (%d)" % ret)
 
             return mldsa_priv
 
