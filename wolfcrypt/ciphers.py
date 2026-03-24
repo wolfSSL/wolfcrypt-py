@@ -2149,6 +2149,9 @@ if _lib.ML_DSA_ENABLED:
             return res[0] == 1
 
     class MlDsaPrivate(_MlDsaBase):
+        _SIGNATURE_SEED_LENGTH = 32
+        """The length of a signature generation seed."""
+
         @classmethod
         def make_key(cls, mldsa_type, rng=Random()):
             """
@@ -2269,6 +2272,60 @@ if _lib.ML_DSA_ENABLED:
 
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("wc_dilithium_sign_msg() error (%d)" % ret)
+
+            if in_size != out_size[0]:
+                raise WolfCryptError(
+                    "in_size=%d and out_size=%d don't match" % (in_size, out_size[0])
+                )
+
+            return _ffi.buffer(signature, out_size[0])[:]
+
+        def sign_with_seed(self, message, seed, ctx=None):
+            """
+            :param message: message to be signed
+            :type message: bytes or str
+            :param seed: 32-byte seed for deterministic signature generation.
+            :type seed: bytes
+            :param ctx: context (optional)
+            :type ctx: None for no context, str or bytes otherwise
+            :return: signature
+            :rtype: bytes
+            """
+            msg_bytestype = t2b(message)
+            in_size = self.sig_size
+            signature = _ffi.new(f"byte[{in_size}]")
+            out_size = _ffi.new("word32 *")
+            out_size[0] = in_size
+
+            assert isinstance(seed, bytes) and len(seed) == MlDsaPrivate._SIGNATURE_SEED_LENGTH, \
+                f"Seed for generating a signature must be {MlDsaPrivate._SIGNATURE_SEED_LENGTH} bytes."
+
+            if ctx is not None:
+                ctx_bytestype = t2b(ctx)
+                ret = _lib.wc_dilithium_sign_ctx_msg_with_seed(
+                    _ffi.from_buffer(ctx_bytestype),
+                    len(ctx_bytestype),
+                    _ffi.from_buffer(msg_bytestype),
+                    len(msg_bytestype),
+                    signature,
+                    out_size,
+                    self.native_object,
+                    _ffi.from_buffer(seed),
+                )
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptError("wc_dilithium_sign_ctx_msg_with_seed() error (%d)" % ret)
+            else:
+                ret = _lib.wc_dilithium_sign_msg_with_seed(
+                    _ffi.from_buffer(msg_bytestype),
+                    len(msg_bytestype),
+                    signature,
+                    out_size,
+                    self.native_object,
+                    _ffi.from_buffer(seed),
+                )
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptError("wc_dilithium_sign_msg_with_seed() error (%d)" % ret)
+
 
             if in_size != out_size[0]:
                 raise WolfCryptError(
