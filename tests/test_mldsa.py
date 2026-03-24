@@ -134,3 +134,21 @@ if _lib.ML_DSA_ENABLED:
         # Verify with wrong message
         wrong_message = b"This is a wrong message for ML-DSA signature"
         assert not mldsa_pub.verify(signature, wrong_message)
+
+        # Verify with ctx for signature generated without
+        ctx = b"This is a test context for ML-DSA signature"
+        wrong_ctx = b"This is a wrong context for ML-DSA signature"
+        assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
+
+        # Sign a message with context
+        signature = mldsa_priv.sign(message, rng, ctx=ctx)
+        assert len(signature) == mldsa_priv.sig_size
+
+        # Verify the signature by MlDsaPrivate
+        assert mldsa_priv.verify(signature, message, ctx=ctx)
+
+        # Verify the signature by MlDsaPublic
+        assert mldsa_pub.verify(signature, message, ctx=ctx)
+
+        # Verify with wrong ctx
+        assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
