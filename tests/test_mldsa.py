@@ -28,6 +28,8 @@ if _lib.ML_DSA_ENABLED:
     from wolfcrypt.ciphers import MlDsaPrivate, MlDsaPublic, MlDsaType
     from wolfcrypt.random import Random
 
+    ML_DSA_SIGNATURE_SEED_LENGTH = 32
+
     @pytest.fixture
     def rng():
         return Random()
@@ -134,3 +136,31 @@ if _lib.ML_DSA_ENABLED:
         # Verify with wrong message
         wrong_message = b"This is a wrong message for ML-DSA signature"
         assert not mldsa_pub.verify(signature, wrong_message)
+
+    def test_sign_with_seed(mldsa_type, rng):
+        signature_seed = rng.bytes(ML_DSA_SIGNATURE_SEED_LENGTH)
+        mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
+        pub_key = mldsa_priv.encode_pub_key()
+
+        # Import public key
+        mldsa_pub = MlDsaPublic(mldsa_type)
+        mldsa_pub.decode_key(pub_key)
+
+        # Sign a message
+        message = b"This is a test message for ML-DSA signature"
+        signature = mldsa_priv.sign_with_seed(message, signature_seed)
+        assert len(signature) == mldsa_priv.sig_size
+
+        # Verify the signature using public key
+        assert mldsa_pub.verify(signature, message)
+
+        # re-generate from the same seed:
+        signature_from_same_seed = mldsa_priv.sign_with_seed(message, signature_seed)
+        assert signature == signature_from_same_seed
+
+        # test that the seed size is checked:
+        with pytest.raises(AssertionError):
+            _ = mldsa_priv.sign_with_seed(message, signature_seed[:-1])
+
+        with pytest.raises(AssertionError):
+            _ = mldsa_priv.sign_with_seed(message, "")
