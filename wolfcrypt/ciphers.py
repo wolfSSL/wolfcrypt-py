@@ -191,6 +191,7 @@ class _Cipher:
             self._enc = _ffi.new(self._native_type)
             ret = self._set_key(_ENCRYPTION)
             if ret < 0:  # pragma: no cover
+                self._enc = None
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
         result = _ffi.new("byte[%d]" % len(string))
@@ -223,6 +224,7 @@ class _Cipher:
             self._dec = _ffi.new(self._native_type)
             ret = self._set_key(_DECRYPTION)
             if ret < 0:  # pragma: no cover
+                self._dec = None
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
         result = _ffi.new("byte[%d]" % len(string))
@@ -405,10 +407,15 @@ if _lib.AESGCM_STREAM_ENABLED:
                 raise ValueError("key must be %s in length, not %d" %
                                  (self._key_sizes, len(key)))
             self._native_object = _ffi.new(self._native_type)
-            _lib.wc_AesInit(self._native_object, _ffi.NULL, -2)
+            ret = _lib.wc_AesInit(self._native_object, _ffi.NULL, -2)
+            if ret < 0:
+                raise WolfCryptError("AES init error (%d)" % ret)
             ret = _lib.wc_AesGcmInit(self._native_object, key, len(key), IV, len(IV))
             if ret < 0:
                 raise WolfCryptError("Init error (%d)" % ret)
+
+        def __del__(self):
+            _lib.wc_AesFree(self._native_object)
 
         def set_aad(self, data):
             """
@@ -497,10 +504,11 @@ if _lib.CHACHA_ENABLED:
             self._dec = None
             self._key = None
             if len(key) > 0:
-                if size not in self._key_sizes:
-                    raise ValueError("Invalid key size %d" % size)
                 self._key = t2b(key)
-                self.key_size = size
+                if len(self._key) not in self._key_sizes:
+                    raise ValueError("key must be %s in length, not %d" %
+                                     (self._key_sizes, len(self._key)))
+                self.key_size = len(self._key)
             self._IV_nonce = []
             self._IV_counter = 0
 
@@ -510,13 +518,13 @@ if _lib.CHACHA_ENABLED:
             if self._enc:
                 ret = _lib.wc_Chacha_SetKey(self._enc, self._key, len(self._key))
                 if ret == 0:
-                    _lib.wc_Chacha_SetIV(self._enc, self._IV_nonce, self._IV_counter)
+                    ret = _lib.wc_Chacha_SetIV(self._enc, self._IV_nonce, self._IV_counter)
                 if ret != 0:
                     return ret
             if self._dec:
                 ret = _lib.wc_Chacha_SetKey(self._dec, self._key, len(self._key))
                 if ret == 0:
-                    _lib.wc_Chacha_SetIV(self._dec, self._IV_nonce, self._IV_counter)
+                    ret = _lib.wc_Chacha_SetIV(self._dec, self._IV_nonce, self._IV_counter)
                 if ret != 0:
                     return ret
             return 0
@@ -626,6 +634,11 @@ if _lib.DES3_ENABLED:
         block_size = 8
         key_size = 24
         _native_type = "Des3 *"
+
+        def __init__(self, key, mode, IV=None):
+            if mode != MODE_CBC:
+                raise ValueError("Des3 only supports MODE_CBC")
+            super().__init__(key, mode, IV)
 
         def _set_key(self, direction):
             if direction == _ENCRYPTION:
@@ -2021,7 +2034,6 @@ if _lib.ML_KEM_ENABLED:
             )
 
             if ret < 0:  # pragma: no cover
-                self.native_object = None
                 raise WolfCryptError("wc_KyberKey_Decapsulate() error (%d)" % ret)
 
             return _ffi.buffer(ss, ss_size)[:]

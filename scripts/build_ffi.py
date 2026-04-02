@@ -650,6 +650,7 @@ def build_ffi(local_wolfssl, features):
             word32 sz, const byte* authIn, word32 authInSz);
         int wc_AesGcmDecryptFinal(Aes* aes, const byte* authTag,
             word32 authTagSz);
+        void wc_AesFree(Aes* aes);
         """
 
     if features["AES"] and features["AES_SIV"]:
@@ -962,6 +963,7 @@ def build_ffi(local_wolfssl, features):
         int wc_PemToDer(const unsigned char* buff, long longSz, int type,
                         DerBuffer** pDer, void* heap, EncryptedInfo* info,
                         int* keyFormat);
+        void wc_FreeDer(DerBuffer** pDer);
         int wc_DerToPemEx(const byte* der, word32 derSz, byte* output, word32 outSz,
                         byte *cipher_info, int type);
         """
