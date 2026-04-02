@@ -183,7 +183,7 @@ class _Cipher:
             raise ValueError(
                     "empty string not allowed")
 
-        if len(string) % self.block_size and not self.mode == MODE_CTR and "ChaCha" not in self._native_type:
+        if len(string) % self.block_size and "ChaCha" not in self._native_type and self.mode != MODE_CTR:
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
 
@@ -215,7 +215,7 @@ class _Cipher:
         if not string:
             raise ValueError("empty string not allowed")
 
-        if len(string) % self.block_size and self.mode != MODE_CTR and "ChaCha" not in self._native_type:
+        if len(string) % self.block_size and "ChaCha" not in self._native_type and self.mode != MODE_CTR:
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
 
