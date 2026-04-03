@@ -116,6 +116,10 @@ if _lib.SHA_ENABLED:
         digest_size = 20
         _native_type = "wc_Sha *"
         _native_size = _ffi.sizeof("wc_Sha")
+        _delete = _lib.wc_ShaFree
+
+        def __del__(self):
+            self._delete(self._native_object)
 
         def _init(self):
             return _lib.wc_InitSha(self._native_object)
@@ -138,6 +142,10 @@ if _lib.SHA256_ENABLED:
         digest_size = 32
         _native_type = "wc_Sha256 *"
         _native_size = _ffi.sizeof("wc_Sha256")
+        _delete = _lib.wc_Sha256Free
+
+        def __del__(self):
+            self._delete(self._native_object)
 
         def _init(self):
             return _lib.wc_InitSha256(self._native_object)
@@ -160,6 +168,10 @@ if _lib.SHA384_ENABLED:
         digest_size = 48
         _native_type = "wc_Sha384 *"
         _native_size = _ffi.sizeof("wc_Sha384")
+        _delete = _lib.wc_Sha384Free
+
+        def __del__(self):
+            self._delete(self._native_object)
 
         def _init(self):
             return _lib.wc_InitSha384(self._native_object)
@@ -182,6 +194,10 @@ if _lib.SHA512_ENABLED:
         digest_size = 64
         _native_type = "wc_Sha512 *"
         _native_size = _ffi.sizeof("wc_Sha512")
+        _delete = _lib.wc_Sha512Free
+
+        def __del__(self):
+            self._delete(self._native_object)
 
         def _init(self):
             return _lib.wc_InitSha512(self._native_object)
@@ -208,6 +224,16 @@ if _lib.SHA3_ENABLED:
         SHA3_256_DIGEST_SIZE = 32
         SHA3_384_DIGEST_SIZE = 48
         SHA3_512_DIGEST_SIZE = 64
+
+        def __del__(self):
+            if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
+                _lib.wc_Sha3_224_Free(self._native_object)
+            elif self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
+                _lib.wc_Sha3_256_Free(self._native_object)
+            elif self.digest_size == Sha3.SHA3_384_DIGEST_SIZE:
+                _lib.wc_Sha3_384_Free(self._native_object)
+            elif self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
+                _lib.wc_Sha3_512_Free(self._native_object)
 
         def __init__(self, string=None, size=SHA3_384_DIGEST_SIZE):  # pylint: disable=W0231
             self._native_object = _ffi.new(self._native_type)
@@ -285,6 +311,10 @@ if _lib.HMAC_ENABLED:
         digest_size = None
         _native_type = "Hmac *"
         _native_size = _ffi.sizeof("Hmac")
+        _delete = _lib.wc_HmacFree
+
+        def __del__(self):
+            self._delete(self._native_object)
 
         def __init__(self, key, string=None):  # pylint: disable=W0231
             key = t2b(key)

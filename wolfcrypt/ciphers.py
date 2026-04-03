@@ -129,6 +129,10 @@ class _Cipher:
 
         self.mode = mode
 
+        key = t2b(key)
+        if IV is not None:
+            IV = t2b(IV)
+
         if self.key_size:
             if self.key_size != len(key):
                 raise ValueError("key must be %d in length, not %d" %
@@ -147,10 +151,10 @@ class _Cipher:
         self._native_object = _ffi.new(self._native_type)
         self._enc = None
         self._dec = None
-        self._key = t2b(key)
+        self._key = key
 
         if IV:
-            self._IV = t2b(IV)
+            self._IV = IV
         else:  # pragma: no cover
             self._IV = _ffi.new("byte[%d]" % self.block_size)
 
@@ -402,6 +406,8 @@ if _lib.AESGCM_STREAM_ENABLED:
             """
             key = t2b(key)
             IV = t2b(IV)
+            if tag_bytes < 4 or tag_bytes > 16:
+                raise ValueError("tag_bytes must be between 4 and 16")
             self._tag_bytes = tag_bytes
             if len(key) not in self._key_sizes:
                 raise ValueError("key must be %s in length, not %d" %
@@ -442,7 +448,7 @@ if _lib.AESGCM_STREAM_ENABLED:
             self._buf = _ffi.new("byte[%d]" % (len(data)))
             ret = _lib.wc_AesGcmEncryptUpdate(self._native_object, self._buf, data, len(data), aad, len(aad))
             if ret < 0:
-                raise WolfCryptError("Decryption error (%d)" % ret)
+                raise WolfCryptError("Encryption error (%d)" % ret)
             return bytes(self._buf)
 
         def decrypt(self, data):
@@ -455,7 +461,7 @@ if _lib.AESGCM_STREAM_ENABLED:
                 self._mode = _DECRYPTION
                 aad = self._aad
             elif self._mode == _ENCRYPTION:
-                raise WolfCryptError("Class instance already in use for decryption")
+                raise WolfCryptError("Class instance already in use for encryption")
             self._buf = _ffi.new("byte[%d]" % (len(data)))
             ret = _lib.wc_AesGcmDecryptUpdate(self._native_object, self._buf, data, len(data), aad, len(aad))
             if ret < 0:
@@ -495,7 +501,7 @@ if _lib.CHACHA_ENABLED:
         key_size = None  # 16, 24, 32
         _key_sizes = [16, 32]
         _native_type = "ChaCha *"
-        _IV_nonce = []
+        _IV_nonce = b""
         _IV_counter = 0
 
         def __init__(self, key="", size=32):
@@ -509,7 +515,7 @@ if _lib.CHACHA_ENABLED:
                     raise ValueError("key must be %s in length, not %d" %
                                      (self._key_sizes, len(self._key)))
                 self.key_size = len(self._key)
-            self._IV_nonce = []
+            self._IV_nonce = b""
             self._IV_counter = 0
 
         def _set_key(self, direction):
@@ -754,6 +760,8 @@ if _lib.RSA_ENABLED:
             return _ffi.buffer(ciphertext)[:]
 
         def encrypt_oaep(self, plaintext, label=""):
+            if not self._hash_type:
+                raise WolfCryptError("Hash type not set. Cannot use OAEP padding without a hash type.")
             plaintext = t2b(plaintext)
             label = t2b(label)
             ciphertext = _ffi.new("byte[%d]" % self.output_size)
@@ -837,10 +845,12 @@ if _lib.RSA_ENABLED:
     class RsaPrivate(RsaPublic):
         if _lib.KEYGEN_ENABLED:
             @classmethod
-            def make_key(cls, size, rng=Random(), hash_type=None):
+            def make_key(cls, size, rng=None, hash_type=None):
                 """
                 Generates a new key pair of desired length **size**.
                 """
+                if rng is None:
+                    rng = Random()
                 rsa = cls(hash_type=hash_type)
 
                 ret = _lib.wc_MakeRsaKey(rsa.native_object, size, 65537,
@@ -943,6 +953,8 @@ if _lib.RSA_ENABLED:
 
             Returns a string containing the plaintext.
             """
+            if not self._hash_type:
+                raise WolfCryptError("Hash type not set. Cannot use OAEP padding without a hash type.")
             ciphertext = t2b(ciphertext)
             label = t2b(label)
             plaintext = _ffi.new("byte[%d]" % self.output_size)
@@ -1173,33 +1185,39 @@ if _lib.ECC_ENABLED:
                     raise WolfCryptError("wolfCrypt error (%d)" % ret)
                 ret = _lib.mp_init(mpS)
                 if ret != 0:  # pragma: no cover
+                    _lib.mp_clear(mpR)
                     raise WolfCryptError("wolfCrypt error (%d)" % ret)
 
-                ret = _lib.mp_read_unsigned_bin(mpR, R, len(R))
-                if ret != 0:  # pragma: no cover
-                    raise WolfCryptError("wolfCrypt error (%d)" % ret)
+                try:
+                    ret = _lib.mp_read_unsigned_bin(mpR, R, len(R))
+                    if ret != 0:  # pragma: no cover
+                        raise WolfCryptError("wolfCrypt error (%d)" % ret)
 
-                ret = _lib.mp_read_unsigned_bin(mpS, S, len(S))
-                if ret != 0:  # pragma: no cover
-                    raise WolfCryptError("wolfCrypt error (%d)" % ret)
+                    ret = _lib.mp_read_unsigned_bin(mpS, S, len(S))
+                    if ret != 0:  # pragma: no cover
+                        raise WolfCryptError("wolfCrypt error (%d)" % ret)
 
+                    ret = _lib.wc_ecc_verify_hash_ex(mpR, mpS,
+                                                  data, len(data),
+                                                  status, self.native_object)
 
-                ret = _lib.wc_ecc_verify_hash_ex(mpR, mpS,
-                                              data, len(data),
-                                              status, self.native_object)
+                    if ret < 0:
+                        raise WolfCryptError("Verify error (%d)" % ret)
 
-                if ret < 0:
-                    raise WolfCryptError("Verify error (%d)" % ret)
-
-                return status[0] == 1
+                    return status[0] == 1
+                finally:
+                    _lib.mp_clear(mpR)
+                    _lib.mp_clear(mpS)
 
 
     class EccPrivate(EccPublic):
         @classmethod
-        def make_key(cls, size, rng=Random()):
+        def make_key(cls, size, rng=None):
             """
             Generates a new key pair of desired length **size**.
             """
+            if rng is None:
+                rng = Random()
             ecc = cls()
 
             ret = _lib.wc_ecc_make_key(rng.native_object, size,
@@ -1302,12 +1320,14 @@ if _lib.ECC_ENABLED:
 
             return _ffi.buffer(shared_secret, secret_size[0])[:]
 
-        def sign(self, plaintext, rng=Random()):
+        def sign(self, plaintext, rng=None):
             """
             Signs **plaintext**, using the private key data in the object.
 
             Returns the signature.
             """
+            if rng is None:
+                rng = Random()
             plaintext = t2b(plaintext)
             signature = _ffi.new("byte[%d]" % self.max_signature_size)
 
@@ -1325,12 +1345,14 @@ if _lib.ECC_ENABLED:
             return _ffi.buffer(signature, signature_size[0])[:]
 
         if _lib.MPAPI_ENABLED:
-            def sign_raw(self, plaintext, rng=Random()):
+            def sign_raw(self, plaintext, rng=None):
                 """
                 Signs **plaintext**, using the private key data in the object.
 
                 Returns the signature in its two raw components r, s
                 """
+                if rng is None:
+                    rng = Random()
                 plaintext = t2b(plaintext)
                 R = _ffi.new("mp_int[1]")
                 S = _ffi.new("mp_int[1]")
@@ -1343,25 +1365,30 @@ if _lib.ECC_ENABLED:
                     raise WolfCryptError("wolfCrypt error (%d)" % ret)
                 ret = _lib.mp_init(S)
                 if ret != 0:  # pragma: no cover
+                    _lib.mp_clear(R)
                     raise WolfCryptError("wolfCrypt error (%d)" % ret)
 
-                ret = _lib.wc_ecc_sign_hash_ex(plaintext, len(plaintext),
-                                            rng.native_object,
-                                            self.native_object,
-                                            R, S)
-                if ret != 0:  # pragma: no cover
-                    raise WolfCryptError("Signature error (%d)" % ret)
+                try:
+                    ret = _lib.wc_ecc_sign_hash_ex(plaintext, len(plaintext),
+                                                rng.native_object,
+                                                self.native_object,
+                                                R, S)
+                    if ret != 0:  # pragma: no cover
+                        raise WolfCryptError("Signature error (%d)" % ret)
 
-                ret = _lib.mp_to_unsigned_bin_len(R, R_bin, self.size)
-                if ret != 0:  # pragma: no cover
-                    raise WolfCryptError("wolfCrypt error (%d)" % ret)
+                    ret = _lib.mp_to_unsigned_bin_len(R, R_bin, self.size)
+                    if ret != 0:  # pragma: no cover
+                        raise WolfCryptError("wolfCrypt error (%d)" % ret)
 
-                ret = _lib.mp_to_unsigned_bin_len(S, S_bin, self.size)
-                if ret != 0:  # pragma: no cover
-                    raise WolfCryptError("wolfCrypt error (%d)" % ret)
+                    ret = _lib.mp_to_unsigned_bin_len(S, S_bin, self.size)
+                    if ret != 0:  # pragma: no cover
+                        raise WolfCryptError("wolfCrypt error (%d)" % ret)
 
-                return _ffi.buffer(R_bin, self.size)[:], _ffi.buffer(S_bin,
-                        self.size)[:]
+                    return _ffi.buffer(R_bin, self.size)[:], _ffi.buffer(S_bin,
+                            self.size)[:]
+                finally:
+                    _lib.mp_clear(R)
+                    _lib.mp_clear(S)
 
 
 if _lib.ED25519_ENABLED:
@@ -1462,10 +1489,12 @@ if _lib.ED25519_ENABLED:
                 self.decode_key(key,pub)
 
         @classmethod
-        def make_key(cls, size, rng=Random()):
+        def make_key(cls, size, rng=None):
             """
             Generates a new key pair of desired length **size**.
             """
+            if rng is None:
+                rng = Random()
             ed25519 = cls()
 
             ret = _lib.wc_ed25519_make_key(rng.native_object, size,
@@ -1503,6 +1532,8 @@ if _lib.ED25519_ENABLED:
                     raise WolfCryptError("Public key generate error (%d)" % ret)
                 ret = _lib.wc_ed25519_import_public(pubkey, self.size,
                         self.native_object)
+                if ret < 0:
+                    raise WolfCryptError("Public key import error (%d)" % ret)
 
             if self.size <= 0:  # pragma: no cover
                 raise WolfCryptError("Key decode error (%d)" % self.size)
@@ -1518,20 +1549,22 @@ if _lib.ED25519_ENABLED:
             """
             key = _ffi.new("byte[%d]" % (self.size * 4))
             pubkey = _ffi.new("byte[%d]" % (self.size * 4))
-            size = _ffi.new("word32[1]")
+            priv_size = _ffi.new("word32[1]")
+            pub_size = _ffi.new("word32[1]")
 
-            size[0] = _lib.wc_ed25519_priv_size(self.native_object)
+            priv_size[0] = _lib.wc_ed25519_priv_size(self.native_object)
+            pub_size[0] = _lib.wc_ed25519_pub_size(self.native_object)
 
             ret = _lib.wc_ed25519_export_private_only(self.native_object,
-                    key, size)
+                    key, priv_size)
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Private key encode error (%d)" % ret)
             ret = _lib.wc_ed25519_export_public(self.native_object, pubkey,
-                    size)
+                    pub_size)
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Public key encode error (%d)" % ret)
 
-            return _ffi.buffer(key, size[0])[:], _ffi.buffer(pubkey, size[0])[:]
+            return _ffi.buffer(key, priv_size[0])[:], _ffi.buffer(pubkey, pub_size[0])[:]
 
         def sign(self, plaintext):
             """
@@ -1658,10 +1691,12 @@ if _lib.ED448_ENABLED:
                 self.decode_key(key,pub)
 
         @classmethod
-        def make_key(cls, size, rng=Random()):
+        def make_key(cls, size, rng=None):
             """
             Generates a new key pair of desired length **size**.
             """
+            if rng is None:
+                rng = Random()
             ed448 = cls()
 
             ret = _lib.wc_ed448_make_key(rng.native_object, size,
@@ -1699,6 +1734,8 @@ if _lib.ED448_ENABLED:
                     raise WolfCryptError("Public key generate error (%d)" % ret)
                 ret = _lib.wc_ed448_import_public(pubkey, self.size,
                         self.native_object)
+                if ret < 0:
+                    raise WolfCryptError("Public key import error (%d)" % ret)
 
             if self.size <= 0:  # pragma: no cover
                 raise WolfCryptError("Key decode error (%d)" % self.size)
@@ -1714,20 +1751,22 @@ if _lib.ED448_ENABLED:
             """
             key = _ffi.new("byte[%d]" % (self.size * 4))
             pubkey = _ffi.new("byte[%d]" % (self.size * 4))
-            size = _ffi.new("word32[1]")
+            priv_size = _ffi.new("word32[1]")
+            pub_size = _ffi.new("word32[1]")
 
-            size[0] = _lib.wc_ed448_priv_size(self.native_object)
+            priv_size[0] = _lib.wc_ed448_priv_size(self.native_object)
+            pub_size[0] = _lib.wc_ed448_pub_size(self.native_object)
 
             ret = _lib.wc_ed448_export_private_only(self.native_object,
-                    key, size)
+                    key, priv_size)
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Private key encode error (%d)" % ret)
             ret = _lib.wc_ed448_export_public(self.native_object, pubkey,
-                    size)
+                    pub_size)
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Public key encode error (%d)" % ret)
 
-            return _ffi.buffer(key, size[0])[:], _ffi.buffer(pubkey, size[0])[:]
+            return _ffi.buffer(key, priv_size[0])[:], _ffi.buffer(pubkey, pub_size[0])[:]
 
         def sign(self, plaintext, ctx=None):
             """
@@ -1875,13 +1914,15 @@ if _lib.ML_KEM_ENABLED:
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("wc_KyberKey_DecodePublicKey() error (%d)" % ret)
 
-        def encapsulate(self, rng=Random()):
+        def encapsulate(self, rng=None):
             """
             :param rng: random number generator for an encupsulation
             :type rng: Random
             :return: tuple of a shared secret (first element) and the cipher text (second element)
             :rtype: tuple[bytes, bytes]
             """
+            if rng is None:
+                rng = Random()
             ct_size = self.ct_size
             ss_size = self.ss_size
             ct = _ffi.new(f"unsigned char[{ct_size}]")
@@ -1919,7 +1960,7 @@ if _lib.ML_KEM_ENABLED:
 
     class MlKemPrivate(_MlKemBase):
         @classmethod
-        def make_key(cls, mlkem_type, rng=Random()):
+        def make_key(cls, mlkem_type, rng=None):
             """
             :param mlkem_type: ML-KEM type
             :type mlkem_type: MlKemType
@@ -1928,6 +1969,8 @@ if _lib.ML_KEM_ENABLED:
             :return: `MlKemPrivate` object
             :rtype: MlKemPrivate
             """
+            if rng is None:
+                rng = Random()
             mlkem_priv = cls(mlkem_type)
             ret = _lib.wc_KyberKey_MakeKey(mlkem_priv.native_object, rng.native_object)
 
@@ -2182,7 +2225,7 @@ if _lib.ML_DSA_ENABLED:
     class MlDsaPrivate(_MlDsaBase):
         
         @classmethod
-        def make_key(cls, mldsa_type, rng=Random()):
+        def make_key(cls, mldsa_type, rng=None):
             """
             :param mldsa_type: ML-DSA type
             :type mldsa_type: MlDsaType
@@ -2191,6 +2234,8 @@ if _lib.ML_DSA_ENABLED:
             :return: `MlDsaPrivate` object
             :rtype: MlDsaPrivate
             """
+            if rng is None:
+                rng = Random()
             mldsa_priv = cls(mldsa_type)
             ret = _lib.wc_dilithium_make_key(
                 mldsa_priv.native_object, rng.native_object
@@ -2305,7 +2350,7 @@ if _lib.ML_DSA_ENABLED:
             if pub_key is not None:
                 self._decode_pub_key(pub_key)
 
-        def sign(self, message, rng=Random(), ctx=None):
+        def sign(self, message, rng=None, ctx=None):
             """
             :param message: message to be signed
             :type message: bytes or str
@@ -2316,6 +2361,8 @@ if _lib.ML_DSA_ENABLED:
             :return: signature
             :rtype: bytes
             """
+            if rng is None:
+                rng = Random()
             msg_bytestype = t2b(message)
             in_size = self.sig_size
             signature = _ffi.new(f"byte[{in_size}]")

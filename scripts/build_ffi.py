@@ -495,6 +495,7 @@ def build_ffi(local_wolfssl, features):
         int ML_KEM_ENABLED = """ + str(features["ML_KEM"]) + """;
         int ML_DSA_ENABLED = """ + str(features["ML_DSA"]) + """;
         int HKDF_ENABLED = """ + str(features["HKDF"]) + """;
+        int ERROR_STRINGS_ENABLED = """ + str(features["ERROR_STRINGS"]) + """;
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -534,6 +535,7 @@ def build_ffi(local_wolfssl, features):
         extern int ML_KEM_ENABLED;
         extern int ML_DSA_ENABLED;
         extern int HKDF_ENABLED;
+        extern int ERROR_STRINGS_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -559,6 +561,7 @@ def build_ffi(local_wolfssl, features):
         typedef struct { ...; } mp_int;
 
         int mp_init (mp_int * a);
+        void mp_clear (mp_int * a);
         int mp_to_unsigned_bin (mp_int * a, unsigned char *b);
         int mp_to_unsigned_bin_len (mp_int * a, unsigned char *b, int c);
         int mp_read_unsigned_bin (mp_int * a, const unsigned char *b, int c);
@@ -570,6 +573,7 @@ def build_ffi(local_wolfssl, features):
         int wc_InitSha(wc_Sha*);
         int wc_ShaUpdate(wc_Sha*, const byte*, word32);
         int wc_ShaFinal(wc_Sha*, byte*);
+        void wc_ShaFree(wc_Sha*);
         """
 
     if features["SHA256"]:
@@ -578,6 +582,7 @@ def build_ffi(local_wolfssl, features):
         int wc_InitSha256(wc_Sha256*);
         int wc_Sha256Update(wc_Sha256*, const byte*, word32);
         int wc_Sha256Final(wc_Sha256*, byte*);
+        void wc_Sha256Free(wc_Sha256*);
         """
 
     if features["SHA384"]:
@@ -586,6 +591,7 @@ def build_ffi(local_wolfssl, features):
         int wc_InitSha384(wc_Sha384*);
         int wc_Sha384Update(wc_Sha384*, const byte*, word32);
         int wc_Sha384Final(wc_Sha384*, byte*);
+        void wc_Sha384Free(wc_Sha384*);
         """
 
     if features["SHA512"]:
@@ -595,6 +601,7 @@ def build_ffi(local_wolfssl, features):
         int wc_InitSha512(wc_Sha512*);
         int wc_Sha512Update(wc_Sha512*, const byte*, word32);
         int wc_Sha512Final(wc_Sha512*, byte*);
+        void wc_Sha512Free(wc_Sha512*);
         """
     if features["SHA3"]:
         cdef += """
@@ -611,6 +618,10 @@ def build_ffi(local_wolfssl, features):
         int wc_Sha3_256_Final(wc_Sha3*, byte*);
         int wc_Sha3_384_Final(wc_Sha3*, byte*);
         int wc_Sha3_512_Final(wc_Sha3*, byte*);
+        int wc_Sha3_224_Free(wc_Sha3*);
+        int wc_Sha3_256_Free(wc_Sha3*);
+        int wc_Sha3_384_Free(wc_Sha3*);
+        int wc_Sha3_512_Free(wc_Sha3*);
         """
 
     if features["DES3"]:
@@ -707,6 +718,7 @@ def build_ffi(local_wolfssl, features):
         int wc_HmacSetKey(Hmac*, int, const byte*, word32);
         int wc_HmacUpdate(Hmac*, const byte*, word32);
         int wc_HmacFinal(Hmac*, byte*);
+        void wc_HmacFree(Hmac*);
         """
 
     if features["RSA"]:
@@ -989,6 +1001,11 @@ def build_ffi(local_wolfssl, features):
 
         int wolfCrypt_SetPrivateKeyReadEnable_fips(int, enum wc_KeyType);
         int wolfCrypt_GetPrivateKeyReadEnable_fips(enum wc_KeyType);
+        """
+
+    if features["ERROR_STRINGS"]:
+        cdef += """
+        const char* wc_GetErrorString(int error);
         """
 
     if features["ML_KEM"] or features["ML_DSA"]:
