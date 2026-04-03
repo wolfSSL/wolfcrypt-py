@@ -421,7 +421,8 @@ if _lib.AESGCM_STREAM_ENABLED:
                 raise WolfCryptError("Init error (%d)" % ret)
 
         def __del__(self):
-            _lib.wc_AesFree(self._native_object)
+            if hasattr(self, '_native_object'):
+                _lib.wc_AesFree(self._native_object)
 
         def set_aad(self, data):
             """
@@ -1230,6 +1231,7 @@ if _lib.ECC_ENABLED:
                 ret = _lib.wc_ecc_set_rng(ecc.native_object, rng.native_object)
                 if ret < 0:
                     raise WolfCryptError("Error setting ECC RNG (%d)" % ret)
+                ecc._rng = rng
 
             return ecc
 
@@ -2296,9 +2298,7 @@ if _lib.ML_DSA_ENABLED:
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("wc_MlDsaKey_GetPrivLen() error (%d)" % ret)
 
-            key_pair_size = size[0]
-
-            return key_pair_size - self.pub_key_size
+            return size[0] - self.pub_key_size
 
         def encode_pub_key(self):
             """

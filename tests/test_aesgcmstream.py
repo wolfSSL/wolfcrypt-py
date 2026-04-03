@@ -122,3 +122,16 @@ if _lib.AESGCM_STREAM_ENABLED:
         gcmdec.decrypt(buf)
         with pytest.raises(WolfCryptError):
             gcmdec.final(authTag)
+
+    def test_invalid_tag_bytes():
+        key = "fedcba9876543210"
+        iv = "0123456789abcdef"
+        with pytest.raises(ValueError, match="tag_bytes must be between 4 and 16"):
+            AesGcmStream(key, iv, tag_bytes=0)
+        with pytest.raises(ValueError, match="tag_bytes must be between 4 and 16"):
+            AesGcmStream(key, iv, tag_bytes=3)
+        with pytest.raises(ValueError, match="tag_bytes must be between 4 and 16"):
+            AesGcmStream(key, iv, tag_bytes=17)
+        # valid edge cases
+        AesGcmStream(key, iv, tag_bytes=4)
+        AesGcmStream(key, iv, tag_bytes=16)

@@ -225,19 +225,21 @@ if _lib.SHA3_ENABLED:
         SHA3_384_DIGEST_SIZE = 48
         SHA3_512_DIGEST_SIZE = 64
 
+        _SHA3_FREE = {
+            28: _lib.wc_Sha3_224_Free,
+            32: _lib.wc_Sha3_256_Free,
+            48: _lib.wc_Sha3_384_Free,
+            64: _lib.wc_Sha3_512_Free,
+        }
+
         def __del__(self):
-            if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
-                _lib.wc_Sha3_224_Free(self._native_object)
-            elif self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
-                _lib.wc_Sha3_256_Free(self._native_object)
-            elif self.digest_size == Sha3.SHA3_384_DIGEST_SIZE:
-                _lib.wc_Sha3_384_Free(self._native_object)
-            elif self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
-                _lib.wc_Sha3_512_Free(self._native_object)
+            if hasattr(self, '_delete'):
+                self._delete(self._native_object)
 
         def __init__(self, string=None, size=SHA3_384_DIGEST_SIZE):  # pylint: disable=W0231
             self._native_object = _ffi.new(self._native_type)
             self.digest_size = size
+            self._delete = self._SHA3_FREE.get(size)
             ret = self._init()
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("Sha3 init error (%d)" % ret)

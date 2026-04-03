@@ -872,3 +872,29 @@ def test_aessiv_decrypt_kat_openssl():
         TEST_VECTOR_CIPHERTEXT_OPENSSL
     )
     assert plaintext == TEST_VECTOR_PLAINTEXT_OPENSSL
+
+
+if _lib.DES3_ENABLED:
+    def test_des3_rejects_mode_ctr():
+        key = b"\x01\x23\x45\x67\x89\xab\xcd\xef" * 3
+        iv = b"\xfe\xdc\xba\x98\x76\x54\x32\x10"
+        with pytest.raises(ValueError, match="Des3 only supports MODE_CBC"):
+            Des3(key, MODE_CTR, iv)
+
+
+if _lib.CHACHA_ENABLED:
+    def test_chacha_non_block_aligned():
+        key = b"\x00" * 32
+        chacha = ChaCha(key)
+        chacha.set_iv(b"\x00" * 12)
+        plaintext = b"This is 25 bytes of text!"
+        assert len(plaintext) == 25
+        ciphertext = chacha.encrypt(plaintext)
+        assert len(ciphertext) == 25
+        chacha2 = ChaCha(key)
+        chacha2.set_iv(b"\x00" * 12)
+        assert chacha2.decrypt(ciphertext) == plaintext
+
+    def test_chacha_invalid_key_length():
+        with pytest.raises(ValueError, match="key must be"):
+            ChaCha(b"\x00" * 20)

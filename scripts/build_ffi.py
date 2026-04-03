@@ -304,13 +304,14 @@ def generate_libwolfssl(fips):
 
 def get_features(local_wolfssl, features):
     fips = False
+    fips_file = None
 
-    if sys.platform == "win32":
+    if local_wolfssl and sys.platform == "win32":
         # On Windows, we assume the local_wolfssl path is to a wolfSSL source
         # directory where the library has been built.
         fips_file = os.path.join(local_wolfssl, "wolfssl", "wolfcrypt",
             "fips.h")
-    else:
+    elif local_wolfssl:
         # On non-Windows platforms, first assume local_wolfssl is an
         # installation directory with an include subdirectory.
         fips_file = os.path.join(local_wolfssl, "include", "wolfssl",
@@ -320,7 +321,7 @@ def get_features(local_wolfssl, features):
             fips_file = os.path.join(local_wolfssl, "wolfssl", "wolfcrypt",
                 "fips.h")
 
-    if os.path.exists(fips_file):
+    if fips_file and os.path.exists(fips_file):
         with open(fips_file, "r") as f:
             contents = f.read()
             if not contents.isspace():
@@ -618,10 +619,10 @@ def build_ffi(local_wolfssl, features):
         int wc_Sha3_256_Final(wc_Sha3*, byte*);
         int wc_Sha3_384_Final(wc_Sha3*, byte*);
         int wc_Sha3_512_Final(wc_Sha3*, byte*);
-        int wc_Sha3_224_Free(wc_Sha3*);
-        int wc_Sha3_256_Free(wc_Sha3*);
-        int wc_Sha3_384_Free(wc_Sha3*);
-        int wc_Sha3_512_Free(wc_Sha3*);
+        void wc_Sha3_224_Free(wc_Sha3*);
+        void wc_Sha3_256_Free(wc_Sha3*);
+        void wc_Sha3_384_Free(wc_Sha3*);
+        void wc_Sha3_512_Free(wc_Sha3*);
         """
 
     if features["DES3"]:
@@ -1112,16 +1113,16 @@ def main(ffibuilder):
             e = "Local wolfssl installation path {} doesn't exist.".format(local_wolfssl)
             raise FileNotFoundError(e)
 
-        get_features(local_wolfssl, features)
-
-    if features["RSA_BLINDING"] and features["FIPS"]:
-        # These settings can't coexist. See settings.h.
-        features["RSA_BLINDING"] = 0
-
     if not local_wolfssl:
         print("Building wolfSSL...")
         if not get_libwolfssl():
             generate_libwolfssl(features["FIPS"])
+
+    get_features(local_wolfssl, features)
+
+    if features["RSA_BLINDING"] and features["FIPS"]:
+        # These settings can't coexist. See settings.h.
+        features["RSA_BLINDING"] = 0
 
     build_ffi(local_wolfssl, features)
 
