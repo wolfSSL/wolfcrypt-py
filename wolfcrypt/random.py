@@ -31,14 +31,14 @@ class Random(object):
     A Cryptographically Secure Pseudo Random Number Generator - CSPRNG
     """
 
-    def __init__(self, nonce=_ffi.NULL):
+    def __init__(self, nonce=_ffi.NULL, device_id=_lib.INVALID_DEVID):
         self.native_object = _ffi.new("WC_RNG *")
 
         if nonce == _ffi.NULL:
             nonce_size = 0
         else:
             nonce_size = len(nonce)
-        ret = _lib.wc_InitRngNonce(self.native_object, nonce, nonce_size)
+        ret = _lib.wc_InitRngNonce_ex(self.native_object, nonce, nonce_size, _ffi.NULL, device_id)
         if ret < 0:  # pragma: no cover
             self.native_object = None
             raise WolfCryptError("RNG init error (%d)" % ret)
