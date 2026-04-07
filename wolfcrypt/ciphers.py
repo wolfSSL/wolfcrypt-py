@@ -684,13 +684,16 @@ if _lib.RSA_ENABLED:
         _mgf = None
         _hash_type = None
 
-        def __init__(self):
+        def __init__(self, rng=None):
+            if rng is None:
+                rng = Random()
+
             self.native_object = _ffi.new("RsaKey *")
             ret = _lib.wc_InitRsaKey(self.native_object, _ffi.NULL)
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
-            self._random = Random()
+            self._random = rng
             if _lib.RSA_BLINDING_ENABLED:
                 ret = _lib.wc_RsaSetRNG(self.native_object,
                         self._random.native_object)
@@ -724,12 +727,12 @@ if _lib.RSA_ENABLED:
 
 
     class RsaPublic(_Rsa):
-        def __init__(self, key=None, hash_type=None):
+        def __init__(self, key=None, hash_type=None, rng=None):
+            super().__init__(rng)
+
             if key is not None:
                 key = t2b(key)
             self._hash_type = hash_type
-
-            _Rsa.__init__(self)
 
             idx = _ffi.new("word32*")
             idx[0] = 0
@@ -883,9 +886,9 @@ if _lib.RSA_ENABLED:
 
                 return rsa
 
-        def __init__(self, key=None, hash_type=None):  # pylint: disable=super-init-not-called
+        def __init__(self, key=None, hash_type=None, rng=None):  # pylint: disable=super-init-not-called
 
-            _Rsa.__init__(self)  # pylint: disable=non-parent-init-called
+            _Rsa.__init__(self, rng)  # pylint: disable=non-parent-init-called
             self._hash_type = hash_type
             idx = _ffi.new("word32*")
             idx[0] = 0
