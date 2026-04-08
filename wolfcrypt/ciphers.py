@@ -213,10 +213,9 @@ class _Cipher(object):
         string = t2b(string)
 
         if not string:
-            raise ValueError(
-                    "empty string not allowed")
+            raise ValueError("empty string not allowed")
 
-        if len(string) % self.block_size and not self.mode == MODE_CTR and not "ChaCha" in self._native_type:
+        if len(string) % self.block_size and self.mode != MODE_CTR and "ChaCha" not in self._native_type:
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
 
@@ -498,7 +497,7 @@ if _lib.CHACHA_ENABLED:
             self._dec = None
             self._key = None
             if len(key) > 0:
-                if not size in self._key_sizes:
+                if size not in self._key_sizes:
                     raise ValueError("Invalid key size %d" % size)
                 self._key = t2b(key)
                 self.key_size = size
@@ -506,7 +505,7 @@ if _lib.CHACHA_ENABLED:
             self._IV_counter = 0
 
         def _set_key(self, direction):
-            if self._key == None:
+            if self._key is None:
                 return -1
             if self._enc:
                 ret = _lib.wc_Chacha_SetKey(self._enc, self._key, len(self._key))
@@ -692,7 +691,7 @@ if _lib.RSA_ENABLED:
 
     class RsaPublic(_Rsa):
         def __init__(self, key=None, hash_type=None):
-            if key != None:
+            if key is not None:
                 key = t2b(key)
             self._hash_type = hash_type
 
@@ -830,7 +829,7 @@ if _lib.RSA_ENABLED:
                 Generates a new key pair of desired length **size**.
                 """
                 rsa = cls(hash_type=hash_type)
-                if rsa == None:  # pragma: no cover
+                if rsa is None:  # pragma: no cover
                     raise WolfCryptError("Invalid key error (%d)" % ret)
 
                 ret = _lib.wc_MakeRsaKey(rsa.native_object, size, 65537,
@@ -852,7 +851,7 @@ if _lib.RSA_ENABLED:
             idx = _ffi.new("word32*")
             idx[0] = 0
 
-            if key != None:
+            if key is not None:
                 key = t2b(key)
                 ret = _lib.wc_RsaPrivateKeyDecode(key, idx,
                                               self.native_object, len(key))
@@ -1622,7 +1621,7 @@ if _lib.ED448_ENABLED:
             status = _ffi.new("int[1]")
             ctx_buf = _ffi.NULL
             ctx_buf_len = 0
-            if ctx != None:
+            if ctx is not None:
                 ctx_buf = t2b(ctx)
                 ctx_buf_len = len(ctx_buf)
 
@@ -1732,7 +1731,7 @@ if _lib.ED448_ENABLED:
             signature_size[0] = self.max_signature_size
             ctx_buf = _ffi.NULL
             ctx_buf_len = 0
-            if (ctx != None):
+            if ctx is not None:
                 ctx_buf = t2b(ctx)
                 ctx_buf_len = len(ctx_buf)
 
