@@ -238,6 +238,10 @@ def make_flags(prefix, fips):
         # ML-DSA
         flags.append("--enable-dilithium")
 
+        # Crypto Callbacks
+        flags.append("--enable-cryptocb")
+        # flags.append("EXTRACPPFLAGS=-DDEBUG_CRYPTOCB")
+
         # disabling other configs enabled by default
         flags.append("--disable-oldtls")
         flags.append("--disable-oldnames")
@@ -378,6 +382,7 @@ def get_features(local_wolfssl, features):
     features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
+    features["CRYPTO_CB"] = 1 if "#define WOLF_CRYPTO_CB" in defines else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -456,6 +461,7 @@ def build_ffi(local_wolfssl, features):
         #include <wolfssl/wolfcrypt/mlkem.h>
         #include <wolfssl/wolfcrypt/wc_mlkem.h>
         #include <wolfssl/wolfcrypt/dilithium.h>
+        #include <wolfssl/wolfcrypt/cryptocb.h>
     """
 
     init_source_string = """
@@ -497,6 +503,7 @@ def build_ffi(local_wolfssl, features):
         int ML_KEM_ENABLED = """ + str(features["ML_KEM"]) + """;
         int ML_DSA_ENABLED = """ + str(features["ML_DSA"]) + """;
         int HKDF_ENABLED = """ + str(features["HKDF"]) + """;
+        int CRYPTO_CB_ENABLED = """ + str(features["CRYPTO_CB"]) + """;
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -537,12 +544,15 @@ def build_ffi(local_wolfssl, features):
         extern int ML_KEM_ENABLED;
         extern int ML_DSA_ENABLED;
         extern int HKDF_ENABLED;
+        extern int CRYPTO_CB_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
 
         typedef struct { ...; } WC_RNG;
         typedef struct { ...; } OS_Seed;
+
+        int wolfCrypt_Init(void);
 
         int wc_InitRng(WC_RNG*);
         int wc_InitRngNonce(WC_RNG*, byte*, word32);
@@ -1331,6 +1341,110 @@ def build_ffi(local_wolfssl, features):
         int wc_MlDsaKey_GetSigLen(MlDsaKey* key, int* len);
         """
 
+    if features["CRYPTO_CB"]:
+        cdef += """
+        static const int WC_ALGO_TYPE_NONE;
+        static const int WC_ALGO_TYPE_HASH;
+        static const int WC_ALGO_TYPE_CIPHER;
+        static const int WC_ALGO_TYPE_PK;
+        static const int WC_ALGO_TYPE_RNG;
+        static const int WC_ALGO_TYPE_SEED;
+        static const int WC_ALGO_TYPE_HMAC;
+        static const int WC_ALGO_TYPE_CMAC;
+        static const int WC_ALGO_TYPE_CERT;
+        static const int WC_ALGO_TYPE_KDF;
+        static const int WC_ALGO_TYPE_COPY;
+        static const int WC_ALGO_TYPE_FREE;
+        static const int WC_ALGO_TYPE_MAX;
+
+        static const int WC_HASH_TYPE_SHA; /* SHA-1 (not old SHA-0) */
+        static const int WC_HASH_TYPE_SHA256;
+        static const int WC_HASH_TYPE_SHA384;
+        static const int WC_HASH_TYPE_SHA512;
+        static const int WC_HASH_TYPE_SHA3_256;
+        static const int WC_HASH_TYPE_SHA3_384;
+        static const int WC_HASH_TYPE_SHA3_512;
+        """
+
+
+        cdef += """
+        typedef struct {
+            int algo_type; /* enum wc_AlgoType */
+            union {
+        """
+
+        """
+            struct {
+                int type; /* enum wc_CipherType */
+                int enc;
+                union {
+                    //wc_CryptoCb_AesAuthEnc aesgcm_enc;
+                    //wc_CryptoCb_AesAuthDec aesgcm_dec;
+                    //wc_CryptoCb_AesAuthEnc aesccm_enc;
+                    //wc_CryptoCb_AesAuthDec aesccm_dec;
+                    struct {
+                        Aes*        aes;
+                        byte*       out;
+                        const byte* in;
+                        word32      sz;
+                    } aescbc;
+                    //struct {
+                    //    Aes*        aes;
+                    //    byte*       out;
+                    //    const byte* in;
+                    //    word32      sz;
+                    //} aesctr;
+                    //struct {
+                    //    Aes*        aes;
+                    //    byte*       out;
+                    //    const byte* in;
+                    //    word32      sz;
+                    //} aesecb;
+                    //struct {
+                    //    Des3*       des;
+                    //    byte*       out;
+                    //    const byte* in;
+                    //    word32      sz;
+                    //} des3;
+                    //void* ctx;
+                };
+            } cipher;
+        """
+        cdef += """
+            struct {
+                int type; /* enum wc_HashType */
+                const byte* data;
+                word32 data_size;
+                byte* digest;
+                union {
+                    wc_Sha* sha1;
+                    // wc_Sha224* sha224;
+                    wc_Sha256* sha256;
+                    wc_Sha384* sha384;
+                    wc_Sha512* sha512;
+                    wc_Sha3* sha3;
+                    void* ctx;
+                } u;
+            } hash;
+        """
+        cdef += """
+            struct {
+                WC_RNG* rng;
+                byte* out;
+                word32 sz;
+            } rng;
+            };
+            ...;
+        } wc_CryptoInfo;
+
+        typedef int (*CryptoDevCallbackFunc)(int devId, wc_CryptoInfo* info, void* ctx);
+        extern "Python" int py_wc_crypto_callback(int devId, wc_CryptoInfo* info, void* ctx);
+        int wc_CryptoCb_RegisterDevice(int devId, CryptoDevCallbackFunc cb, void* ctx);
+        void wc_CryptoCb_UnRegisterDevice(int devId);
+        int wc_CryptoCb_DefaultDevID();
+        // void wc_CryptoCb_InfoString(wc_CryptoInfo* info);
+        """
+
     ffibuilder.cdef(cdef)
 
 def main(ffibuilder):
@@ -1365,6 +1479,7 @@ def main(ffibuilder):
         "ML_KEM": 1,
         "ML_DSA": 1,
         "HKDF": 1,
+        "CRYPTO_CB": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
