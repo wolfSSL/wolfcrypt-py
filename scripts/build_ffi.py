@@ -238,6 +238,10 @@ def make_flags(prefix, fips):
         # ML-DSA (note: to be able to use the legacy option of signing without context, pass `yes,no-ctx` as argument)
         flags.append("--enable-mldsa=yes")
 
+        # Crypto Callbacks
+        flags.append("--enable-cryptocb")
+        # flags.append("EXTRACPPFLAGS=-DDEBUG_CRYPTOCB")
+
         # disabling other configs enabled by default
         flags.append("--disable-oldtls")
         flags.append("--disable-oldnames")
@@ -394,6 +398,7 @@ def get_features(local_wolfssl, features):
     # Unlike the other fatures, HASHDRBG is enabled by default in random.h, unless WC_NO_HASHDRBG or
     # CUSTOM_RAND_GENERATE_BLOCK is defined.
     features["HASHDRBG"] = 0 if ("#define WC_NO_HASHDRBG" in defines or "#define CUSTOM_RAND_GENERATE_BLOCK" in defines) else 1
+    features["CRYPTO_CB"] = 1 if "#define WOLF_CRYPTO_CB" in defines else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -471,6 +476,7 @@ def build_ffi(local_wolfssl, features):
         #include <wolfssl/wolfcrypt/chacha20_poly1305.h>
         #include <wolfssl/wolfcrypt/wc_mlkem.h>
         #include <wolfssl/wolfcrypt/wc_mldsa.h>
+        #include <wolfssl/wolfcrypt/cryptocb.h>
     """
 
     init_source_string = f"""
@@ -515,6 +521,7 @@ def build_ffi(local_wolfssl, features):
         int ML_DSA_NO_CTX_ENABLED = {features["ML_DSA_NO_CTX"]};
         int HKDF_ENABLED = {features["HKDF"]};
         int HASHDRBG_ENABLED = {features["HASHDRBG"]};
+        int CRYPTO_CB_ENABLED = {features["CRYPTO_CB"]};
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -558,12 +565,15 @@ def build_ffi(local_wolfssl, features):
         extern int ML_DSA_NO_CTX_ENABLED;
         extern int HKDF_ENABLED;
         extern int HASHDRBG_ENABLED;
+        extern int CRYPTO_CB_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
 
         typedef struct { ...; } WC_RNG;
         typedef struct { ...; } OS_Seed;
+
+        int wolfCrypt_Init(void);
 
         int wc_InitRng(WC_RNG*);
         int wc_InitRngNonce(WC_RNG*, byte*, word32);
@@ -1363,6 +1373,110 @@ def build_ffi(local_wolfssl, features):
             int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
             """
 
+    if features["CRYPTO_CB"]:
+        cdef += """
+        static const int WC_ALGO_TYPE_NONE;
+        static const int WC_ALGO_TYPE_HASH;
+        static const int WC_ALGO_TYPE_CIPHER;
+        static const int WC_ALGO_TYPE_PK;
+        static const int WC_ALGO_TYPE_RNG;
+        static const int WC_ALGO_TYPE_SEED;
+        static const int WC_ALGO_TYPE_HMAC;
+        static const int WC_ALGO_TYPE_CMAC;
+        static const int WC_ALGO_TYPE_CERT;
+        static const int WC_ALGO_TYPE_KDF;
+        static const int WC_ALGO_TYPE_COPY;
+        static const int WC_ALGO_TYPE_FREE;
+        static const int WC_ALGO_TYPE_MAX;
+
+        static const int WC_HASH_TYPE_SHA; /* SHA-1 (not old SHA-0) */
+        static const int WC_HASH_TYPE_SHA256;
+        static const int WC_HASH_TYPE_SHA384;
+        static const int WC_HASH_TYPE_SHA512;
+        static const int WC_HASH_TYPE_SHA3_256;
+        static const int WC_HASH_TYPE_SHA3_384;
+        static const int WC_HASH_TYPE_SHA3_512;
+        """
+
+
+        cdef += """
+        typedef struct {
+            int algo_type; /* enum wc_AlgoType */
+            union {
+        """
+
+        """
+            struct {
+                int type; /* enum wc_CipherType */
+                int enc;
+                union {
+                    //wc_CryptoCb_AesAuthEnc aesgcm_enc;
+                    //wc_CryptoCb_AesAuthDec aesgcm_dec;
+                    //wc_CryptoCb_AesAuthEnc aesccm_enc;
+                    //wc_CryptoCb_AesAuthDec aesccm_dec;
+                    struct {
+                        Aes*        aes;
+                        byte*       out;
+                        const byte* in;
+                        word32      sz;
+                    } aescbc;
+                    //struct {
+                    //    Aes*        aes;
+                    //    byte*       out;
+                    //    const byte* in;
+                    //    word32      sz;
+                    //} aesctr;
+                    //struct {
+                    //    Aes*        aes;
+                    //    byte*       out;
+                    //    const byte* in;
+                    //    word32      sz;
+                    //} aesecb;
+                    //struct {
+                    //    Des3*       des;
+                    //    byte*       out;
+                    //    const byte* in;
+                    //    word32      sz;
+                    //} des3;
+                    //void* ctx;
+                };
+            } cipher;
+        """
+        cdef += """
+            struct {
+                int type; /* enum wc_HashType */
+                const byte* data;
+                word32 data_size;
+                byte* digest;
+                union {
+                    wc_Sha* sha1;
+                    // wc_Sha224* sha224;
+                    wc_Sha256* sha256;
+                    wc_Sha384* sha384;
+                    wc_Sha512* sha512;
+                    wc_Sha3* sha3;
+                    void* ctx;
+                } u;
+            } hash;
+        """
+        cdef += """
+            struct {
+                WC_RNG* rng;
+                byte* out;
+                word32 sz;
+            } rng;
+            };
+            ...;
+        } wc_CryptoInfo;
+
+        typedef int (*CryptoDevCallbackFunc)(int devId, wc_CryptoInfo* info, void* ctx);
+        extern "Python" int py_wc_crypto_callback(int devId, wc_CryptoInfo* info, void* ctx);
+        int wc_CryptoCb_RegisterDevice(int devId, CryptoDevCallbackFunc cb, void* ctx);
+        void wc_CryptoCb_UnRegisterDevice(int devId);
+        int wc_CryptoCb_DefaultDevID();
+        // void wc_CryptoCb_InfoString(wc_CryptoInfo* info);
+        """
+
     ffibuilder.cdef(cdef)
 
 def main(ffibuilder):
@@ -1400,6 +1514,7 @@ def main(ffibuilder):
         "ML_DSA_NO_CTX": 0,
         "HKDF": 1,
         "HASHDRBG": 1,
+        "CRYPTO_CB": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
