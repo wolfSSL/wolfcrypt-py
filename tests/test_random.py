@@ -37,3 +37,14 @@ def test_bytes(rng):
     assert len(rng.bytes(1)) == 1
     assert len(rng.bytes(8)) == 8
     assert len(rng.bytes(128)) == 128
+
+@pytest.fixture
+def rng_nonce():
+    return Random(b"abcdefghijklmnopqrstuv")
+
+def test_nonce_byte(rng_nonce):
+    assert len(rng_nonce.byte()) == 1
+
+@pytest.mark.parametrize("length", (1, 8, 128))
+def test_nonce_bytes(rng_nonce, length):
+    assert len(rng_nonce.bytes(length)) == length
