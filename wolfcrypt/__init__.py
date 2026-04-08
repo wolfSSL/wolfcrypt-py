@@ -46,6 +46,7 @@ top_level_py = os.path.basename(sys.argv[0])
 if top_level_py not in ["setup.py", "build_ffi.py"]:
     from wolfcrypt._ffi import ffi as _ffi
     from wolfcrypt._ffi import lib as _lib
+    from wolfcrypt.exceptions import WolfCryptError
 
     if hasattr(_lib, 'WC_RNG_SEED_CB_ENABLED'):
         if _lib.WC_RNG_SEED_CB_ENABLED:
@@ -53,8 +54,7 @@ if top_level_py not in ["setup.py", "build_ffi.py"]:
             if ret < 0:
                 raise WolfCryptError("wc_SetSeed_Cb failed (%d)" % ret)
     if _lib.FIPS_ENABLED and _lib.FIPS_VERSION >= 5:
-        ret = _lib.wolfCrypt_SetPrivateKeyReadEnable_fips(1,
-                                                          _lib.WC_KEYTYPE_ALL);
+        ret = _lib.wolfCrypt_SetPrivateKeyReadEnable_fips(1, _lib.WC_KEYTYPE_ALL)
         if ret < 0:
             raise WolfCryptError("wolfCrypt_SetPrivateKeyReadEnable_fips failed"
                 " (%d)" % ret)
