@@ -1096,7 +1096,7 @@ if _lib.ECC_ENABLED:
             qy_size[0] = self.size
 
             ret = _lib.wc_ecc_export_public_raw(self.native_object, Qx,
-                    qx_size, Qy, qy_size);
+                    qx_size, Qy, qy_size)
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Key encode error (%d)" % ret)
 
@@ -1265,7 +1265,7 @@ if _lib.ECC_ENABLED:
             d_size[0] = self.size
 
             ret = _lib.wc_ecc_export_private_raw(self.native_object, Qx,
-                    qx_size, Qy, qy_size, d, d_size);
+                    qx_size, Qy, qy_size, d, d_size)
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Key encode error (%d)" % ret)
 
@@ -1322,8 +1322,8 @@ if _lib.ECC_ENABLED:
                 Returns the signature in its two raw components r, s
                 """
                 plaintext = t2b(plaintext)
-                R = _ffi.new("mp_int[1]");
-                S = _ffi.new("mp_int[1]");
+                R = _ffi.new("mp_int[1]")
+                S = _ffi.new("mp_int[1]")
 
                 R_bin = _ffi.new("unsigned char[%d]" % self.size )
                 S_bin = _ffi.new("unsigned char[%d]" % self.size )
@@ -1478,12 +1478,12 @@ if _lib.ED25519_ENABLED:
             idx[0] = 0
             if pub:
                 ret = _lib.wc_ed25519_import_private_key(key, len(key), pub,
-                        len(pub), self.native_object);
+                        len(pub), self.native_object)
                 if ret < 0:
                     raise WolfCryptError("Key decode error (%d)" % ret)
             else:
                 ret = _lib.wc_ed25519_import_private_only(key, len(key),
-                        self.native_object);
+                        self.native_object)
                 if ret < 0:
                     raise WolfCryptError("Key decode error (%d)" % ret)
                 pubkey = _ffi.new("byte[%d]" % (self.size * 4))
@@ -1492,7 +1492,7 @@ if _lib.ED25519_ENABLED:
                 if ret < 0:
                     raise WolfCryptError("Public key generate error (%d)" % ret)
                 ret = _lib.wc_ed25519_import_public(pubkey, self.size,
-                        self.native_object);
+                        self.native_object)
 
             if self.size <= 0:  # pragma: no cover
                 raise WolfCryptError("Key decode error (%d)" % self.size)
@@ -1674,12 +1674,12 @@ if _lib.ED448_ENABLED:
             idx[0] = 0
             if pub:
                 ret = _lib.wc_ed448_import_private_key(key, len(key), pub,
-                        len(pub), self.native_object);
+                        len(pub), self.native_object)
                 if ret < 0:
                     raise WolfCryptError("Key decode error (%d)" % ret)
             else:
                 ret = _lib.wc_ed448_import_private_only(key, len(key),
-                        self.native_object);
+                        self.native_object)
                 if ret < 0:
                     raise WolfCryptError("Key decode error (%d)" % ret)
                 pubkey = _ffi.new("byte[%d]" % (self.size * 4))
@@ -1688,7 +1688,7 @@ if _lib.ED448_ENABLED:
                 if ret < 0:
                     raise WolfCryptError("Public key generate error (%d)" % ret)
                 ret = _lib.wc_ed448_import_public(pubkey, self.size,
-                        self.native_object);
+                        self.native_object)
 
             if self.size <= 0:  # pragma: no cover
                 raise WolfCryptError("Key decode error (%d)" % self.size)
