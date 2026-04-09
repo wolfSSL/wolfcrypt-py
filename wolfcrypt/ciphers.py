@@ -829,8 +829,6 @@ if _lib.RSA_ENABLED:
                 Generates a new key pair of desired length **size**.
                 """
                 rsa = cls(hash_type=hash_type)
-                if rsa is None:  # pragma: no cover
-                    raise WolfCryptError("Invalid key error (%d)" % ret)
 
                 ret = _lib.wc_MakeRsaKey(rsa.native_object, size, 65537,
                         rng.native_object)
