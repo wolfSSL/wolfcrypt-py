@@ -332,7 +332,7 @@ def get_features(local_wolfssl, features):
 
     for d in include_dirs:
         if not os.path.exists(d):
-            e = "Invalid wolfSSL include dir: .".format(d)
+            e = f"Invalid wolfSSL include dir: {d}"
             raise FileNotFoundError(e)
 
         options = os.path.join(d, "wolfssl", "options.h")
