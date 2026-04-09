@@ -26,7 +26,6 @@ from contextlib import contextmanager
 from distutils.util import get_platform
 from cffi import FFI
 import shutil
-import glob
 from wolfcrypt._version import __wolfssl_version__ as version
 
 def local_path(path):
