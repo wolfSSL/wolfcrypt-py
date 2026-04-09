@@ -23,11 +23,10 @@
 from wolfcrypt._ffi import lib as _lib
 
 if _lib.AESGCM_STREAM_ENABLED:
-    from collections import namedtuple
     import pytest
     from wolfcrypt.utils import t2b
     from wolfcrypt.exceptions import WolfCryptError
-    from binascii import hexlify as b2h, unhexlify as h2b
+    from binascii import hexlify as b2h
     from wolfcrypt.ciphers import AesGcmStream
 
     def test_encrypt():

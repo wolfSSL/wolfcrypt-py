@@ -23,8 +23,8 @@
 from collections import namedtuple
 import random
 import pytest
-from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
+from wolfcrypt.ciphers import MODE_CTR, MODE_ECB, MODE_CBC, WolfCryptError
 from wolfcrypt.utils import t2b, h2b
 import os
 
@@ -43,20 +43,16 @@ if _lib.CHACHA_ENABLED:
     from wolfcrypt.ciphers import ChaCha
 
 if _lib.RSA_ENABLED:
-    from wolfcrypt.ciphers import (RsaPrivate, RsaPublic, HASH_TYPE_SHA256, MGF1SHA256, HASH_TYPE_SHA, MGF1SHA1)
+    from wolfcrypt.ciphers import RsaPrivate, RsaPublic, HASH_TYPE_SHA256, HASH_TYPE_SHA
 
 if _lib.ECC_ENABLED:
-    from wolfcrypt.ciphers import (EccPrivate, EccPublic)
+    from wolfcrypt.ciphers import EccPrivate, EccPublic
 
 if _lib.ED25519_ENABLED:
-    from wolfcrypt.ciphers import (Ed25519Private, Ed25519Public)
+    from wolfcrypt.ciphers import Ed25519Private, Ed25519Public
 
 if _lib.ED448_ENABLED:
-    from wolfcrypt.ciphers import (Ed448Private, Ed448Public)
-
-from wolfcrypt.ciphers import (
-    MODE_CTR, MODE_ECB, MODE_CBC, WolfCryptError
-)
+    from wolfcrypt.ciphers import Ed448Private, Ed448Public
 
 
 @pytest.fixture
