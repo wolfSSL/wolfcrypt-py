@@ -25,10 +25,8 @@ from wolfcrypt._ffi import lib as _lib
 if _lib.ML_DSA_ENABLED:
     import pytest
 
-    from wolfcrypt.ciphers import MlDsaPrivate, MlDsaPublic, MlDsaType
+    from wolfcrypt.ciphers import MlDsaPrivate, MlDsaPublic, MlDsaType, ML_DSA_KEYGEN_SEED_LENGTH
     from wolfcrypt.random import Random
-
-    ML_DSA_SEED_LENGTH = 32
 
     @pytest.fixture
     def rng():
@@ -138,7 +136,7 @@ if _lib.ML_DSA_ENABLED:
         assert not mldsa_pub.verify(signature, wrong_message)
 
     def test_generate_from_seed(mldsa_type, rng):
-        private_key_seed = rng.bytes(ML_DSA_SEED_LENGTH)
+        private_key_seed = rng.bytes(ML_DSA_KEYGEN_SEED_LENGTH)
         mldsa_priv = MlDsaPrivate.make_key_from_seed(mldsa_type, private_key_seed)
         pub_key = mldsa_priv.encode_pub_key()
 
@@ -159,12 +157,11 @@ if _lib.ML_DSA_ENABLED:
         assert mldsa_priv_regenerated.encode_priv_key() == mldsa_priv.encode_priv_key()
         assert mldsa_priv_regenerated.encode_pub_key() == mldsa_priv.encode_pub_key()
 
-        # test that the seed is checked:
-        with pytest.raises(AssertionError):
-            mldsa_priv = MlDsaPrivate.make_key_from_seed(mldsa_type, private_key_seed[:-1])
-
-        with pytest.raises(AssertionError):
-            mldsa_priv = MlDsaPrivate.make_key_from_seed(mldsa_type, private_key_seed + bytes(1))
-
-        with pytest.raises(AssertionError):
-            mldsa_priv = MlDsaPrivate.make_key_from_seed(mldsa_type, 'a' * 32)
+        # test that the seed length is checked:
+        with pytest.raises(ValueError):
+            mldsa_priv = MlDsaPrivate.make_key_from_seed(mldsa_type, bytes(ML_DSA_KEYGEN_SEED_LENGTH - 1))
+        with pytest.raises(ValueError):
+            mldsa_priv = MlDsaPrivate.make_key_from_seed(mldsa_type, bytes(ML_DSA_KEYGEN_SEED_LENGTH + 1))
+        # test that the seed type is checked (should be bytes-like, not a string)
+        with pytest.raises(TypeError):
+            mldsa_priv = MlDsaPrivate.make_key_from_seed(mldsa_type, 'a' * ML_DSA_KEYGEN_SEED_LENGTH)

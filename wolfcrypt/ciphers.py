@@ -2031,6 +2031,9 @@ if _lib.ML_KEM_ENABLED:
 
 
 if _lib.ML_DSA_ENABLED:
+    ML_DSA_KEYGEN_SEED_LENGTH = 32
+    """The length of a private key generation seed."""
+        
     class MlDsaType(IntEnum):
         """
         `MlDsaType` specifies supported ML-DSA types.
@@ -2152,8 +2155,6 @@ if _lib.ML_DSA_ENABLED:
             return res[0] == 1
 
     class MlDsaPrivate(_MlDsaBase):
-        _SEED_LENGTH = 32
-        """The length of a private key generation seed."""
         
         @classmethod
         def make_key(cls, mldsa_type, rng=Random()):
@@ -2186,11 +2187,19 @@ if _lib.ML_DSA_ENABLED:
             :type seed: bytes
             """
             mldsa_priv = cls(mldsa_type)
-            assert isinstance(seed, bytes) and len(seed) == MlDsaPrivate._SEED_LENGTH, \
-                f"Seed for generating ML-DSA key must be {MlDsaPrivate._SEED_LENGTH} bytes"
+            try:
+                seed_view = memoryview(seed)
+            except TypeError as exception:
+                raise TypeError(
+                    "seed must support the buffer protocol, such as `bytes` or `bytearray`"
+                ) from exception
+            if len(seed_view) != ML_DSA_KEYGEN_SEED_LENGTH:
+                raise ValueError(
+                    f"Seed for generating ML-DSA key must be {ML_DSA_KEYGEN_SEED_LENGTH} bytes"
+                )
 
             ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object,
-                    _ffi.from_buffer(seed))
+                    _ffi.from_buffer(seed_view))
 
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("wc_dilithium_make_key_from_seed() error (%d)" % ret)
