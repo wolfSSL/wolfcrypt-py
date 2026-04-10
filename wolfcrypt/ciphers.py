@@ -2151,6 +2151,8 @@ if _lib.ML_DSA_ENABLED:
                     res,
                     self.native_object,
                 )
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptError("wc_dilithium_verify_ctx_msg() error (%d)" % ret)
             else:
                 ret = _lib.wc_dilithium_verify_msg(
                     _ffi.from_buffer(sig_bytestype),
@@ -2160,9 +2162,8 @@ if _lib.ML_DSA_ENABLED:
                     res,
                     self.native_object,
                 )
-
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptError("wc_dilithium_verify_msg() error (%d)" % ret)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptError("wc_dilithium_verify_msg() error (%d)" % ret)
 
             return res[0] == 1
 
