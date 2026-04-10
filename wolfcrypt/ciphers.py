@@ -2031,6 +2031,9 @@ if _lib.ML_KEM_ENABLED:
 
 
 if _lib.ML_DSA_ENABLED:
+    ML_DSA_SIGNATURE_SEED_LENGTH = 32
+    """The length of a signature generation seed."""
+
     class MlDsaType(IntEnum):
         """
         `MlDsaType` specifies supported ML-DSA types.
@@ -2152,9 +2155,7 @@ if _lib.ML_DSA_ENABLED:
             return res[0] == 1
 
     class MlDsaPrivate(_MlDsaBase):
-        _SIGNATURE_SEED_LENGTH = 32
-        """The length of a signature generation seed."""
-
+        
         @classmethod
         def make_key(cls, mldsa_type, rng=Random()):
             """
@@ -2289,7 +2290,7 @@ if _lib.ML_DSA_ENABLED:
             :type message: bytes or str
             :param seed: 32-byte seed for deterministic signature generation.
             :type seed: bytes
-            :param ctx: context (optional)
+            :param ctx: context (optional, maximum 255 bytes)
             :type ctx: None for no context, str or bytes otherwise
             :return: signature
             :rtype: bytes
@@ -2300,20 +2301,33 @@ if _lib.ML_DSA_ENABLED:
             out_size = _ffi.new("word32 *")
             out_size[0] = in_size
 
-            assert isinstance(seed, bytes) and len(seed) == MlDsaPrivate._SIGNATURE_SEED_LENGTH, \
-                f"Seed for generating a signature must be {MlDsaPrivate._SIGNATURE_SEED_LENGTH} bytes."
+            try:
+                seed_view = memoryview(seed)
+            except TypeError as exception:
+                raise TypeError(
+                    "seed must support the buffer protocol, such as `bytes` or `bytearray`"
+                ) from exception
+            if len(seed_view) != ML_DSA_SIGNATURE_SEED_LENGTH:
+                raise ValueError(
+                    f"Seed for generating a signature must be {ML_DSA_SIGNATURE_SEED_LENGTH}"
+                    "bytes."
+                )
 
             if ctx is not None:
                 ctx_bytestype = t2b(ctx)
+                if len(ctx_bytestype) > 255:
+                    raise ValueError(
+                        f"context length {len(ctx_bytestype)} too large: must be 255 or less"
+                    )
                 ret = _lib.wc_dilithium_sign_ctx_msg_with_seed(
                     _ffi.from_buffer(ctx_bytestype),
-                    len(ctx_bytestype),
+                    len(ctx_bytestype),  # length must be < 256 bytes
                     _ffi.from_buffer(msg_bytestype),
                     len(msg_bytestype),
                     signature,
                     out_size,
                     self.native_object,
-                    _ffi.from_buffer(seed),
+                    _ffi.from_buffer(seed_view),
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptError("wc_dilithium_sign_ctx_msg_with_seed() error (%d)" % ret)
@@ -2324,7 +2338,7 @@ if _lib.ML_DSA_ENABLED:
                     signature,
                     out_size,
                     self.native_object,
-                    _ffi.from_buffer(seed),
+                    _ffi.from_buffer(seed_view),
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptError("wc_dilithium_sign_msg_with_seed() error (%d)" % ret)
