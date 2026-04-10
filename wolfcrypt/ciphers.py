@@ -2267,7 +2267,7 @@ if _lib.ML_DSA_ENABLED:
             :type message: bytes or str
             :param rng: random number generator for sign
             :type rng: Random
-            :param ctx: context (optional)
+            :param ctx: context (optional, maximum 255 bytes)
             :type ctx: None for no context, str or bytes otherwise
             :return: signature
             :rtype: bytes
@@ -2280,9 +2280,11 @@ if _lib.ML_DSA_ENABLED:
 
             if ctx is not None:
                 ctx_bytestype = t2b(ctx)
+                if len(ctx_bytestype) > 255:
+                    raise ValueError(f"context length {len(ctx_bytestype)} too large: must be 255 bytes or less")
                 ret = _lib.wc_dilithium_sign_ctx_msg(
                     _ffi.from_buffer(ctx_bytestype),
-                    len(ctx_bytestype),
+                    len(ctx_bytestype),  # length must be < 256 bytes
                     _ffi.from_buffer(msg_bytestype),
                     len(msg_bytestype),
                     signature,
@@ -2290,6 +2292,8 @@ if _lib.ML_DSA_ENABLED:
                     self.native_object,
                     rng.native_object,
                 )
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptError("wc_dilithium_sign_ctx_msg() error (%d)" % ret)
             else:
                 ret = _lib.wc_dilithium_sign_msg(
                     _ffi.from_buffer(msg_bytestype),
@@ -2299,10 +2303,9 @@ if _lib.ML_DSA_ENABLED:
                     self.native_object,
                     rng.native_object,
                 )
-
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptError("wc_dilithium_sign_msg() error (%d)" % ret)
-
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptError("wc_dilithium_sign_msg() error (%d)" % ret)
+            
             if in_size != out_size[0]:
                 raise WolfCryptError(
                     "in_size=%d and out_size=%d don't match" % (in_size, out_size[0])

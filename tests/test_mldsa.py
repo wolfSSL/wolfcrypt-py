@@ -135,7 +135,8 @@ if _lib.ML_DSA_ENABLED:
         wrong_message = b"This is a wrong message for ML-DSA signature"
         assert not mldsa_pub.verify(signature, wrong_message)
 
-        # Verify with ctx for signature generated without
+        # Verify a signature generated without a context but where a context
+        # is provided during verify
         ctx = b"This is a test context for ML-DSA signature"
         wrong_ctx = b"This is a wrong context for ML-DSA signature"
         assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
@@ -150,5 +151,8 @@ if _lib.ML_DSA_ENABLED:
         # Verify the signature by MlDsaPublic
         assert mldsa_pub.verify(signature, message, ctx=ctx)
 
-        # Verify with wrong ctx
+        # Verify but do not provide a context
+        assert not mldsa_pub.verify(signature, message, ctx=None)
+
+        # Verify with wrong context
         assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
