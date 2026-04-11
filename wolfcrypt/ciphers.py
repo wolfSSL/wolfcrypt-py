@@ -183,7 +183,7 @@ class _Cipher(object):
             raise ValueError(
                     "empty string not allowed")
 
-        if len(string) % self.block_size and not self.mode == MODE_CTR and not "ChaCha" in self._native_type:
+        if len(string) % self.block_size and not self.mode == MODE_CTR and "ChaCha" not in self._native_type:
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
 

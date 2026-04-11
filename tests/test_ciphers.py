@@ -605,7 +605,7 @@ if _lib.ECC_ENABLED:
 
             # invalid signature
             ret = ecc_public.verify_raw(r, s[:-1], plaintext)
-            assert ret == False
+            assert not ret
 
             # private object holds both private and public info, so it can also verify
             # using the known public key.
