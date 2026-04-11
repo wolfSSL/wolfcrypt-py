@@ -242,7 +242,6 @@ def make_flags(prefix, fips):
         flags.append("--disable-oldtls")
         flags.append("--disable-oldnames")
         flags.append("--disable-extended-master")
-        flags.append("--disable-errorstrings")
 
         return " ".join(flags)
 
@@ -429,6 +428,7 @@ def build_ffi(local_wolfssl, features):
 
     includes_string += """
         #include <wolfssl/wolfcrypt/settings.h>
+        #include <wolfssl/wolfcrypt/error-crypt.h>
 
         #include <wolfssl/wolfcrypt/sha.h>
         #include <wolfssl/wolfcrypt/sha256.h>
@@ -466,6 +466,7 @@ def build_ffi(local_wolfssl, features):
         }
         #endif
 
+        int ERROR_STRINGS_ENABLED = """ + str(features["ERROR_STRINGS"]) + """;
         int MPAPI_ENABLED = """ + str(features["MPAPI"]) + """;
         int SHA_ENABLED = """ + str(features["SHA"]) + """;
         int SHA256_ENABLED = """ + str(features["SHA256"]) + """;
@@ -505,6 +506,7 @@ def build_ffi(local_wolfssl, features):
     # TODO: change cdef to cdef.
     # cdef = ""
     cdef = """
+        extern int ERROR_STRINGS_ENABLED;
         extern int MPAPI_ENABLED;
         extern int SHA_ENABLED;
         extern int SHA256_ENABLED;
@@ -548,6 +550,270 @@ def build_ffi(local_wolfssl, features):
         int wc_RNG_GenerateByte(WC_RNG*, byte*);
         int wc_FreeRng(WC_RNG*);
     """
+
+    if features["ERROR_STRINGS"]:
+        cdef += """
+        static const int WC_FAILURE;
+
+        static const int MAX_CODE_E;
+        static const int WC_FIRST_E;
+
+        static const int WC_SPAN1_FIRST_E;
+
+        static const int MP_MEM;
+        static const int MP_VAL;
+        static const int MP_WOULDBLOCK;
+
+        static const int MP_NOT_INF;
+
+        static const int OPEN_RAN_E;
+        static const int READ_RAN_E;
+        static const int WINCRYPT_E;
+        static const int CRYPTGEN_E;
+        static const int RAN_BLOCK_E;
+        static const int BAD_MUTEX_E;
+        static const int WC_TIMEOUT_E;
+        static const int WC_PENDING_E;
+        static const int WC_NO_PENDING_E;
+
+        static const int MP_INIT_E;
+        static const int MP_READ_E;
+        static const int MP_EXPTMOD_E;
+        static const int MP_TO_E;
+        static const int MP_SUB_E;
+        static const int MP_ADD_E;
+        static const int MP_MUL_E;
+        static const int MP_MULMOD_E;
+        static const int MP_MOD_E;
+        static const int MP_INVMOD_E;
+        static const int MP_CMP_E;
+        static const int MP_ZERO_E;
+
+        static const int AES_EAX_AUTH_E;
+        static const int KEY_EXHAUSTED_E;
+        static const int MEMORY_E;
+        static const int VAR_STATE_CHANGE_E;
+        static const int FIPS_DEGRADED_E;
+
+        static const int FIPS_CODE_SZ_E;
+        static const int FIPS_DATA_SZ_E;
+
+        static const int RSA_WRONG_TYPE_E;
+        static const int RSA_BUFFER_E;
+        static const int BUFFER_E;
+        static const int ALGO_ID_E;
+        static const int PUBLIC_KEY_E;
+        static const int DATE_E;
+        static const int SUBJECT_E;
+        static const int ISSUER_E;
+        static const int CA_TRUE_E;
+        static const int EXTENSIONS_E;
+
+        static const int ASN_PARSE_E;
+        static const int ASN_VERSION_E;
+        static const int ASN_GETINT_E;
+        static const int ASN_RSA_KEY_E;
+        static const int ASN_OBJECT_ID_E;
+        static const int ASN_TAG_NULL_E;
+        static const int ASN_EXPECT_0_E;
+        static const int ASN_BITSTR_E;
+        static const int ASN_UNKNOWN_OID_E;
+        static const int ASN_DATE_SZ_E;
+        static const int ASN_BEFORE_DATE_E;
+        static const int ASN_AFTER_DATE_E;
+        static const int ASN_SIG_OID_E;
+        static const int ASN_TIME_E;
+        static const int ASN_INPUT_E;
+        static const int ASN_SIG_CONFIRM_E;
+        static const int ASN_SIG_HASH_E;
+        static const int ASN_SIG_KEY_E;
+        static const int ASN_DH_KEY_E;
+        static const int KDF_SRTP_KAT_FIPS_E;
+        static const int ASN_CRIT_EXT_E;
+        static const int ASN_ALT_NAME_E;
+        static const int ASN_NO_PEM_HEADER;
+        static const int ED25519_KAT_FIPS_E;
+        static const int ED448_KAT_FIPS_E;
+        static const int PBKDF2_KAT_FIPS_E;
+        static const int WC_KEY_MISMATCH_E;
+
+        static const int ECC_BAD_ARG_E;
+        static const int ASN_ECC_KEY_E;
+        static const int ECC_CURVE_OID_E;
+        static const int BAD_FUNC_ARG;
+        static const int NOT_COMPILED_IN;
+        static const int UNICODE_SIZE_E;
+        static const int NO_PASSWORD;
+        static const int ALT_NAME_E;
+        static const int BAD_OCSP_RESPONDER;
+        static const int CRL_CERT_DATE_ERR;
+
+        static const int AES_GCM_AUTH_E;
+        static const int AES_CCM_AUTH_E;
+
+        static const int ASYNC_INIT_E;
+
+        static const int COMPRESS_INIT_E;
+        static const int COMPRESS_E;
+        static const int DECOMPRESS_INIT_E;
+        static const int DECOMPRESS_E;
+
+        static const int BAD_ALIGN_E;
+        static const int ASN_NO_SIGNER_E;
+        static const int ASN_CRL_CONFIRM_E;
+        static const int ASN_CRL_NO_SIGNER_E;
+        static const int ASN_OCSP_CONFIRM_E;
+
+        static const int BAD_STATE_E;
+        static const int BAD_PADDING_E;
+
+        static const int REQ_ATTRIBUTE_E;
+
+        static const int PKCS7_OID_E;
+        static const int PKCS7_RECIP_E;
+        static const int FIPS_NOT_ALLOWED_E;
+        static const int ASN_NAME_INVALID_E;
+
+        static const int RNG_FAILURE_E;
+        static const int HMAC_MIN_KEYLEN_E;
+        static const int RSA_PAD_E;
+        static const int LENGTH_ONLY_E;
+
+        static const int IN_CORE_FIPS_E;
+        static const int AES_KAT_FIPS_E;
+        static const int DES3_KAT_FIPS_E;
+        static const int HMAC_KAT_FIPS_E;
+        static const int RSA_KAT_FIPS_E;
+        static const int DRBG_KAT_FIPS_E;
+        static const int DRBG_CONT_FIPS_E;
+        static const int AESGCM_KAT_FIPS_E;
+        static const int THREAD_STORE_KEY_E;
+        static const int THREAD_STORE_SET_E;
+
+        static const int MAC_CMP_FAILED_E;
+        static const int IS_POINT_E;
+        static const int ECC_INF_E;
+        static const int ECC_PRIV_KEY_E;
+        static const int ECC_OUT_OF_RANGE_E;
+
+        static const int SRP_CALL_ORDER_E;
+        static const int SRP_VERIFY_E;
+        static const int SRP_BAD_KEY_E;
+
+        static const int ASN_NO_SKID;
+        static const int ASN_NO_AKID;
+        static const int ASN_NO_KEYUSAGE;
+        static const int SKID_E;
+        static const int AKID_E;
+        static const int KEYUSAGE_E;
+        static const int CERTPOLICIES_E;
+
+        static const int WC_INIT_E;
+        static const int SIG_VERIFY_E;
+        static const int BAD_COND_E;
+        static const int SIG_TYPE_E;
+        static const int HASH_TYPE_E;
+
+        static const int FIPS_INVALID_VER_E;
+
+        static const int WC_KEY_SIZE_E;
+        static const int ASN_COUNTRY_SIZE_E;
+        static const int MISSING_RNG_E;
+        static const int ASN_PATHLEN_SIZE_E;
+        static const int ASN_PATHLEN_INV_E;
+
+        static const int BAD_KEYWRAP_ALG_E;
+        static const int BAD_KEYWRAP_IV_E;
+        static const int WC_CLEANUP_E;
+        static const int ECC_CDH_KAT_FIPS_E;
+        static const int DH_CHECK_PUB_E;
+        static const int BAD_PATH_ERROR;
+
+        static const int ASYNC_OP_E;
+
+        static const int ECC_PRIVATEONLY_E;
+        static const int EXTKEYUSAGE_E;
+        static const int WC_HW_E;
+        static const int WC_HW_WAIT_E;
+
+        static const int PSS_SALTLEN_E;
+        static const int PRIME_GEN_E;
+        static const int BER_INDEF_E;
+        static const int RSA_OUT_OF_RANGE_E;
+        static const int RSAPSS_PAT_FIPS_E;
+        static const int ECDSA_PAT_FIPS_E;
+        static const int DH_KAT_FIPS_E;
+        static const int AESCCM_KAT_FIPS_E;
+        static const int SHA3_KAT_FIPS_E;
+        static const int ECDHE_KAT_FIPS_E;
+        static const int AES_GCM_OVERFLOW_E;
+        static const int AES_CCM_OVERFLOW_E;
+        static const int RSA_KEY_PAIR_E;
+        static const int DH_CHECK_PRIV_E;
+
+        static const int WC_AFALG_SOCK_E;
+        static const int WC_DEVCRYPTO_E;
+
+        static const int ZLIB_INIT_ERROR;
+        static const int ZLIB_COMPRESS_ERROR;
+        static const int ZLIB_DECOMPRESS_ERROR;
+
+        static const int PKCS7_NO_SIGNER_E;
+        static const int WC_PKCS7_WANT_READ_E;
+
+        static const int CRYPTOCB_UNAVAILABLE;
+        static const int PKCS7_SIGNEEDS_CHECK;
+        static const int PSS_SALTLEN_RECOVER_E;
+        static const int CHACHA_POLY_OVERFLOW;
+        static const int ASN_SELF_SIGNED_E;
+        static const int SAKKE_VERIFY_FAIL_E;
+        static const int MISSING_IV;
+        static const int MISSING_KEY;
+        static const int BAD_LENGTH_E;
+        static const int ECDSA_KAT_FIPS_E;
+        static const int RSA_PAT_FIPS_E;
+        static const int KDF_TLS12_KAT_FIPS_E;
+        static const int KDF_TLS13_KAT_FIPS_E;
+        static const int KDF_SSH_KAT_FIPS_E;
+        static const int DHE_PCT_E;
+        static const int ECC_PCT_E;
+        static const int FIPS_PRIVATE_KEY_LOCKED_E;
+        static const int PROTOCOLCB_UNAVAILABLE;
+        static const int AES_SIV_AUTH_E;
+        static const int NO_VALID_DEVID;
+
+        static const int IO_FAILED_E;
+        static const int SYSLIB_FAILED_E;
+        static const int USE_HW_PSK;
+
+        static const int ENTROPY_RT_E;
+        static const int ENTROPY_APT_E;
+
+        static const int ASN_DEPTH_E;
+        static const int ASN_LEN_E;
+
+        static const int SM4_GCM_AUTH_E;
+        static const int SM4_CCM_AUTH_E;
+
+        static const int WC_SPAN1_LAST_E;
+        static const int WC_SPAN1_MIN_CODE_E;
+
+        static const int WC_SPAN2_FIRST_E;
+
+        static const int DEADLOCK_AVERTED_E;
+        static const int ASCON_AUTH_E;
+        static const int WC_ACCEL_INHIBIT_E;
+        static const int BAD_INDEX_E;
+        static const int INTERRUPTED_E;
+
+        static const int WC_SPAN2_LAST_E;
+        static const int WC_LAST_E;
+
+        static const int WC_SPAN2_MIN_CODE_E;
+        static const int MIN_CODE_E;
+
+        const char* wc_GetErrorString(int error);
+        """
 
     if not features["FIPS"] or features["FIPS_VERSION"] > 2:
         cdef += """

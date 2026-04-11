@@ -318,11 +318,7 @@ if _lib.HMAC_ENABLED:
             if len(key) > 0:
                 ret = _lib.wc_HmacSetKey(self._native_object, hmac, key, len(key))
                 if ret < 0:
-                    err_str = "no error description found"
-                    try:
-                        err_str = _ffi.string(_lib.wc_GetErrorString(ret)).decode()
-                    except:
-                        pass
+                    err_str = _ffi.string(_lib.wc_GetErrorString(ret)).decode()
                     raise WolfCryptError("wc_HmacSetKey returned {}: {}".format(ret, err_str))
             return ret
 
