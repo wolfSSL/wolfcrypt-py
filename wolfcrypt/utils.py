@@ -20,10 +20,12 @@
 
 # pylint: disable=unused-import
 
+from __future__ import annotations
+
 from binascii import hexlify as b2h, unhexlify as h2b  # noqa: F401
 
 
-def t2b(string):
+def t2b(string: bytes | bytearray | memoryview | str) -> bytes:
     """
     Converts text to binary.
 
@@ -31,5 +33,5 @@ def t2b(string):
     Encodes str to UTF-8 bytes.
     """
     if isinstance(string, (bytes, bytearray, memoryview)):
-        return string
+        return bytes(string)
     return str(string).encode("utf-8")

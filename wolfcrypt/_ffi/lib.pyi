@@ -1,0 +1,76 @@
+
+from _cffi_backend import FFI
+from typing_extensions import TypeAlias
+
+INVALID_DEVID: int
+
+AES_ENABLED: int
+AES_SIV_ENABLED: int
+AESGCM_STREAM_ENABLED: int
+ASN_ENABLED: int
+CHACHA_ENABLED: int
+CHACHA_STREAM_ENABLED: int
+CHACHA20_POLY1305_ENABLED: int
+DES3_ENABLED: int
+ECC_ENABLED: int
+ED25519_ENABLED: int
+ED448_ENABLED: int
+FIPS_ENABLED: int
+HMAC_ENABLED: int
+KEYGEN_ENABLED: int
+HKDF_ENABLED: int
+ML_DSA_ENABLED: int
+ML_KEM_ENABLED: int
+MPAPI_ENABLED: int
+PWDBASED_ENABLED: int
+RSA_ENABLED: int
+RSA_PSS_ENABLED: int
+SHA_ENABLED: int
+SHA3_ENABLED: int
+SHA256_ENABLED: int
+SHA384_ENABLED: int
+SHA512_ENABLED: int
+WC_RNG_SEED_CB_ENABLED: int
+
+FIPS_VERSION: int
+
+WC_MGF1NONE: int
+WC_MGF1SHA1: int
+WC_MGF1SHA224: int
+WC_MGF1SHA256: int
+WC_MGF1SHA384: int
+WC_MGF1SHA512: int
+
+WC_HASH_TYPE_NONE: int
+WC_HASH_TYPE_MD2: int
+WC_HASH_TYPE_MD4: int
+WC_HASH_TYPE_MD5: int
+WC_HASH_TYPE_SHA: int
+WC_HASH_TYPE_SHA224: int
+WC_HASH_TYPE_SHA256: int
+WC_HASH_TYPE_SHA384: int
+WC_HASH_TYPE_SHA512: int
+WC_HASH_TYPE_MD5_SHA: int
+WC_HASH_TYPE_SHA3_224: int
+WC_HASH_TYPE_SHA3_256: int
+WC_HASH_TYPE_SHA3_384: int
+WC_HASH_TYPE_SHA3_512: int
+WC_HASH_TYPE_BLAKE2B: int
+WC_HASH_TYPE_BLAKE2S: int
+
+WC_ML_KEM_512: int
+WC_ML_KEM_768: int
+WC_ML_KEM_1024: int
+
+WC_ML_DSA_44: int
+WC_ML_DSA_65: int
+WC_ML_DSA_87: int
+
+WC_KEYTYPE_ALL: int
+
+RNG: TypeAlias = FFI.CData
+
+def wc_InitRngNonce_ex(rng: RNG, nonce: bytes, nonce_size: int, heap: FFI.CData, device_id: int) -> int: ...
+def wc_RNG_GenerateByte(rng: RNG, buffer: FFI.CData) -> int: ...
+def wc_RNG_GenerateBlock(rng: RNG, buffer: FFI.CData, len: int) -> int: ...
+def wc_FreeRng(rng: RNG) -> None: ...
