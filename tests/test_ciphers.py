@@ -25,6 +25,7 @@ import random
 import pytest
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.ciphers import MODE_CTR, MODE_ECB, MODE_CBC, WolfCryptError
+from wolfcrypt.random import Random
 from wolfcrypt.utils import t2b, h2b
 import os
 
@@ -613,11 +614,12 @@ if _lib.ECC_ENABLED:
 
 
     def test_ecc_make_shared_secret():
-        a = EccPrivate.make_key(32)
+        rng = Random()
+        a = EccPrivate.make_key(32, rng=rng)
         a_pub = EccPublic()
         a_pub.import_x963(a.export_x963())
 
-        b = EccPrivate.make_key(32)
+        b = EccPrivate.make_key(32, rng=rng)
         b_pub = EccPublic()
         b_pub.import_x963(b.export_x963())
 

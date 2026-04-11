@@ -2450,6 +2450,8 @@ if _lib.ML_DSA_ENABLED:
             :return: signature
             :rtype: bytes
             """
+            if rng is None:
+                rng = Random()
             msg_bytestype = t2b(message)
             in_size = self.sig_size
             signature = _ffi.new(f"byte[{in_size}]")
