@@ -27,7 +27,7 @@ from wolfcrypt.utils import t2b, b2h
 from wolfcrypt.exceptions import WolfCryptError
 
 
-class _Hash(object):
+class _Hash:
     """
     A **PEP 247: Cryptographic Hash Functions** compliant
     **Hash Function Interface**.
