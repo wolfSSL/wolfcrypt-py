@@ -396,9 +396,8 @@ if _lib.AESGCM_STREAM_ENABLED:
         block_size = 16
         _key_sizes = [16, 24, 32]
         _native_type = "Aes *"
-        _aad = bytes()
-        _tag_bytes = 16
-        _mode = None
+        # making sure _lib.wc_AesFree outlives Aes instances
+        _delete = _lib.wc_AesFree
 
         def __init__(self, key, IV, tag_bytes=16):
             """
@@ -406,23 +405,31 @@ if _lib.AESGCM_STREAM_ENABLED:
             """
             key = t2b(key)
             IV = t2b(IV)
-            if tag_bytes < 4 or tag_bytes > 16:
-                raise ValueError("tag_bytes must be between 4 and 16")
+            # NIST SP 800-38D valid GCM tag lengths: 16, 15, 14, 13, 12, 8, 4 bytes.
+            if tag_bytes not in (4, 8, 12, 13, 14, 15, 16):
+                raise ValueError(
+                    "tag_bytes must be one of 4, 8, 12, 13, 14, 15, or 16")
+            # Per-instance state: AAD, tag length, and current mode (enc/dec).
+            self._aad = bytes()
             self._tag_bytes = tag_bytes
+            self._mode = None
             if len(key) not in self._key_sizes:
                 raise ValueError("key must be %s in length, not %d" %
                                  (self._key_sizes, len(key)))
+            self._init_done = False
             self._native_object = _ffi.new(self._native_type)
             ret = _lib.wc_AesInit(self._native_object, _ffi.NULL, -2)
             if ret < 0:
                 raise WolfCryptError("AES init error (%d)" % ret)
+            self._init_done = True
             ret = _lib.wc_AesGcmInit(self._native_object, key, len(key), IV, len(IV))
             if ret < 0:
                 raise WolfCryptError("Init error (%d)" % ret)
 
         def __del__(self):
-            if hasattr(self, '_native_object'):
-                _lib.wc_AesFree(self._native_object)
+            if getattr(self, '_init_done', False):
+                self._delete(self._native_object)
+                self._init_done = False
 
         def set_aad(self, data):
             """
@@ -446,11 +453,11 @@ if _lib.AESGCM_STREAM_ENABLED:
                 aad = self._aad
             elif self._mode == _DECRYPTION:
                 raise WolfCryptError("Class instance already in use for decryption")
-            self._buf = _ffi.new("byte[%d]" % (len(data)))
-            ret = _lib.wc_AesGcmEncryptUpdate(self._native_object, self._buf, data, len(data), aad, len(aad))
+            buf = _ffi.new("byte[%d]" % (len(data)))
+            ret = _lib.wc_AesGcmEncryptUpdate(self._native_object, buf, data, len(data), aad, len(aad))
             if ret < 0:
                 raise WolfCryptError("Encryption error (%d)" % ret)
-            return bytes(self._buf)
+            return bytes(buf)
 
         def decrypt(self, data):
             """
@@ -463,11 +470,11 @@ if _lib.AESGCM_STREAM_ENABLED:
                 aad = self._aad
             elif self._mode == _ENCRYPTION:
                 raise WolfCryptError("Class instance already in use for encryption")
-            self._buf = _ffi.new("byte[%d]" % (len(data)))
-            ret = _lib.wc_AesGcmDecryptUpdate(self._native_object, self._buf, data, len(data), aad, len(aad))
+            buf = _ffi.new("byte[%d]" % (len(data)))
+            ret = _lib.wc_AesGcmDecryptUpdate(self._native_object, buf, data, len(data), aad, len(aad))
             if ret < 0:
                 raise WolfCryptError("Decryption error (%d)" % ret)
-            return bytes(self._buf)
+            return bytes(buf)
 
         def final(self, authTag=None):
             """
@@ -505,7 +512,9 @@ if _lib.CHACHA_ENABLED:
         _IV_nonce = b""
         _IV_counter = 0
 
-        def __init__(self, key="", size=32):
+        def __init__(self, key="", size=32):  # pylint: disable=unused-argument
+            # size is kept for backwards compatibility; key length is now
+            # derived from the actual key and validated against _key_sizes.
             self._native_object = _ffi.new(self._native_type)
             self._enc = None
             self._dec = None
@@ -552,7 +561,9 @@ if _lib.CHACHA_ENABLED:
                 raise ValueError("nonce must be %d bytes, got %d" %
                                  (self._NONCE_SIZE, len(self._IV_nonce)))
             self._IV_counter = counter
-            self._set_key(0)
+            ret = self._set_key(0)
+            if ret < 0:
+                raise WolfCryptError("ChaCha set_iv error (%d)" % ret)
 
 if _lib.CHACHA20_POLY1305_ENABLED:
     class ChaCha20Poly1305:
@@ -643,6 +654,9 @@ if _lib.DES3_ENABLED:
         _native_type = "Des3 *"
 
         def __init__(self, key, mode, IV=None):
+            # Intentionally stricter than _Cipher.__init__, which accepts both
+            # CBC and CTR. wolfCrypt has no 3DES-CTR implementation, so reject
+            # MODE_CTR here with a clearer error before delegating.
             if mode != MODE_CBC:
                 raise ValueError("Des3 only supports MODE_CBC")
             super().__init__(key, mode, IV)
@@ -863,6 +877,9 @@ if _lib.RSA_ENABLED:
                 rsa.size = size
                 if rsa.output_size <= 0:  # pragma: no cover
                     raise WolfCryptError("Invalid key size error (%d)" % ret)
+
+                # Retain RNG reference defensively.
+                rsa._rng = rng
 
                 return rsa
 
@@ -1231,7 +1248,11 @@ if _lib.ECC_ENABLED:
                 ret = _lib.wc_ecc_set_rng(ecc.native_object, rng.native_object)
                 if ret < 0:
                     raise WolfCryptError("Error setting ECC RNG (%d)" % ret)
-                ecc._rng = rng
+
+            # Retain the RNG so it outlives the ECC key. Even outside the
+            # timing-resistance path, wolfSSL internals may retain a pointer
+            # to the RNG; keeping the reference avoids any UAF risk.
+            ecc._rng = rng
 
             return ecc
 
@@ -1504,6 +1525,10 @@ if _lib.ED25519_ENABLED:
             if ret < 0:
                 raise WolfCryptError("Key generation error (%d)" % ret)
 
+            # Retain RNG reference defensively; wolfSSL may retain a pointer
+            # internally on some builds.
+            ed25519._rng = rng
+
             return ed25519
 
         def decode_key(self, key, pub = None):
@@ -1705,6 +1730,10 @@ if _lib.ED448_ENABLED:
                     ed448.native_object)
             if ret < 0:
                 raise WolfCryptError("Key generation error (%d)" % ret)
+
+            # Retain RNG reference defensively; wolfSSL may retain a pointer
+            # internally on some builds.
+            ed448._rng = rng
 
             return ed448
 
@@ -1979,6 +2008,9 @@ if _lib.ML_KEM_ENABLED:
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("wc_KyberKey_MakeKey() error (%d)" % ret)
 
+            # Retain RNG reference defensively.
+            mlkem_priv._rng = rng
+
             return mlkem_priv
 
         @classmethod
@@ -2245,6 +2277,9 @@ if _lib.ML_DSA_ENABLED:
 
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("wc_dilithium_make_key() error (%d)" % ret)
+
+            # Retain RNG reference defensively.
+            mldsa_priv._rng = rng
 
             return mldsa_priv
 

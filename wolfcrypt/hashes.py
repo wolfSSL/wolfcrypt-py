@@ -34,6 +34,7 @@ class _Hash:
     """
     def __init__(self, string=None):
         self._native_object = _ffi.new(self._native_type)
+        self._shallow_copy = False
         ret = self._init()
         if ret < 0:  # pragma: no cover
             raise WolfCryptError("Hash init error (%d)" % ret)
@@ -56,11 +57,32 @@ class _Hash:
         Returns a separate copy of this hashing object. An update
         to this copy won't affect the original object.
         """
-        copy = self.new("")
+        # Bypass __init__ to avoid calling _init() on a state that _copy
+        # immediately overwrites (which would leak internal resources in
+        # async/HW-accelerated builds). Mark as shallow up front so __del__
+        # skips the free if we bail out before the copy completes.
+        copy = type(self).__new__(type(self))
+        copy._shallow_copy = True  # pylint: disable=protected-access
+        copy._native_object = _ffi.new(self._native_type)  # pylint: disable=protected-access
 
-        _ffi.memmove(copy._native_object,  # pylint: disable=protected-access
-                     self._native_object,
-                     self._native_size)
+        copy_fn = getattr(self, '_copy', None)
+        if copy_fn:
+            ret = copy_fn(self._native_object,
+                          copy._native_object)  # pylint: disable=protected-access
+            if ret < 0:  # pragma: no cover
+                # Free any partial allocation before raising; __del__ would
+                # skip it because _shallow_copy is still True.
+                delete = getattr(self, '_delete', None)
+                if delete:
+                    delete(copy._native_object)  # pylint: disable=protected-access
+                raise WolfCryptError("Hash copy error (%d)" % ret)
+            copy._shallow_copy = False  # pylint: disable=protected-access
+        else:
+            _ffi.memmove(copy._native_object,  # pylint: disable=protected-access
+                         self._native_object,
+                         self._native_size)
+            # Keep _shallow_copy = True: memmove shares internal state with
+            # self, so __del__ must not free it separately.
 
         return copy
 
@@ -87,12 +109,31 @@ class _Hash:
 
         if self._native_object:
             obj = _ffi.new(self._native_type)
+            # _copy and _delete are class attributes on Sha/Sha256/etc, but
+            # are set as instance attributes on Sha3 (because the SHA3 variant
+            # is selected by digest_size at __init__ time). getattr handles
+            # both cases.
+            copy_fn = getattr(self, '_copy', None)
 
-            _ffi.memmove(obj, self._native_object, self._native_size)
+            try:
+                if copy_fn:
+                    ret = copy_fn(self._native_object, obj)
+                    if ret < 0:  # pragma: no cover
+                        raise WolfCryptError("Hash copy error (%d)" % ret)
+                else:
+                    _ffi.memmove(obj, self._native_object, self._native_size)
 
-            ret = self._final(obj, result)
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptError("Hash finalize error (%d)" % ret)
+                ret = self._final(obj, result)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptError("Hash finalize error (%d)" % ret)
+            finally:
+                # Only free when we did a deep copy; memmove'd temps share
+                # internal resources with self and must not be separately freed.
+                # Runs even on failed copy to clean up any partial allocation.
+                if copy_fn:
+                    delete = getattr(self, '_delete', None)
+                    if delete:
+                        delete(obj)
 
         return _ffi.buffer(result, self.digest_size)[:]
 
@@ -117,9 +158,11 @@ if _lib.SHA_ENABLED:
         _native_type = "wc_Sha *"
         _native_size = _ffi.sizeof("wc_Sha")
         _delete = _lib.wc_ShaFree
+        _copy = _lib.wc_ShaCopy
 
         def __del__(self):
-            self._delete(self._native_object)
+            if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
+                self._delete(self._native_object)
 
         def _init(self):
             return _lib.wc_InitSha(self._native_object)
@@ -143,9 +186,11 @@ if _lib.SHA256_ENABLED:
         _native_type = "wc_Sha256 *"
         _native_size = _ffi.sizeof("wc_Sha256")
         _delete = _lib.wc_Sha256Free
+        _copy = _lib.wc_Sha256Copy
 
         def __del__(self):
-            self._delete(self._native_object)
+            if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
+                self._delete(self._native_object)
 
         def _init(self):
             return _lib.wc_InitSha256(self._native_object)
@@ -169,9 +214,11 @@ if _lib.SHA384_ENABLED:
         _native_type = "wc_Sha384 *"
         _native_size = _ffi.sizeof("wc_Sha384")
         _delete = _lib.wc_Sha384Free
+        _copy = _lib.wc_Sha384Copy
 
         def __del__(self):
-            self._delete(self._native_object)
+            if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
+                self._delete(self._native_object)
 
         def _init(self):
             return _lib.wc_InitSha384(self._native_object)
@@ -195,9 +242,11 @@ if _lib.SHA512_ENABLED:
         _native_type = "wc_Sha512 *"
         _native_size = _ffi.sizeof("wc_Sha512")
         _delete = _lib.wc_Sha512Free
+        _copy = _lib.wc_Sha512Copy
 
         def __del__(self):
-            self._delete(self._native_object)
+            if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
+                self._delete(self._native_object)
 
         def _init(self):
             return _lib.wc_InitSha512(self._native_object)
@@ -232,14 +281,28 @@ if _lib.SHA3_ENABLED:
             64: _lib.wc_Sha3_512_Free,
         }
 
+        _SHA3_COPY = {
+            28: _lib.wc_Sha3_224_Copy,
+            32: _lib.wc_Sha3_256_Copy,
+            48: _lib.wc_Sha3_384_Copy,
+            64: _lib.wc_Sha3_512_Copy,
+        }
+
         def __del__(self):
-            if hasattr(self, '_delete'):
+            # Unlike the SHA-1/2 classes, Sha3's _delete is set per-instance
+            # from a size->function dict and is None for invalid sizes, so
+            # we need the extra truthiness check.
+            if (hasattr(self, '_native_object')
+                    and not getattr(self, '_shallow_copy', False)
+                    and getattr(self, '_delete', None)):
                 self._delete(self._native_object)
 
         def __init__(self, string=None, size=SHA3_384_DIGEST_SIZE):  # pylint: disable=W0231
             self._native_object = _ffi.new(self._native_type)
+            self._shallow_copy = False
             self.digest_size = size
             self._delete = self._SHA3_FREE.get(size)
+            self._copy = self._SHA3_COPY.get(size)
             ret = self._init()
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("Sha3 init error (%d)" % ret)
@@ -251,8 +314,27 @@ if _lib.SHA3_ENABLED:
             return cls(string, size)
 
         def copy(self):
-            c = Sha3(size=self.digest_size)
-            _ffi.memmove(c._native_object, self._native_object, self._native_size)
+            # Bypass __init__ to avoid calling _init() on a state that _copy
+            # immediately overwrites (which would leak internal resources in
+            # async/HW-accelerated builds). Mark as shallow up front so
+            # __del__ skips the free if we bail out before the copy completes.
+            c = type(self).__new__(type(self))
+            c._shallow_copy = True
+            c._native_object = _ffi.new(self._native_type)
+            c.digest_size = self.digest_size
+            c._delete = self._delete
+            c._copy = self._copy
+            if self._copy:
+                ret = self._copy(self._native_object, c._native_object)
+                if ret < 0:  # pragma: no cover
+                    # Free any partial allocation before raising.
+                    if self._delete:
+                        self._delete(c._native_object)
+                    raise WolfCryptError("Hash copy error (%d)" % ret)
+                c._shallow_copy = False
+            else:
+                _ffi.memmove(c._native_object, self._native_object, self._native_size)
+                # Keep _shallow_copy = True: memmove shares state with self.
             return c
 
         def _init(self):
@@ -309,6 +391,14 @@ if _lib.HMAC_ENABLED:
         """
         A **PEP 247: Cryptographic Hash Functions** compliant
         **Keyed Hash Function Interface**.
+
+        Note: wolfSSL does not provide a `wc_HmacCopy` equivalent, so
+        `copy()` falls back to a byte-level memmove. In default builds the
+        Hmac struct is self-contained and this is safe. In async or
+        hardware-accelerated builds where the struct contains internal
+        pointers, the copy shares those pointers with the original; the
+        copy must not outlive the original or be used after the original
+        is freed.
         """
         digest_size = None
         _native_type = "Hmac *"
@@ -316,12 +406,14 @@ if _lib.HMAC_ENABLED:
         _delete = _lib.wc_HmacFree
 
         def __del__(self):
-            self._delete(self._native_object)
+            if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
+                self._delete(self._native_object)
 
         def __init__(self, key, string=None):  # pylint: disable=W0231
             key = t2b(key)
 
             self._native_object = _ffi.new(self._native_type)
+            self._shallow_copy = False
             ret = self._init(self._type, key)
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("Hmac init error (%d)" % ret)

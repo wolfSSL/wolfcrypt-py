@@ -184,3 +184,27 @@ def test_hash(hash_cls, vectors):
     copy.update("wolfcrypt")
 
     assert hash_obj.hexdigest() == copy.hexdigest() == digest
+
+
+def test_hash_repeated_construction_destruction(hash_cls, vectors):
+    import gc
+    digest = vectors[hash_cls].digest
+    for _ in range(1000):
+        h = hash_new(hash_cls, "wolfcrypt")
+        assert h.hexdigest() == digest
+        del h
+    gc.collect()
+
+
+def test_hash_copy_destroy_lifecycle(hash_cls, vectors):
+    import gc
+    digest = vectors[hash_cls].digest
+    for _ in range(100):
+        h = hash_new(hash_cls, "wolfcrypt")
+        c = h.copy()
+        # Destroy original first, then verify copy still produces correct digest.
+        del h
+        gc.collect()
+        assert c.hexdigest() == digest
+        del c
+    gc.collect()

@@ -44,8 +44,10 @@ if _lib.ASN_ENABLED:
             err = "Error converting from PEM to DER. ({})".format(ret)
             raise WolfCryptError(err)
 
-        result = _ffi.buffer(der[0][0].buffer, der[0][0].length)[:]
-        _lib.wc_FreeDer(der)
+        try:
+            result = _ffi.buffer(der[0][0].buffer, der[0][0].length)[:]
+        finally:
+            _lib.wc_FreeDer(der)
         return result
 
     def der_to_pem(der, pem_type):

@@ -575,6 +575,7 @@ def build_ffi(local_wolfssl, features):
         int wc_ShaUpdate(wc_Sha*, const byte*, word32);
         int wc_ShaFinal(wc_Sha*, byte*);
         void wc_ShaFree(wc_Sha*);
+        int wc_ShaCopy(wc_Sha*, wc_Sha*);
         """
 
     if features["SHA256"]:
@@ -584,6 +585,7 @@ def build_ffi(local_wolfssl, features):
         int wc_Sha256Update(wc_Sha256*, const byte*, word32);
         int wc_Sha256Final(wc_Sha256*, byte*);
         void wc_Sha256Free(wc_Sha256*);
+        int wc_Sha256Copy(wc_Sha256*, wc_Sha256*);
         """
 
     if features["SHA384"]:
@@ -593,6 +595,7 @@ def build_ffi(local_wolfssl, features):
         int wc_Sha384Update(wc_Sha384*, const byte*, word32);
         int wc_Sha384Final(wc_Sha384*, byte*);
         void wc_Sha384Free(wc_Sha384*);
+        int wc_Sha384Copy(wc_Sha384*, wc_Sha384*);
         """
 
     if features["SHA512"]:
@@ -603,6 +606,7 @@ def build_ffi(local_wolfssl, features):
         int wc_Sha512Update(wc_Sha512*, const byte*, word32);
         int wc_Sha512Final(wc_Sha512*, byte*);
         void wc_Sha512Free(wc_Sha512*);
+        int wc_Sha512Copy(wc_Sha512*, wc_Sha512*);
         """
     if features["SHA3"]:
         cdef += """
@@ -623,6 +627,10 @@ def build_ffi(local_wolfssl, features):
         void wc_Sha3_256_Free(wc_Sha3*);
         void wc_Sha3_384_Free(wc_Sha3*);
         void wc_Sha3_512_Free(wc_Sha3*);
+        int wc_Sha3_224_Copy(wc_Sha3*, wc_Sha3*);
+        int wc_Sha3_256_Copy(wc_Sha3*, wc_Sha3*);
+        int wc_Sha3_384_Copy(wc_Sha3*, wc_Sha3*);
+        int wc_Sha3_512_Copy(wc_Sha3*, wc_Sha3*);
         """
 
     if features["DES3"]:
