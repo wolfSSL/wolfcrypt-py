@@ -81,7 +81,7 @@ def wolfssl_lib_dir(local_wolfssl=None, fips=False):
             lib_names.append("libwolfssl.so")
 
         found = False
-        for root, dirs, files in os.walk(local_wolfssl):
+        for root, _dirs, files in os.walk(local_wolfssl):
             for name in lib_names:
                 if name in files:
                     lib_dir = root
