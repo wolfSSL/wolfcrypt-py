@@ -133,6 +133,28 @@ if _lib.ML_DSA_ENABLED:
         # Verify with wrong message
         wrong_message = b"This is a wrong message for ML-DSA signature"
         assert not mldsa_pub.verify(signature, wrong_message)
+        
+        # Verify a signature generated without a context but where a context
+        # is provided during verify
+        ctx = b"This is a test context for ML-DSA signature"
+        wrong_ctx = b"This is a wrong context for ML-DSA signature"
+        assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
+
+        # Sign a message with context
+        signature = mldsa_priv.sign(message, rng, ctx=ctx)
+        assert len(signature) == mldsa_priv.sig_size
+
+        # Verify the signature by MlDsaPrivate
+        assert mldsa_priv.verify(signature, message, ctx=ctx)
+
+        # Verify the signature by MlDsaPublic
+        assert mldsa_pub.verify(signature, message, ctx=ctx)
+
+        # Verify but do not provide a context
+        assert not mldsa_pub.verify(signature, message, ctx=None)
+
+        # Verify with wrong context
+        assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
 
     def test_sign_with_seed(mldsa_type, rng):
         signature_seed = rng.bytes(ML_DSA_SIGNATURE_SEED_LENGTH)
@@ -180,3 +202,4 @@ if _lib.ML_DSA_ENABLED:
         # test that the context length is checked (more than 255 bytes is invalid):
         with pytest.raises(ValueError):
             _ = mldsa_priv.sign_with_seed(message, signature_seed[:-1], ctx=bytes(1000))
+
