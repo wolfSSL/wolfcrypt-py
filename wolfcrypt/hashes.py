@@ -24,7 +24,7 @@ from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import t2b, b2h
 
-from wolfcrypt.exceptions import WolfCryptError
+from wolfcrypt.exceptions import WolfCryptError, error_string
 
 
 class _Hash(object):
@@ -318,7 +318,7 @@ if _lib.HMAC_ENABLED:
             if len(key) > 0:
                 ret = _lib.wc_HmacSetKey(self._native_object, hmac, key, len(key))
                 if ret < 0:
-                    err_str = _ffi.string(_lib.wc_GetErrorString(ret)).decode()
+                    err_str = error_string(ret)
                     raise WolfCryptError("wc_HmacSetKey returned {}: {}".format(ret, err_str))
             return ret
 

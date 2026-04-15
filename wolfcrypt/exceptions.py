@@ -19,5 +19,22 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
 
+from wolfcrypt._ffi import ffi as _ffi
+from wolfcrypt._ffi import lib as _lib
+
+
 class WolfCryptError(Exception):
     pass
+
+
+def error_string(err_code: int) -> str:
+    """
+    Convert error code to error string.
+
+    :param err_code: WolfCrypt error code
+    :return: error string
+    """
+    if _lib.ERROR_STRINGS_ENABLED:
+        return _ffi.string(_lib.wc_GetErrorString(err_code)).decode()
+    else:
+        return ""

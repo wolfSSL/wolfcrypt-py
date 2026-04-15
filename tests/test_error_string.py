@@ -20,11 +20,12 @@
 
 import pytest
 
-from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
+from wolfcrypt.exceptions import error_string
 
 
 @pytest.mark.skipif(not _lib.ERROR_STRINGS_ENABLED, reason="wc_GetErrorString not enabled")
-@pytest.mark.parametrize("err", (_lib.WC_FAILURE, _lib.KEY_EXHAUSTED_E, _lib.NO_PASSWORD, _lib.INTERRUPTED_E, 0))
+@pytest.mark.parametrize("err", (_lib.WC_FAILURE, _lib.KEY_EXHAUSTED_E, _lib.NO_PASSWORD, _lib.INTERRUPTED_E))
 def test_error_string(err):
-    print(_ffi.string(_lib.wc_GetErrorString(err)).decode())
+    # Error code 0 is an invalid error code (it means success)
+    assert error_string(err) != error_string(0)
