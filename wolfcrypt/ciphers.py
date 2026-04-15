@@ -2173,6 +2173,36 @@ if _lib.ML_DSA_ENABLED:
 
             return mldsa_priv
 
+        @classmethod
+        def make_key_from_seed(cls, mldsa_type, seed):
+            """
+            Deterministically generate the key from a seed.
+
+            :param mldsa_type: ML-DSA type
+            :type mldsa_type: MlDsaType
+            :param seed: the (32 byte) seed from which to deterministically create the key
+            :type seed: bytes
+            """
+            mldsa_priv = cls(mldsa_type)
+            try:
+                seed_view = memoryview(seed)
+            except TypeError as exception:
+                raise TypeError(
+                    "seed must support the buffer protocol, such as `bytes` or `bytearray`"
+                ) from exception
+            if len(seed_view) != ML_DSA_KEYGEN_SEED_LENGTH:
+                raise ValueError(
+                    f"Seed for generating ML-DSA key must be {ML_DSA_KEYGEN_SEED_LENGTH} bytes"
+                )
+
+            ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object,
+                    _ffi.from_buffer(seed_view))
+
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptError("wc_dilithium_make_key_from_seed() error (%d)" % ret)
+
+            return mldsa_priv
+
         @property
         def pub_key_size(self):
             """
