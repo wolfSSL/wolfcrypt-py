@@ -26,7 +26,7 @@ from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.exceptions import WolfCryptError
 
 
-class Random(object):
+class Random:
     """
     A Cryptographically Secure Pseudo Random Number Generator - CSPRNG
     """

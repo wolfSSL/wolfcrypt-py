@@ -112,7 +112,7 @@ if _lib.RSA_ENABLED:
 
 
 
-class _Cipher(object):
+class _Cipher:
     """
     A **PEP 272: Block Encryption Algorithms** compliant
     **Symmetric Key Cipher**.
@@ -275,7 +275,7 @@ if _lib.AES_ENABLED:
                 raise ValueError("Invalid mode associated to cipher")
 
 if _lib.AES_SIV_ENABLED:
-    class AesSiv(object):
+    class AesSiv:
         """
         AES-SIV (Synthetic Initialization Vector) implementation as described in RFC 5297.
         """
@@ -383,7 +383,7 @@ if _lib.AES_SIV_ENABLED:
 
 
 if _lib.AESGCM_STREAM_ENABLED:
-    class AesGcmStream(object):
+    class AesGcmStream:
         """
         AES GCM Stream
         """
@@ -540,7 +540,7 @@ if _lib.CHACHA_ENABLED:
             self._set_key(0)
 
 if _lib.CHACHA20_POLY1305_ENABLED:
-    class ChaCha20Poly1305(object):
+    class ChaCha20Poly1305:
         """
         ChaCha20-Poly1305 AEAD cipher.
 
@@ -645,7 +645,7 @@ if _lib.DES3_ENABLED:
 
 
 if _lib.RSA_ENABLED:
-    class _Rsa(object):  # pylint: disable=too-few-public-methods
+    class _Rsa:  # pylint: disable=too-few-public-methods
         RSA_MIN_PAD_SIZE = 11
         _mgf = None
         _hash_type = None
@@ -1006,7 +1006,7 @@ if _lib.RSA_ENABLED:
 
 
 if _lib.ECC_ENABLED:
-    class _Ecc(object):  # pylint: disable=too-few-public-methods
+    class _Ecc:  # pylint: disable=too-few-public-methods
         def __init__(self):
             self.native_object = _ffi.new("ecc_key *")
             ret = _lib.wc_ecc_init(self.native_object)
@@ -1352,7 +1352,7 @@ if _lib.ECC_ENABLED:
 
 
 if _lib.ED25519_ENABLED:
-    class _Ed25519(object):  # pylint: disable=too-few-public-methods
+    class _Ed25519:  # pylint: disable=too-few-public-methods
         def __init__(self):
             self.native_object = _ffi.new("ed25519_key *")
             ret = _lib.wc_ed25519_init(self.native_object)
@@ -1542,7 +1542,7 @@ if _lib.ED25519_ENABLED:
             return _ffi.buffer(signature, signature_size[0])[:]
 
 if _lib.ED448_ENABLED:
-    class _Ed448(object):  # pylint: disable=too-few-public-methods
+    class _Ed448:  # pylint: disable=too-few-public-methods
         def __init__(self):
             self.native_object = _ffi.new("ed448_key *")
             ret = _lib.wc_ed448_init(self.native_object)
@@ -1762,7 +1762,7 @@ if _lib.ML_KEM_ENABLED:
         ML_KEM_768 = _lib.WC_ML_KEM_768
         ML_KEM_1024 = _lib.WC_ML_KEM_1024
 
-    class _MlKemBase(object):
+    class _MlKemBase:
         INVALID_DEVID = _lib.INVALID_DEVID
 
         def __init__(self, mlkem_type):
@@ -2048,7 +2048,7 @@ if _lib.ML_DSA_ENABLED:
         ML_DSA_65 = _lib.WC_ML_DSA_65
         ML_DSA_87 = _lib.WC_ML_DSA_87
 
-    class _MlDsaBase(object):
+    class _MlDsaBase:
         INVALID_DEVID = _lib.INVALID_DEVID
 
         def __init__(self, mldsa_type):
