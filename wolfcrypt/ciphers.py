@@ -1229,30 +1229,29 @@ if _lib.ECC_ENABLED:
 
 
     class EccPrivate(EccPublic):
+
+        def __init__(self, key=None, rng=None):
+            super().__init__(key)
+            if rng is None:
+                rng = Random()
+            self._rng = rng
+
         @classmethod
         def make_key(cls, size, rng=None):
             """
             Generates a new key pair of desired length **size**.
             """
-            if rng is None:
-                rng = Random()
-            ecc = cls()
-
-            ret = _lib.wc_ecc_make_key(rng.native_object, size,
+            ecc = cls(rng=rng)
+            ret = _lib.wc_ecc_make_key(ecc._rng.native_object, size,
                     ecc.native_object)
             if ret < 0:
                 raise WolfCryptError("Key generation error (%d)" % ret)
 
             if _lib.ECC_TIMING_RESISTANCE_ENABLED and (not _lib.FIPS_ENABLED or
                _lib.FIPS_VERSION > 2):
-                ret = _lib.wc_ecc_set_rng(ecc.native_object, rng.native_object)
+                ret = _lib.wc_ecc_set_rng(ecc.native_object, ecc._rng.native_object)
                 if ret < 0:
                     raise WolfCryptError("Error setting ECC RNG (%d)" % ret)
-
-            # Retain the RNG so it outlives the ECC key. Even outside the
-            # timing-resistance path, wolfSSL internals may retain a pointer
-            # to the RNG; keeping the reference avoids any UAF risk.
-            ecc._rng = rng
 
             return ecc
 
@@ -2450,8 +2449,6 @@ if _lib.ML_DSA_ENABLED:
             :return: signature
             :rtype: bytes
             """
-            if rng is None:
-                rng = Random()
             msg_bytestype = t2b(message)
             in_size = self.sig_size
             signature = _ffi.new(f"byte[{in_size}]")

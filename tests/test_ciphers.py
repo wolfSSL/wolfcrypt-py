@@ -614,12 +614,11 @@ if _lib.ECC_ENABLED:
 
 
     def test_ecc_make_shared_secret():
-        rng = Random()
-        a = EccPrivate.make_key(32, rng=rng)
+        a = EccPrivate.make_key(32, rng=Random())
         a_pub = EccPublic()
         a_pub.import_x963(a.export_x963())
 
-        b = EccPrivate.make_key(32, rng=rng)
+        b = EccPrivate.make_key(32, rng=Random())
         b_pub = EccPublic()
         b_pub.import_x963(b.export_x963())
 
@@ -627,6 +626,13 @@ if _lib.ECC_ENABLED:
             == b.shared_secret(a) \
             == a.shared_secret(b_pub) \
             == b.shared_secret(a_pub)
+
+    def test_ecc_make_key_no_rng():
+        key = EccPrivate.make_key(32)
+        pub_key = EccPublic()
+        pub_key.import_x963(key.export_x963())
+
+        assert key.shared_secret(pub_key)
 
 if _lib.ED25519_ENABLED:
     @pytest.fixture
