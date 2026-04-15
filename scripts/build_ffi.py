@@ -26,7 +26,6 @@ from contextlib import contextmanager
 from distutils.util import get_platform
 from cffi import FFI
 import shutil
-import glob
 from wolfcrypt._version import __wolfssl_version__ as version
 
 def local_path(path):
@@ -332,7 +331,7 @@ def get_features(local_wolfssl, features):
 
     for d in include_dirs:
         if not os.path.exists(d):
-            e = "Invalid wolfSSL include dir: .".format(d)
+            e = f"Invalid wolfSSL include dir: {d}"
             raise FileNotFoundError(e)
 
         options = os.path.join(d, "wolfssl", "options.h")
@@ -543,6 +542,8 @@ def build_ffi(local_wolfssl, features):
         typedef struct { ...; } OS_Seed;
 
         int wc_InitRng(WC_RNG*);
+        int wc_InitRngNonce(WC_RNG*, byte*, word32);
+        int wc_InitRngNonce_ex(WC_RNG*, byte*, word32, void*, int);
         int wc_RNG_GenerateBlock(WC_RNG*, byte*, word32);
         int wc_RNG_GenerateByte(WC_RNG*, byte*);
         int wc_FreeRng(WC_RNG*);
@@ -1032,6 +1033,8 @@ def build_ffi(local_wolfssl, features):
         int wc_dilithium_import_public(const byte* in, word32 inLen, dilithium_key* key);
         int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
         int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
+        int wc_dilithium_sign_msg_with_seed(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
+        int wc_dilithium_sign_ctx_msg_with_seed(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
         int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
         int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx, word32 ctxLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
         typedef dilithium_key MlDsaKey;

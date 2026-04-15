@@ -213,10 +213,9 @@ class _Cipher(object):
         string = t2b(string)
 
         if not string:
-            raise ValueError(
-                    "empty string not allowed")
+            raise ValueError("empty string not allowed")
 
-        if len(string) % self.block_size and not self.mode == MODE_CTR and not "ChaCha" in self._native_type:
+        if len(string) % self.block_size and self.mode != MODE_CTR and "ChaCha" not in self._native_type:
             raise ValueError(
                 "string must be a multiple of %d in length" % self.block_size)
 
@@ -498,7 +497,7 @@ if _lib.CHACHA_ENABLED:
             self._dec = None
             self._key = None
             if len(key) > 0:
-                if not size in self._key_sizes:
+                if size not in self._key_sizes:
                     raise ValueError("Invalid key size %d" % size)
                 self._key = t2b(key)
                 self.key_size = size
@@ -506,7 +505,7 @@ if _lib.CHACHA_ENABLED:
             self._IV_counter = 0
 
         def _set_key(self, direction):
-            if self._key == None:
+            if self._key is None:
                 return -1
             if self._enc:
                 ret = _lib.wc_Chacha_SetKey(self._enc, self._key, len(self._key))
@@ -692,7 +691,7 @@ if _lib.RSA_ENABLED:
 
     class RsaPublic(_Rsa):
         def __init__(self, key=None, hash_type=None):
-            if key != None:
+            if key is not None:
                 key = t2b(key)
             self._hash_type = hash_type
 
@@ -830,8 +829,6 @@ if _lib.RSA_ENABLED:
                 Generates a new key pair of desired length **size**.
                 """
                 rsa = cls(hash_type=hash_type)
-                if rsa == None:  # pragma: no cover
-                    raise WolfCryptError("Invalid key error (%d)" % ret)
 
                 ret = _lib.wc_MakeRsaKey(rsa.native_object, size, 65537,
                         rng.native_object)
@@ -852,7 +849,7 @@ if _lib.RSA_ENABLED:
             idx = _ffi.new("word32*")
             idx[0] = 0
 
-            if key != None:
+            if key is not None:
                 key = t2b(key)
                 ret = _lib.wc_RsaPrivateKeyDecode(key, idx,
                                               self.native_object, len(key))
@@ -1096,7 +1093,7 @@ if _lib.ECC_ENABLED:
             qy_size[0] = self.size
 
             ret = _lib.wc_ecc_export_public_raw(self.native_object, Qx,
-                    qx_size, Qy, qy_size);
+                    qx_size, Qy, qy_size)
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Key encode error (%d)" % ret)
 
@@ -1265,7 +1262,7 @@ if _lib.ECC_ENABLED:
             d_size[0] = self.size
 
             ret = _lib.wc_ecc_export_private_raw(self.native_object, Qx,
-                    qx_size, Qy, qy_size, d, d_size);
+                    qx_size, Qy, qy_size, d, d_size)
             if ret != 0:  # pragma: no cover
                 raise WolfCryptError("Key encode error (%d)" % ret)
 
@@ -1322,8 +1319,8 @@ if _lib.ECC_ENABLED:
                 Returns the signature in its two raw components r, s
                 """
                 plaintext = t2b(plaintext)
-                R = _ffi.new("mp_int[1]");
-                S = _ffi.new("mp_int[1]");
+                R = _ffi.new("mp_int[1]")
+                S = _ffi.new("mp_int[1]")
 
                 R_bin = _ffi.new("unsigned char[%d]" % self.size )
                 S_bin = _ffi.new("unsigned char[%d]" % self.size )
@@ -1478,12 +1475,12 @@ if _lib.ED25519_ENABLED:
             idx[0] = 0
             if pub:
                 ret = _lib.wc_ed25519_import_private_key(key, len(key), pub,
-                        len(pub), self.native_object);
+                        len(pub), self.native_object)
                 if ret < 0:
                     raise WolfCryptError("Key decode error (%d)" % ret)
             else:
                 ret = _lib.wc_ed25519_import_private_only(key, len(key),
-                        self.native_object);
+                        self.native_object)
                 if ret < 0:
                     raise WolfCryptError("Key decode error (%d)" % ret)
                 pubkey = _ffi.new("byte[%d]" % (self.size * 4))
@@ -1492,7 +1489,7 @@ if _lib.ED25519_ENABLED:
                 if ret < 0:
                     raise WolfCryptError("Public key generate error (%d)" % ret)
                 ret = _lib.wc_ed25519_import_public(pubkey, self.size,
-                        self.native_object);
+                        self.native_object)
 
             if self.size <= 0:  # pragma: no cover
                 raise WolfCryptError("Key decode error (%d)" % self.size)
@@ -1622,7 +1619,7 @@ if _lib.ED448_ENABLED:
             status = _ffi.new("int[1]")
             ctx_buf = _ffi.NULL
             ctx_buf_len = 0
-            if ctx != None:
+            if ctx is not None:
                 ctx_buf = t2b(ctx)
                 ctx_buf_len = len(ctx_buf)
 
@@ -1674,12 +1671,12 @@ if _lib.ED448_ENABLED:
             idx[0] = 0
             if pub:
                 ret = _lib.wc_ed448_import_private_key(key, len(key), pub,
-                        len(pub), self.native_object);
+                        len(pub), self.native_object)
                 if ret < 0:
                     raise WolfCryptError("Key decode error (%d)" % ret)
             else:
                 ret = _lib.wc_ed448_import_private_only(key, len(key),
-                        self.native_object);
+                        self.native_object)
                 if ret < 0:
                     raise WolfCryptError("Key decode error (%d)" % ret)
                 pubkey = _ffi.new("byte[%d]" % (self.size * 4))
@@ -1688,7 +1685,7 @@ if _lib.ED448_ENABLED:
                 if ret < 0:
                     raise WolfCryptError("Public key generate error (%d)" % ret)
                 ret = _lib.wc_ed448_import_public(pubkey, self.size,
-                        self.native_object);
+                        self.native_object)
 
             if self.size <= 0:  # pragma: no cover
                 raise WolfCryptError("Key decode error (%d)" % self.size)
@@ -1732,7 +1729,7 @@ if _lib.ED448_ENABLED:
             signature_size[0] = self.max_signature_size
             ctx_buf = _ffi.NULL
             ctx_buf_len = 0
-            if (ctx != None):
+            if ctx is not None:
                 ctx_buf = t2b(ctx)
                 ctx_buf_len = len(ctx_buf)
 
@@ -2031,6 +2028,9 @@ if _lib.ML_KEM_ENABLED:
 
 
 if _lib.ML_DSA_ENABLED:
+    ML_DSA_SIGNATURE_SEED_LENGTH = 32
+    """The length of a signature generation seed."""
+
     class MlDsaType(IntEnum):
         """
         `MlDsaType` specifies supported ML-DSA types.
@@ -2168,6 +2168,7 @@ if _lib.ML_DSA_ENABLED:
             return res[0] == 1
 
     class MlDsaPrivate(_MlDsaBase):
+        
         @classmethod
         def make_key(cls, mldsa_type, rng=Random()):
             """
@@ -2307,6 +2308,73 @@ if _lib.ML_DSA_ENABLED:
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptError("wc_dilithium_sign_msg() error (%d)" % ret)
             
+            if in_size != out_size[0]:
+                raise WolfCryptError(
+                    "in_size=%d and out_size=%d don't match" % (in_size, out_size[0])
+                )
+
+            return _ffi.buffer(signature, out_size[0])[:]
+
+        def sign_with_seed(self, message, seed, ctx=None):
+            """
+            :param message: message to be signed
+            :type message: bytes or str
+            :param seed: 32-byte seed for deterministic signature generation.
+            :type seed: bytes
+            :param ctx: context (optional, maximum 255 bytes)
+            :type ctx: None for no context, str or bytes otherwise
+            :return: signature
+            :rtype: bytes
+            """
+            msg_bytestype = t2b(message)
+            in_size = self.sig_size
+            signature = _ffi.new(f"byte[{in_size}]")
+            out_size = _ffi.new("word32 *")
+            out_size[0] = in_size
+
+            try:
+                seed_view = memoryview(seed)
+            except TypeError as exception:
+                raise TypeError(
+                    "seed must support the buffer protocol, such as `bytes` or `bytearray`"
+                ) from exception
+            if len(seed_view) != ML_DSA_SIGNATURE_SEED_LENGTH:
+                raise ValueError(
+                    f"Seed for generating a signature must be {ML_DSA_SIGNATURE_SEED_LENGTH}"
+                    "bytes."
+                )
+
+            if ctx is not None:
+                ctx_bytestype = t2b(ctx)
+                if len(ctx_bytestype) > 255:
+                    raise ValueError(
+                        f"context length {len(ctx_bytestype)} too large: must be 255 or less"
+                    )
+                ret = _lib.wc_dilithium_sign_ctx_msg_with_seed(
+                    _ffi.from_buffer(ctx_bytestype),
+                    len(ctx_bytestype),  # length must be < 256 bytes
+                    _ffi.from_buffer(msg_bytestype),
+                    len(msg_bytestype),
+                    signature,
+                    out_size,
+                    self.native_object,
+                    _ffi.from_buffer(seed_view),
+                )
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptError("wc_dilithium_sign_ctx_msg_with_seed() error (%d)" % ret)
+            else:
+                ret = _lib.wc_dilithium_sign_msg_with_seed(
+                    _ffi.from_buffer(msg_bytestype),
+                    len(msg_bytestype),
+                    signature,
+                    out_size,
+                    self.native_object,
+                    _ffi.from_buffer(seed_view),
+                )
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptError("wc_dilithium_sign_msg_with_seed() error (%d)" % ret)
+
+
             if in_size != out_size[0]:
                 raise WolfCryptError(
                     "in_size=%d and out_size=%d don't match" % (in_size, out_size[0])

@@ -22,7 +22,6 @@
 
 from collections import namedtuple
 import pytest
-from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import t2b
 

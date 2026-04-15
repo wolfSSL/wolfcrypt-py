@@ -27,7 +27,7 @@ if _lib.CHACHA20_POLY1305_ENABLED:
     import pytest
     from wolfcrypt.utils import t2b
     from wolfcrypt.exceptions import WolfCryptError
-    from binascii import hexlify as b2h, unhexlify as h2b
+    from binascii import unhexlify as h2b
     from wolfcrypt.ciphers import ChaCha20Poly1305
 
     def test_encrypt_decrypt():

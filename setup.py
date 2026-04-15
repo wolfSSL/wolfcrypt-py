@@ -22,12 +22,12 @@
 # pylint: disable=wrong-import-position
 
 import os
+import re
 import sys
 from setuptools import setup, find_packages
 
 os.chdir(os.path.dirname(sys.argv[0]) or ".")
 
-import re
 VERSIONFILE = "wolfcrypt/_version.py"
 verstrline = open(VERSIONFILE, "rt").read()
 VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
