@@ -22,8 +22,6 @@
 
 from __future__ import annotations
 
-from _cffi_backend import FFI
-
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 
