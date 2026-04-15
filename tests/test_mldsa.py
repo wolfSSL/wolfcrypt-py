@@ -24,7 +24,7 @@ from wolfcrypt._ffi import lib as _lib
 
 if _lib.ML_DSA_ENABLED:
     import pytest
-    from wolfcrypt.ciphers import MlDsaPrivate, MlDsaPublic, MlDsaType, ML_DSA_KEYGEN_SEED_LENGTH, ML_DSA_SIGNATURE_SEED_LENGTH
+    from wolfcrypt.ciphers import MlDsaPrivate, MlDsaPublic, MlDsaType, ML_DSA_SIGNATURE_SEED_LENGTH
     from wolfcrypt.random import Random
 
     @pytest.fixture
