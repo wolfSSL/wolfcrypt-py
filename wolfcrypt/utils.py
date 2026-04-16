@@ -29,7 +29,8 @@ def t2b(string: bytes | bytearray | memoryview | str) -> bytes:
     """
     Converts text to binary.
 
-    Passes through bytes, bytearray, and memoryview unchanged.
+    Passes through bytes unchanged.
+    Objects of type bytearray or memoryview are converted to bytes.
     Encodes str to UTF-8 bytes.
     """
     if isinstance(string, (bytes, bytearray, memoryview)):

@@ -47,7 +47,7 @@ class Random:
     def __del__(self) -> None:
         if self.native_object:
             try:
-                Random._delete(self.native_object)
+                self._delete(self.native_object)
             except AttributeError:
                 # Can occur during interpreter shutdown
                 pass

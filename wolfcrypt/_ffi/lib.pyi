@@ -1,6 +1,6 @@
 
 from _cffi_backend import FFI
-from typing_extensions import TypeAlias
+from typing import TypeAlias
 
 INVALID_DEVID: int
 
