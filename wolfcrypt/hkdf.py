@@ -34,7 +34,7 @@ if _lib.HKDF_ENABLED:
         Perform HKDF Extract-and-Expand in one call (wraps wc_HKDF).
 
         Parameters:
-        - hash_cls: hash class, see `wolfcrypt.hashes`.
+        - hash_cls: HMAC class, e.g. HmacSha256, see `wolfcrypt.hashes`.
         - in_key: input key material (IKM) as bytes or str.
         - salt: optional salt value (bytes or str). If None, treated as empty.
         - info: optional context/application info (bytes or str). If None,
@@ -79,7 +79,7 @@ if _lib.HKDF_ENABLED:
         Wraps wc_HKDF_Extract.
 
         Parameters:
-        - hash_cls: hash class, see `wolfcrypt.hashes`.
+        - hash_cls: HMAC class, e.g. HmacSha256, see `wolfcrypt.hashes`.
         - salt: bytes/str (can be None -> treated as empty).
         - in_key: input key material (IKM) as bytes/str.
 
@@ -106,7 +106,7 @@ if _lib.HKDF_ENABLED:
         Wraps wc_HKDF_Expand.
 
         Parameters:
-        - hash_cls: hash class, see `wolfcrypt.hashes`.
+        - hash_cls: HMAC class, e.g. HmacSha256, see `wolfcrypt.hashes`.
         - prk: pseudorandom key (output from HKDF-Extract) as bytes/str.
         - info: optional context/application info (bytes/str). If None, treated as empty.
         - out_len: length of output keying material in bytes.

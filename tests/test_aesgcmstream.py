@@ -122,3 +122,35 @@ if _lib.AESGCM_STREAM_ENABLED:
         gcmdec.decrypt(buf)
         with pytest.raises(WolfCryptError):
             gcmdec.final(authTag)
+
+    def test_invalid_tag_bytes():
+        key = "fedcba9876543210"
+        iv = "0123456789abcdef"
+        # Out of range
+        with pytest.raises(ValueError, match="tag_bytes must be one of"):
+            AesGcmStream(key, iv, tag_bytes=0)
+        with pytest.raises(ValueError, match="tag_bytes must be one of"):
+            AesGcmStream(key, iv, tag_bytes=3)
+        with pytest.raises(ValueError, match="tag_bytes must be one of"):
+            AesGcmStream(key, iv, tag_bytes=17)
+        # Non-NIST sizes within 4-16 range
+        for bad in (5, 6, 7, 9, 10, 11):
+            with pytest.raises(ValueError, match="tag_bytes must be one of"):
+                AesGcmStream(key, iv, tag_bytes=bad)
+        # Valid NIST sizes: verify the resulting tag has the requested length.
+        for good in (4, 8, 12, 13, 14, 15, 16):
+            gcm = AesGcmStream(key, iv, tag_bytes=good)
+            gcm.encrypt("hello world")
+            tag = gcm.final()
+            assert len(tag) == good
+
+    def test_repeated_construction_destruction():
+        import gc
+        key = "fedcba9876543210"
+        iv = "0123456789abcdef"
+        for _ in range(1000):
+            gcm = AesGcmStream(key, iv)
+            gcm.encrypt("hello world")
+            gcm.final()
+            del gcm
+        gc.collect()

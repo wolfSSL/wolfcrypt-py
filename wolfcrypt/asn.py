@@ -20,6 +20,8 @@
 
 # pylint: disable=no-member,no-name-in-module
 
+import hmac as _hmac
+
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.exceptions import WolfCryptError
@@ -42,7 +44,11 @@ if _lib.ASN_ENABLED:
             err = "Error converting from PEM to DER. ({})".format(ret)
             raise WolfCryptError(err)
 
-        return _ffi.buffer(der[0][0].buffer, der[0][0].length)[:]
+        try:
+            result = _ffi.buffer(der[0][0].buffer, der[0][0].length)[:]
+        finally:
+            _lib.wc_FreeDer(der)
+        return result
 
     def der_to_pem(der, pem_type):
         pem_length = _lib.wc_DerToPemEx(der, len(der), _ffi.NULL, 0, _ffi.NULL,
@@ -61,13 +67,13 @@ if _lib.ASN_ENABLED:
         return _ffi.buffer(pem, pem_length)[:]
 
     def hash_oid_from_class(hash_cls):
-        if hash_cls == Sha:
+        if _lib.SHA_ENABLED and hash_cls == Sha:
             return _lib.SHAh
-        elif hash_cls == Sha256:
+        elif _lib.SHA256_ENABLED and hash_cls == Sha256:
             return _lib.SHA256h
-        elif hash_cls == Sha384:
+        elif _lib.SHA384_ENABLED and hash_cls == Sha384:
             return _lib.SHA384h
-        elif hash_cls == Sha512:
+        elif _lib.SHA512_ENABLED and hash_cls == Sha512:
             return _lib.SHA512h
         else:
             err = "Unknown hash class {}.".format(hash_cls.__name__)
@@ -95,4 +101,4 @@ if _lib.ASN_ENABLED:
     def check_signature(signature, data, hash_cls, pub_key):
         computed_signature = make_signature(data, hash_cls)
         decrypted_signature = pub_key.verify(signature)
-        return computed_signature == decrypted_signature
+        return _hmac.compare_digest(computed_signature, decrypted_signature)
