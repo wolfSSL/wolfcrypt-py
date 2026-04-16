@@ -750,9 +750,9 @@ if _lib.RSA_ENABLED:
 
         if _lib.ASN_ENABLED:
             @classmethod
-            def from_pem(cls, file, hash_type=None):
+            def from_pem(cls, file, hash_type=None, rng=None):
                 der = pem_to_der(file, _lib.PUBLICKEY_TYPE)
-                return cls(key=der, hash_type=hash_type)
+                return cls(key=der, hash_type=hash_type, rng=rng)
 
         def encrypt(self, plaintext):
             """
@@ -916,9 +916,9 @@ if _lib.RSA_ENABLED:
 
         if _lib.ASN_ENABLED:
             @classmethod
-            def from_pem(cls, file, hash_type=None):
+            def from_pem(cls, file, hash_type=None, rng=None):
                 der = pem_to_der(file, _lib.PRIVATEKEY_TYPE)
-                return cls(key=der, hash_type=hash_type)
+                return cls(key=der, hash_type=hash_type, rng=rng)
 
         if _lib.KEYGEN_ENABLED:
             def encode_key(self):

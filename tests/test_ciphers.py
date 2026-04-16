@@ -26,6 +26,7 @@ import pytest
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.ciphers import MODE_CTR, MODE_ECB, MODE_CBC, WolfCryptError
 from wolfcrypt.utils import t2b, h2b
+from wolfcrypt.random import Random
 import os
 
 certs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "certs")
@@ -326,8 +327,16 @@ if _lib.CHACHA_ENABLED:
 
 if _lib.RSA_ENABLED:
     @pytest.fixture
+    def rng():
+        return Random()
+
+    @pytest.fixture
     def rsa_private(vectors):
         return RsaPrivate(vectors[RsaPrivate].key)
+
+    @pytest.fixture
+    def rsa_private_rng(vectors, rng):
+        return RsaPrivate(vectors[RsaPrivate].key, rng=rng)
 
     @pytest.fixture
     def rsa_private_oaep(vectors):
@@ -344,6 +353,10 @@ if _lib.RSA_ENABLED:
     @pytest.fixture
     def rsa_public(vectors):
         return RsaPublic(vectors[RsaPublic].key)
+
+    @pytest.fixture
+    def rsa_public_rng(vectors, rng):
+        return RsaPublic(vectors[RsaPublic].key, rng=rng)
 
     @pytest.fixture
     def rsa_public_oaep(vectors):
@@ -365,6 +378,17 @@ if _lib.RSA_ENABLED:
             pem = f.read()
         return RsaPublic.from_pem(pem)
 
+    @pytest.fixture
+    def rsa_private_pem_rng(vectors, rng):
+        with open(vectors[RsaPrivate].pem, "rb") as f:
+            pem = f.read()
+        return RsaPrivate.from_pem(pem, rng=rng)
+
+    @pytest.fixture
+    def rsa_public_pem_rng(vectors, rng):
+        with open(vectors[RsaPublic].pem, "rb") as f:
+            pem = f.read()
+        return RsaPublic.from_pem(pem, rng=rng)
 
     def test_new_rsa_raises(vectors):
         with pytest.raises(WolfCryptError):
@@ -393,6 +417,22 @@ if _lib.RSA_ENABLED:
 
         assert 1024 / 8 == len(ciphertext) == rsa_private.output_size
         assert plaintext == rsa_private.decrypt(ciphertext)
+
+    def test_rsa_encrypt_decrypt_rng(rsa_private_rng, rsa_public_rng):
+        plaintext = t2b("Everyone gets Friday off.")
+
+        # normal usage, encrypt with public, decrypt with private
+        ciphertext = rsa_public_rng.encrypt(plaintext)
+
+        assert 1024 / 8 == len(ciphertext) == rsa_public_rng.output_size
+        assert plaintext == rsa_private_rng.decrypt(ciphertext)
+
+        # private object holds both private and public info, so it can also encrypt
+        # using the known public key.
+        ciphertext = rsa_private_rng.encrypt(plaintext)
+
+        assert 1024 / 8 == len(ciphertext) == rsa_private_rng.output_size
+        assert plaintext == rsa_private_rng.decrypt(ciphertext)
 
     def test_rsa_encrypt_decrypt_pad_oaep(rsa_private_oaep, rsa_public_oaep):
         plaintext = t2b("Everyone gets Friday off.")
@@ -476,6 +516,22 @@ if _lib.RSA_ENABLED:
 
         assert 256 == len(signature) == rsa_private_pem.output_size
         assert plaintext == rsa_private_pem.verify(signature)
+
+    def test_rsa_sign_verify_pem_rng(rsa_private_pem_rng, rsa_public_pem_rng):
+        plaintext = t2b("Everyone gets Friday off.")
+
+        # normal usage, sign with private, verify with public
+        signature = rsa_private_pem_rng.sign(plaintext)
+
+        assert 256 == len(signature) == rsa_private_pem_rng.output_size
+        assert plaintext == rsa_public_pem_rng.verify(signature)
+
+        # private object holds both private and public info, so it can also verify
+        # using the known public key.
+        signature = rsa_private_pem_rng.sign(plaintext)
+
+        assert 256 == len(signature) == rsa_private_pem_rng.output_size
+        assert plaintext == rsa_private_pem_rng.verify(signature)
 
     def test_rsa_pkcs8_sign_verify(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
