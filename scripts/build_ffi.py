@@ -497,7 +497,6 @@ def build_ffi(local_wolfssl, features):
         int ML_KEM_ENABLED = """ + str(features["ML_KEM"]) + """;
         int ML_DSA_ENABLED = """ + str(features["ML_DSA"]) + """;
         int HKDF_ENABLED = """ + str(features["HKDF"]) + """;
-        int ERROR_STRINGS_ENABLED = """ + str(features["ERROR_STRINGS"]) + """;
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -538,7 +537,6 @@ def build_ffi(local_wolfssl, features):
         extern int ML_KEM_ENABLED;
         extern int ML_DSA_ENABLED;
         extern int HKDF_ENABLED;
-        extern int ERROR_STRINGS_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1276,11 +1274,6 @@ def build_ffi(local_wolfssl, features):
 
         int wolfCrypt_SetPrivateKeyReadEnable_fips(int, enum wc_KeyType);
         int wolfCrypt_GetPrivateKeyReadEnable_fips(enum wc_KeyType);
-        """
-
-    if features["ERROR_STRINGS"]:
-        cdef += """
-        const char* wc_GetErrorString(int error);
         """
 
     if features["ML_KEM"] or features["ML_DSA"]:
