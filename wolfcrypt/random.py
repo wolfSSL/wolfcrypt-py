@@ -33,7 +33,7 @@ class Random:
     A Cryptographically Secure Pseudo Random Number Generator - CSPRNG
     """
 
-    def __init__(self, nonce=b"", device_id=_lib.INVALID_DEVID) -> None:
+    def __init__(self, nonce: __builtins__.bytes = b"", device_id: int = _lib.INVALID_DEVID) -> None:
         self.native_object = _ffi.new("WC_RNG *")
 
         ret = _lib.wc_InitRngNonce_ex(self.native_object, nonce, len(nonce), _ffi.NULL, device_id)
@@ -65,7 +65,7 @@ class Random:
 
         return _ffi.buffer(result, 1)[:]
 
-    def bytes(self, length) -> __builtins__.bytes:
+    def bytes(self, length: int) -> __builtins__.bytes:
         """
         Generate and return a random sequence of length bytes.
         """
