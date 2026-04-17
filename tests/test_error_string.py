@@ -1,6 +1,6 @@
-# exceptions.py
+# test_error_string.py
 #
-# Copyright (C) 2006-2022 wolfSSL Inc.
+# Copyright (C) 2026 wolfSSL Inc.
 #
 # This file is part of wolfSSL. (formerly known as CyaSSL)
 #
@@ -18,23 +18,15 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
+import pytest
 
-from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
+from wolfcrypt.exceptions import error_string
 
 
-class WolfCryptError(Exception):
-    pass
+if _lib.ERROR_STRINGS_ENABLED:
 
-
-def error_string(err_code: int) -> str:
-    """
-    Convert error code to error string.
-
-    :param err_code: WolfCrypt error code
-    :return: error string
-    """
-    if _lib.ERROR_STRINGS_ENABLED:
-        return _ffi.string(_lib.wc_GetErrorString(err_code)).decode()
-    else:
-        return ""
+    @pytest.mark.parametrize("err", (_lib.WC_FAILURE, _lib.KEY_EXHAUSTED_E, _lib.NO_PASSWORD, _lib.INTERRUPTED_E))
+    def test_error_string(err):
+        # Error code 0 is an invalid error code (it means success)
+        assert error_string(err) != error_string(0)
