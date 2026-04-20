@@ -27,12 +27,19 @@ from binascii import hexlify as b2h, unhexlify as h2b  # noqa: F401
 
 def t2b(string: bytes | bytearray | memoryview | str) -> bytes:
     """
-    Converts text to binary.
+    Converts text to bytes.
 
     Passes through bytes unchanged.
     Objects of type bytearray or memoryview are converted to bytes.
     Encodes str to UTF-8 bytes.
+
+    :param string: text to convert to bytes.
+    :raises TypeError: if string is not one of the supported types.
     """
-    if isinstance(string, (bytes, bytearray, memoryview)):
+    if isinstance(string, bytes):
+        return string
+    if isinstance(string, (bytearray, memoryview)):
         return bytes(string)
-    return str(string).encode("utf-8")
+    if isinstance(string, str):
+        return str(string).encode("utf-8")
+    raise TypeError(f"String parameter of wrong type {type(string).__name__}, expected bytes, bytearray, memoryview or str")
