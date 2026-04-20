@@ -1232,8 +1232,6 @@ if _lib.ECC_ENABLED:
 
         def __init__(self, key=None, rng=None):
             super().__init__(key)
-            if rng is None:
-                rng = Random()
             self._rng = rng
 
         @classmethod
@@ -1241,7 +1239,10 @@ if _lib.ECC_ENABLED:
             """
             Generates a new key pair of desired length **size**.
             """
+            if rng is None:
+                rng = Random()
             ecc = cls(rng=rng)
+
             ret = _lib.wc_ecc_make_key(ecc._rng.native_object, size,
                     ecc.native_object)
             if ret < 0:
