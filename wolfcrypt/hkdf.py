@@ -56,7 +56,7 @@ if _lib.HKDF_ENABLED:
         if out_len is None:
             out_len = hash_cls.digest_size
 
-        out = _ffi.new("byte[%d]" % out_len)
+        out = _ffi.new(f"byte[{out_len}]")
         ret = _lib.wc_HKDF(
             hash_cls._type,
             in_key,
@@ -92,7 +92,7 @@ if _lib.HKDF_ENABLED:
         in_key = t2b(in_key)
 
         out_len = hash_cls.digest_size
-        out = _ffi.new("byte[%d]" % out_len)
+        out = _ffi.new(f"byte[{out_len}]")
 
         ret = _lib.wc_HKDF_Extract(hash_cls._type, salt, len(salt), in_key, len(in_key), out)
         if ret != 0:
@@ -122,7 +122,7 @@ if _lib.HKDF_ENABLED:
         if out_len is None or out_len <= 0:
             raise ValueError("out_len must be a positive integer")
 
-        out = _ffi.new("byte[%d]" % out_len)
+        out = _ffi.new(f"byte[{out_len}]")
 
         ret = _lib.wc_HKDF_Expand(
             hash_cls._type, prk, len(prk), info, len(info), out, out_len

@@ -33,7 +33,7 @@ if _lib.PWDBASED_ENABLED:
         if isinstance(password, str):
             password = str.encode(password)
 
-        key = _ffi.new("byte[%d]" %key_length)
+        key = _ffi.new(f"byte[{key_length}]")
         ret = _lib.wc_PBKDF2(key, password, len(password), salt, len(salt),
                              iterations, key_length, hash_type)
 

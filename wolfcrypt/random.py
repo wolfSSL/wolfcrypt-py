@@ -69,7 +69,7 @@ class Random:
         """
         Generate and return a random sequence of length bytes.
         """
-        result = _ffi.new("byte[%d]" % length)
+        result = _ffi.new(f"byte[{length}]")
 
         assert self.native_object is not None
         ret = _lib.wc_RNG_GenerateBlock(self.native_object, result, length)

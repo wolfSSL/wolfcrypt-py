@@ -105,7 +105,7 @@ class _Hash:
         way by this function; you can continue updating the object
         after calling this function.
         """
-        result = _ffi.new("byte[%d]" % self.digest_size)
+        result = _ffi.new(f"byte[{self.digest_size}]")
 
         if self._native_object:
             obj = _ffi.new(self._native_type)
