@@ -23,7 +23,7 @@
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 
-from wolfcrypt.exceptions import WolfCryptError
+from wolfcrypt.exceptions import WolfCryptApiError
 
 
 class Random:
@@ -41,7 +41,7 @@ class Random:
         ret = _lib.wc_InitRngNonce_ex(self.native_object, nonce, nonce_size, _ffi.NULL, device_id)
         if ret < 0:  # pragma: no cover
             self.native_object = None
-            raise WolfCryptError("RNG init error (%d)" % ret)
+            raise WolfCryptApiError("RNG init error", ret)
 
     # making sure _lib.wc_FreeRng outlives WC_RNG instances
     _delete = _lib.wc_FreeRng
@@ -62,7 +62,7 @@ class Random:
 
         ret = _lib.wc_RNG_GenerateByte(self.native_object, result)
         if ret < 0:  # pragma: no cover
-            raise WolfCryptError("RNG generate byte error (%d)" % ret)
+            raise WolfCryptApiError("RNG generate byte error", ret)
 
         return _ffi.buffer(result, 1)[:]
 
@@ -74,6 +74,6 @@ class Random:
 
         ret = _lib.wc_RNG_GenerateBlock(self.native_object, result, length)
         if ret < 0:  # pragma: no cover
-            raise WolfCryptError("RNG generate block error (%d)" % ret)
+            raise WolfCryptApiError("RNG generate block error", ret)
 
         return _ffi.buffer(result, length)[:]

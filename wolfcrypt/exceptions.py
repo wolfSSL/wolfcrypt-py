@@ -27,6 +27,27 @@ class WolfCryptError(Exception):
     pass
 
 
+class WolfCryptApiError(WolfCryptError):
+    """
+    WolfCrypt API error displaying the error code and error message if support is compiled in.
+    """
+    def __init__(self, message: str, err_code: int) -> None:
+        """
+        Create a WolfCryptApiError exception.
+
+        :param message: error message
+        :param err_code: WolfCrypt error code
+        """
+        err_string = error_string(err_code)
+
+        if err_string:
+            reason = f": {err_string}"
+        else:
+            reason = ""
+
+        super().__init__(f"{message} ({err_code}){reason}")
+
+
 def error_string(err_code: int) -> str:
     """
     Convert error code to error string.
