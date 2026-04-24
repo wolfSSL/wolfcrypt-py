@@ -101,10 +101,10 @@ def wolfssl_lib_dir(local_wolfssl=None, fips=False):
     return lib_dir
 
 def call(cmd):
-    print("Calling: '{}' from working directory {}".format(cmd, os.getcwd()))
+    print(f"Calling: '{cmd}' from working directory {os.getcwd()}")
 
     old_env = os.environ["PATH"]
-    os.environ["PATH"] = "{}:{}".format(WOLFSSL_SRC_PATH, old_env)
+    os.environ["PATH"] = f"{WOLFSSL_SRC_PATH}:{old_env}"
     subprocess.check_call(cmd, shell=True, env=os.environ)
     os.environ["PATH"] = old_env
 
@@ -142,9 +142,9 @@ def checkout_version(version):
             ).strip().decode().split("\n")
 
             if version != "master" and version not in tags:
-                call("git fetch --depth=1 origin tag {}".format(version))
+                call(f"git fetch --depth=1 origin tag {version}")
 
-            call("git checkout --force {}".format(version))
+            call(f"git checkout --force {version}")
 
             return True  # rebuild needed
 
@@ -171,7 +171,7 @@ def make_flags(prefix, fips):
     """
     if sys.platform == "win32":
         flags = []
-        flags.append("-DCMAKE_INSTALL_PREFIX={}".format(prefix))
+        flags.append(f"-DCMAKE_INSTALL_PREFIX={prefix}")
         flags.append("-DWOLFSSL_CRYPT_TESTS=no")
         flags.append("-DWOLFSSL_EXAMPLES=no")
         flags.append("-DBUILD_SHARED_LIBS=no")
@@ -188,7 +188,7 @@ def make_flags(prefix, fips):
             flags.append("CFLAGS=-fPIC")
 
         # install location
-        flags.append("--prefix={}".format(prefix))
+        flags.append(f"--prefix={prefix}")
 
         # crypt only, lib only
         flags.append("--enable-cryptonly")
@@ -261,7 +261,7 @@ def make(configure_flags, fips=False):
             raise Exception("Cannot build wolfSSL FIPS from git repo.")
 
         with chdir(build_path):
-            call("cmake {} ..".format(configure_flags))
+            call(f"cmake {configure_flags} ..")
             call("cmake --build . --config Release")
             call("cmake --install . --config Release")
     else:
@@ -274,7 +274,7 @@ def make(configure_flags, fips=False):
                 call("libtoolize")
                 call("./autogen.sh")
 
-            call("./configure {}".format(configure_flags))
+            call(f"./configure {configure_flags}")
             call("make")
             call("make install")
 
@@ -1375,9 +1375,9 @@ def main(ffibuilder):
 
     local_wolfssl = os.environ.get("USE_LOCAL_WOLFSSL")
     if local_wolfssl:
-        print("Using local wolfSSL at {}.".format(local_wolfssl))
+        print(f"Using local wolfSSL at {local_wolfssl}.")
         if not os.path.exists(local_wolfssl):
-            e = "Local wolfssl installation path {} doesn't exist.".format(local_wolfssl)
+            e = f"Local wolfssl installation path {local_wolfssl} doesn't exist."
             raise FileNotFoundError(e)
 
     if not local_wolfssl:
