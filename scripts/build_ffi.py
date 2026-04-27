@@ -133,7 +133,7 @@ def checkout_version(version):
             current = subprocess.check_output(
                 ["git", "describe", "--all", "--exact-match"]
             ).strip().decode().split('/')[-1]
-        except:
+        except subprocess.CalledProcessError:
             pass
 
         if current != version:
