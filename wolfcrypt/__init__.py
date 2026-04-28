@@ -49,7 +49,9 @@ if top_level_py not in ["setup.py", "build_ffi.py"]:
     from wolfcrypt.cryptocb import CryptoCallback
     from wolfcrypt.exceptions import WolfCryptError
 
-    _lib.wolfCrypt_Init()
+    ret = _lib.wolfCrypt_Init()
+    if ret < 0:
+        raise WolfCryptError(f"WolfCrypt_Init failed ({ret})")
 
     if _lib.CRYPTO_CB_ENABLED:
         @_ffi.def_extern()

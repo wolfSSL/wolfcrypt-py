@@ -1373,43 +1373,50 @@ def build_ffi(local_wolfssl, features):
             union {
         """
 
-        """
-            struct {
-                int type; /* enum wc_CipherType */
-                int enc;
-                union {
-                    //wc_CryptoCb_AesAuthEnc aesgcm_enc;
-                    //wc_CryptoCb_AesAuthDec aesgcm_dec;
-                    //wc_CryptoCb_AesAuthEnc aesccm_enc;
-                    //wc_CryptoCb_AesAuthDec aesccm_dec;
-                    struct {
-                        Aes*        aes;
-                        byte*       out;
-                        const byte* in;
-                        word32      sz;
-                    } aescbc;
-                    //struct {
-                    //    Aes*        aes;
-                    //    byte*       out;
-                    //    const byte* in;
-                    //    word32      sz;
-                    //} aesctr;
-                    //struct {
-                    //    Aes*        aes;
-                    //    byte*       out;
-                    //    const byte* in;
-                    //    word32      sz;
-                    //} aesecb;
-                    //struct {
-                    //    Des3*       des;
-                    //    byte*       out;
-                    //    const byte* in;
-                    //    word32      sz;
-                    //} des3;
-                    //void* ctx;
-                };
-            } cipher;
-        """
+        # The following block is commented out as there are issues with cffi code generation for the
+        # wc_CryptoInfo structure with two layers of anonymous unions.
+        # Uncommenting more parts of the cipher struct causes errors regarding conflicting struct sizes of
+        # other parts of the wc_CryptoInfo struct.
+        # Cffi cdef and the compiler seem to disagree.
+        #
+        # cdef += """
+        #     struct {
+        #         int type; /* enum wc_CipherType */
+        #         int enc;
+        #         union {
+        #             //wc_CryptoCb_AesAuthEnc aesgcm_enc;
+        #             //wc_CryptoCb_AesAuthDec aesgcm_dec;
+        #             //wc_CryptoCb_AesAuthEnc aesccm_enc;
+        #             //wc_CryptoCb_AesAuthDec aesccm_dec;
+        #             struct {
+        #                 Aes*        aes;
+        #                 byte*       out;
+        #                 const byte* in;
+        #                 word32      sz;
+        #             } aescbc;
+        #             //struct {
+        #             //    Aes*        aes;
+        #             //    byte*       out;
+        #             //    const byte* in;
+        #             //    word32      sz;
+        #             //} aesctr;
+        #             //struct {
+        #             //    Aes*        aes;
+        #             //    byte*       out;
+        #             //    const byte* in;
+        #             //    word32      sz;
+        #             //} aesecb;
+        #             //struct {
+        #             //    Des3*       des;
+        #             //    byte*       out;
+        #             //    const byte* in;
+        #             //    word32      sz;
+        #             //} des3;
+        #             //void* ctx;
+        #         };
+        #     } cipher;
+        # """
+
         cdef += """
             struct {
                 int type; /* enum wc_HashType */
