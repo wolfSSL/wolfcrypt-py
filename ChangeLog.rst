@@ -1,3 +1,9 @@
+wolfCrypt-py Release next (TBD)
+==========================================
+
+* Drop support for end-of-life Python versions (<= 3.9)
+
+
 wolfCrypt-py Release 5.8.4 (Jan 7, 2026)
 ==========================================
 
