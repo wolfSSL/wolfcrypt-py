@@ -33,7 +33,7 @@ __copyright__ = "Copyright (C) 2006-2022 wolfSSL Inc"
 __all__ = [
     "__title__", "__summary__", "__uri__", "__version__",
     "__author__", "__email__", "__license__", "__copyright__",
-    "ciphers", "hashes", "random", "pwdbased"
+    "ciphers", "hashes", "random", "pwdbased", "cryptocb"
 ]
 
 import os
@@ -46,7 +46,20 @@ top_level_py = os.path.basename(sys.argv[0])
 if top_level_py not in ["setup.py", "build_ffi.py"]:
     from wolfcrypt._ffi import ffi as _ffi
     from wolfcrypt._ffi import lib as _lib
+    from wolfcrypt.cryptocb import CryptoCallback
     from wolfcrypt.exceptions import WolfCryptError
+
+    ret = _lib.wolfCrypt_Init()
+    if ret < 0:
+        raise WolfCryptError(f"WolfCrypt_Init failed ({ret})")
+
+    if _lib.CRYPTO_CB_ENABLED:
+        @_ffi.def_extern()
+        def py_wc_crypto_callback(device_id: int, info: _ffi.CData, ctx: _ffi.CData) -> int:
+            if ctx == _ffi.NULL:
+                return _lib.CRYPTOCB_UNAVAILABLE
+            crypto_cb: CryptoCallback = _ffi.from_handle(ctx)
+            return crypto_cb.callback(device_id, info)
 
     if hasattr(_lib, 'WC_RNG_SEED_CB_ENABLED'):
         if _lib.WC_RNG_SEED_CB_ENABLED:
