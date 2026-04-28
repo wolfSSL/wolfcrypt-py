@@ -22,7 +22,11 @@
 
 from __future__ import annotations
 
+import logging
+from collections import defaultdict
+from types import TracebackType
 from typing import Final
+
 from typing_extensions import Self
 
 from wolfcrypt._ffi import ffi as _ffi
@@ -30,22 +34,37 @@ from wolfcrypt._ffi import lib as _lib
 
 from wolfcrypt.exceptions import WolfCryptError
 
-ALGO_TYPE_NAME: Final = {
-    _lib.WC_ALGO_TYPE_HASH: "hash",
-    _lib.WC_ALGO_TYPE_CIPHER: "cipher",
-    _lib.WC_ALGO_TYPE_RNG: "rng",
-    _lib.WC_ALGO_TYPE_SEED: "seed",
-}
+ALGO_TYPE_NAME: Final = defaultdict(
+    lambda: "unknown",
+    {
+        _lib.WC_ALGO_TYPE_NONE: "none",
+        _lib.WC_ALGO_TYPE_HASH: "hash",
+        _lib.WC_ALGO_TYPE_CIPHER: "cipher",
+        _lib.WC_ALGO_TYPE_PK: "pk",
+        _lib.WC_ALGO_TYPE_RNG: "rng",
+        _lib.WC_ALGO_TYPE_SEED: "seed",
+        _lib.WC_ALGO_TYPE_HMAC: "hmac",
+        _lib.WC_ALGO_TYPE_CMAC: "cmac",
+        _lib.WC_ALGO_TYPE_CERT: "cert",
+        _lib.WC_ALGO_TYPE_KDF: "kdf",
+        _lib.WC_ALGO_TYPE_COPY: "copy",
+        _lib.WC_ALGO_TYPE_FREE: "free",
+        _lib.WC_ALGO_TYPE_MAX: "max",
+    },
+)
 
-HASH_TYPE_NAME: Final = {
-    _lib.WC_HASH_TYPE_SHA: "SHA1",
-    _lib.WC_HASH_TYPE_SHA256: "SHA256",
-    _lib.WC_HASH_TYPE_SHA384: "SHA384",
-    _lib.WC_HASH_TYPE_SHA512: "SHA512",
-    _lib.WC_HASH_TYPE_SHA3_256: "SHA3_256",
-    _lib.WC_HASH_TYPE_SHA3_384: "SHA3_384",
-    _lib.WC_HASH_TYPE_SHA3_512: "SHA3_512",
-}
+HASH_TYPE_NAME: Final = defaultdict(
+    lambda: "unknown",
+    {
+        _lib.WC_HASH_TYPE_SHA: "SHA1",
+        _lib.WC_HASH_TYPE_SHA256: "SHA256",
+        _lib.WC_HASH_TYPE_SHA384: "SHA384",
+        _lib.WC_HASH_TYPE_SHA512: "SHA512",
+        _lib.WC_HASH_TYPE_SHA3_256: "SHA3_256",
+        _lib.WC_HASH_TYPE_SHA3_384: "SHA3_384",
+        _lib.WC_HASH_TYPE_SHA3_512: "SHA3_512",
+    },
+)
 
 DIGEST_SIZE: Final = {
     _lib.WC_HASH_TYPE_SHA: 20,
@@ -57,10 +76,13 @@ DIGEST_SIZE: Final = {
     _lib.WC_HASH_TYPE_SHA3_512: 64,
 }
 
+log = logging.getLogger(__name__)
+
 
 if _lib.CRYPTO_CB_ENABLED:
+
     class CryptoCallback:
-        def __init__(self, device_id: int):
+        def __init__(self, device_id: int) -> None:
             self.device_id = device_id
             self.ctx = _ffi.new_handle(self)
             ret = _lib.wc_CryptoCb_RegisterDevice(device_id, _lib.py_wc_crypto_callback, self.ctx)
@@ -70,23 +92,35 @@ if _lib.CRYPTO_CB_ENABLED:
         def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_value, traceback) -> None:
+        def __exit__(
+            self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None
+        ) -> bool:
             self._unregister()
+            return False
 
         def __del__(self) -> None:
             self._unregister()
 
         def callback(self, device_id: int, info: _ffi.CData) -> int:
-            print(f"{device_id=} algo = {ALGO_TYPE_NAME[info.algo_type]}")
-            # _lib.wc_CryptoCb_InfoString(info)
+            log.debug(f"{device_id=} algo = {ALGO_TYPE_NAME[info.algo_type]}")
             try:
                 if info.algo_type == _lib.WC_ALGO_TYPE_HASH:
-                    print(f"hash = {HASH_TYPE_NAME[info.hash.type]}")
-                    print(f"{info.hash.data=} {info.hash.data_size=} {info.hash.digest=} {info.hash.u.sha256=}")
+                    if info.hash.type not in DIGEST_SIZE:
+                        return _lib.CRYPTOCB_UNAVAILABLE
+                    log.debug("hash = %s", HASH_TYPE_NAME[info.hash.type])
                     if info.hash.digest == _ffi.NULL:
-                        self.hash_update_callback(device_id, info.hash.type, bytes(_ffi.buffer(info.hash.data, info.hash.data_size)))
+                        self.hash_update_callback(
+                            device_id,
+                            info.hash.type,
+                            bytes(_ffi.buffer(info.hash.data, info.hash.data_size)),
+                        )
                     else:
                         digest = self.hash_finalize_callback(device_id, info.hash.type)
+                        if len(digest) != DIGEST_SIZE[info.hash.type]:
+                            raise ValueError(
+                                f"Generated digest is expected to be {DIGEST_SIZE[info.hash.type]} bytes long, "
+                                f"but is {len(digest)} bytes long"
+                            )
                         _ffi.buffer(info.hash.digest, DIGEST_SIZE[info.hash.type])[:] = digest
                     return 0
                 if info.algo_type == _lib.WC_ALGO_TYPE_CIPHER:
@@ -94,6 +128,10 @@ if _lib.CRYPTO_CB_ENABLED:
                     return 0
                 if info.algo_type == _lib.WC_ALGO_TYPE_RNG:
                     out = self.rng_callback(device_id, info.rng.rng, info.rng.sz)
+                    if len(out) != info.rng.sz:
+                        raise ValueError(
+                            f"Generated random is expected to be {info.rng.sz} bytes long, but is {len(out)} bytes long"
+                        )
                     _ffi.buffer(info.rng.out, info.rng.sz)[:] = out
                     return 0
                 return _lib.CRYPTOCB_UNAVAILABLE
@@ -104,11 +142,9 @@ if _lib.CRYPTO_CB_ENABLED:
             raise NotImplementedError
 
         def hash_update_callback(self, device_id: int, hash_type: int, data: bytes) -> None:
-            print("hash_update_callback")
             raise NotImplementedError
 
         def hash_finalize_callback(self, device_id: int, hash_type: int) -> bytes:
-            print("hash_finalize_callback")
             raise NotImplementedError
 
         def cipher_callback(self, device_id: int) -> None:
