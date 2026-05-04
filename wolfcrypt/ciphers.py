@@ -1229,6 +1229,11 @@ if _lib.ECC_ENABLED:
 
 
     class EccPrivate(EccPublic):
+
+        def __init__(self, key=None, rng=None):
+            super().__init__(key)
+            self._rng = rng
+
         @classmethod
         def make_key(cls, size, rng=None):
             """
@@ -1236,23 +1241,18 @@ if _lib.ECC_ENABLED:
             """
             if rng is None:
                 rng = Random()
-            ecc = cls()
+            ecc = cls(rng=rng)
 
-            ret = _lib.wc_ecc_make_key(rng.native_object, size,
+            ret = _lib.wc_ecc_make_key(ecc._rng.native_object, size,
                     ecc.native_object)
             if ret < 0:
                 raise WolfCryptError("Key generation error (%d)" % ret)
 
             if _lib.ECC_TIMING_RESISTANCE_ENABLED and (not _lib.FIPS_ENABLED or
                _lib.FIPS_VERSION > 2):
-                ret = _lib.wc_ecc_set_rng(ecc.native_object, rng.native_object)
+                ret = _lib.wc_ecc_set_rng(ecc.native_object, ecc._rng.native_object)
                 if ret < 0:
                     raise WolfCryptError("Error setting ECC RNG (%d)" % ret)
-
-            # Retain the RNG so it outlives the ECC key. Even outside the
-            # timing-resistance path, wolfSSL internals may retain a pointer
-            # to the RNG; keeping the reference avoids any UAF risk.
-            ecc._rng = rng
 
             return ecc
 
