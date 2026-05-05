@@ -364,7 +364,7 @@ if _lib.AES_SIV_ENABLED:
             C function has been called, in order to make sure that the memory
             is not freed by the FFI garbage collector before the data is read.
             """
-            if (isinstance(associated_data, str) or isinstance(associated_data, bytes)):
+            if isinstance(associated_data, str) or isinstance(associated_data, bytes):
                 # A single block is provided.
                 # Make sure we have bytes.
                 associated_data = t2b(associated_data)
@@ -374,7 +374,7 @@ if _lib.AES_SIV_ENABLED:
             else:
                 # It is assumed that a list is provided.
                 num_blocks = len(associated_data)
-                if (num_blocks > 126):
+                if num_blocks > 126:
                     raise WolfCryptError("AES-SIV does not support more than 126 blocks "
                                          "of associated data, got: %d" % num_blocks)
                 # Make sure we have bytes.
@@ -410,7 +410,7 @@ if _lib.AESGCM_STREAM_ENABLED:
                 raise ValueError(
                     "tag_bytes must be one of 4, 8, 12, 13, 14, 15, or 16")
             # Per-instance state: AAD, tag length, and current mode (enc/dec).
-            self._aad = bytes()
+            self._aad = b""
             self._tag_bytes = tag_bytes
             self._mode = None
             if len(key) not in self._key_sizes:
@@ -447,7 +447,7 @@ if _lib.AESGCM_STREAM_ENABLED:
             Add more data to the encryption stream
             """
             data = t2b(data)
-            aad = bytes()
+            aad = b""
             if self._mode is None:
                 self._mode = _ENCRYPTION
                 aad = self._aad
@@ -463,7 +463,7 @@ if _lib.AESGCM_STREAM_ENABLED:
             """
             Add more data to the decryption stream
             """
-            aad = bytes()
+            aad = b""
             data = t2b(data)
             if self._mode is None:
                 self._mode = _DECRYPTION
@@ -829,8 +829,7 @@ if _lib.RSA_ENABLED:
                 Returns a string containing the plaintext.
                 """
                 if not self._hash_type:
-                    raise WolfCryptError(("Hash type not set. Cannot verify a "
-                        "PSS signature without a hash type."))
+                    raise WolfCryptError("Hash type not set. Cannot verify a PSS signature without a hash type.")
 
                 hash_cls = hash_type_to_cls(self._hash_type)
                 if not hash_cls:
@@ -1025,8 +1024,7 @@ if _lib.RSA_ENABLED:
                 Returns a string containing the signature.
                 """
                 if not self._hash_type:
-                    raise WolfCryptError(("Hash type not set. Cannot verify a "
-                        "PSS signature without a hash type."))
+                    raise WolfCryptError("Hash type not set. Cannot verify a PSS signature without a hash type.")
 
                 hash_cls = hash_type_to_cls(self._hash_type)
                 if not hash_cls:
@@ -1131,8 +1129,8 @@ if _lib.ECC_ENABLED:
 
             Returns (Qx, Qy)
             """
-            Qx = _ffi.new("byte[%d]" % (self.size))
-            Qy = _ffi.new("byte[%d]" % (self.size))
+            Qx = _ffi.new("byte[%d]" % self.size)
+            Qy = _ffi.new("byte[%d]" % self.size)
             qx_size = _ffi.new("word32[1]")
             qy_size = _ffi.new("word32[1]")
             qx_size[0] = self.size
@@ -1308,9 +1306,9 @@ if _lib.ECC_ENABLED:
 
             Returns (Qx, Qy, d)
             """
-            Qx = _ffi.new("byte[%d]" % (self.size))
-            Qy = _ffi.new("byte[%d]" % (self.size))
-            d = _ffi.new("byte[%d]" % (self.size))
+            Qx = _ffi.new("byte[%d]" % self.size)
+            Qy = _ffi.new("byte[%d]" % self.size)
+            d = _ffi.new("byte[%d]" % self.size)
             qx_size = _ffi.new("word32[1]")
             qy_size = _ffi.new("word32[1]")
             d_size = _ffi.new("word32[1]")
@@ -1453,7 +1451,7 @@ if _lib.ED25519_ENABLED:
             Decodes an ED25519 public key
             """
             key = t2b(key)
-            if (len(key) < _lib.wc_ed25519_pub_size(self.native_object)):
+            if len(key) < _lib.wc_ed25519_pub_size(self.native_object):
                 raise WolfCryptError("Key decode error: key too short")
 
             idx = _ffi.new("word32*")
@@ -1540,7 +1538,7 @@ if _lib.ED25519_ENABLED:
             """
             key = t2b(key)
 
-            if (len(key) < _lib.wc_ed25519_priv_size(self.native_object)/2):
+            if len(key) < _lib.wc_ed25519_priv_size(self.native_object)/2:
                 raise WolfCryptError("Key decode error: key too short")
 
             idx = _ffi.new("word32*")
@@ -1653,7 +1651,7 @@ if _lib.ED448_ENABLED:
             Decodes an ED448 public key
             """
             key = t2b(key)
-            if (len(key) < _lib.wc_ed448_pub_size(self.native_object)):
+            if len(key) < _lib.wc_ed448_pub_size(self.native_object):
                 raise WolfCryptError("Key decode error: key too short")
 
             idx = _ffi.new("word32*")
@@ -1746,7 +1744,7 @@ if _lib.ED448_ENABLED:
             """
             key = t2b(key)
 
-            if (len(key) < _lib.wc_ed448_priv_size(self.native_object)/2):
+            if len(key) < _lib.wc_ed448_priv_size(self.native_object)/2:
                 raise WolfCryptError("Key decode error: key too short")
 
             idx = _ffi.new("word32*")
