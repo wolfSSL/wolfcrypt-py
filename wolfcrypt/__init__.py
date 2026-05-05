@@ -31,7 +31,7 @@ __license__ = "GPLv2 or Commercial License"
 __copyright__ = "Copyright (C) 2006-2022 wolfSSL Inc"
 
 __all__ = [
-    "__title__", "__summary__", "__uri__", "__version__",
+    "__title__", "__summary__", "__uri__", "__version__", "__wolfssl_version__",
     "__author__", "__email__", "__license__", "__copyright__",
     "ciphers", "hashes", "random", "pwdbased"
 ]

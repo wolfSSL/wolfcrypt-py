@@ -364,7 +364,7 @@ if _lib.AES_SIV_ENABLED:
             C function has been called, in order to make sure that the memory
             is not freed by the FFI garbage collector before the data is read.
             """
-            if (isinstance(associated_data, str) or isinstance(associated_data, bytes)):
+            if isinstance(associated_data, str) or isinstance(associated_data, bytes):
                 # A single block is provided.
                 # Make sure we have bytes.
                 associated_data = t2b(associated_data)
@@ -374,7 +374,7 @@ if _lib.AES_SIV_ENABLED:
             else:
                 # It is assumed that a list is provided.
                 num_blocks = len(associated_data)
-                if (num_blocks > 126):
+                if num_blocks > 126:
                     raise WolfCryptError("AES-SIV does not support more than 126 blocks "
                                          "of associated data, got: %d" % num_blocks)
                 # Make sure we have bytes.
@@ -397,7 +397,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         _key_sizes = [16, 24, 32]
         _native_type = "Aes *"
         # making sure _lib.wc_AesFree outlives Aes instances
-        _delete = _lib.wc_AesFree
+        _delete = staticmethod(_lib.wc_AesFree)
 
         def __init__(self, key, IV, tag_bytes=16):
             """
@@ -410,7 +410,7 @@ if _lib.AESGCM_STREAM_ENABLED:
                 raise ValueError(
                     "tag_bytes must be one of 4, 8, 12, 13, 14, 15, or 16")
             # Per-instance state: AAD, tag length, and current mode (enc/dec).
-            self._aad = bytes()
+            self._aad = b""
             self._tag_bytes = tag_bytes
             self._mode = None
             if len(key) not in self._key_sizes:
@@ -447,7 +447,7 @@ if _lib.AESGCM_STREAM_ENABLED:
             Add more data to the encryption stream
             """
             data = t2b(data)
-            aad = bytes()
+            aad = b""
             if self._mode is None:
                 self._mode = _ENCRYPTION
                 aad = self._aad
@@ -463,7 +463,7 @@ if _lib.AESGCM_STREAM_ENABLED:
             """
             Add more data to the decryption stream
             """
-            aad = bytes()
+            aad = b""
             data = t2b(data)
             if self._mode is None:
                 self._mode = _DECRYPTION
@@ -684,13 +684,16 @@ if _lib.RSA_ENABLED:
         _mgf = None
         _hash_type = None
 
-        def __init__(self):
+        def __init__(self, rng=None):
+            if rng is None:
+                rng = Random()
+
             self.native_object = _ffi.new("RsaKey *")
             ret = _lib.wc_InitRsaKey(self.native_object, _ffi.NULL)
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
-            self._random = Random()
+            self._random = rng
             if _lib.RSA_BLINDING_ENABLED:
                 ret = _lib.wc_RsaSetRNG(self.native_object,
                         self._random.native_object)
@@ -698,7 +701,7 @@ if _lib.RSA_ENABLED:
                     raise WolfCryptError("Key initialization error (%d)" % ret)
 
         # making sure _lib.wc_FreeRsaKey outlives RsaKey instances
-        _delete = _lib.wc_FreeRsaKey
+        _delete = staticmethod(_lib.wc_FreeRsaKey)
 
         def __del__(self):
             if self.native_object:
@@ -724,12 +727,12 @@ if _lib.RSA_ENABLED:
 
 
     class RsaPublic(_Rsa):
-        def __init__(self, key=None, hash_type=None):
+        def __init__(self, key=None, hash_type=None, rng=None):
+            super().__init__(rng)
+
             if key is not None:
                 key = t2b(key)
             self._hash_type = hash_type
-
-            _Rsa.__init__(self)
 
             idx = _ffi.new("word32*")
             idx[0] = 0
@@ -747,9 +750,9 @@ if _lib.RSA_ENABLED:
 
         if _lib.ASN_ENABLED:
             @classmethod
-            def from_pem(cls, file, hash_type=None):
+            def from_pem(cls, file, hash_type=None, rng=None):
                 der = pem_to_der(file, _lib.PUBLICKEY_TYPE)
-                return cls(key=der, hash_type=hash_type)
+                return cls(key=der, hash_type=hash_type, rng=rng)
 
         def encrypt(self, plaintext):
             """
@@ -826,8 +829,7 @@ if _lib.RSA_ENABLED:
                 Returns a string containing the plaintext.
                 """
                 if not self._hash_type:
-                    raise WolfCryptError(("Hash type not set. Cannot verify a "
-                        "PSS signature without a hash type."))
+                    raise WolfCryptError("Hash type not set. Cannot verify a PSS signature without a hash type.")
 
                 hash_cls = hash_type_to_cls(self._hash_type)
                 if not hash_cls:
@@ -883,9 +885,9 @@ if _lib.RSA_ENABLED:
 
                 return rsa
 
-        def __init__(self, key=None, hash_type=None):  # pylint: disable=super-init-not-called
+        def __init__(self, key=None, hash_type=None, rng=None):  # pylint: disable=super-init-not-called
 
-            _Rsa.__init__(self)  # pylint: disable=non-parent-init-called
+            _Rsa.__init__(self, rng)  # pylint: disable=non-parent-init-called
             self._hash_type = hash_type
             idx = _ffi.new("word32*")
             idx[0] = 0
@@ -913,9 +915,9 @@ if _lib.RSA_ENABLED:
 
         if _lib.ASN_ENABLED:
             @classmethod
-            def from_pem(cls, file, hash_type=None):
+            def from_pem(cls, file, hash_type=None, rng=None):
                 der = pem_to_der(file, _lib.PRIVATEKEY_TYPE)
-                return cls(key=der, hash_type=hash_type)
+                return cls(key=der, hash_type=hash_type, rng=rng)
 
         if _lib.KEYGEN_ENABLED:
             def encode_key(self):
@@ -1022,8 +1024,7 @@ if _lib.RSA_ENABLED:
                 Returns a string containing the signature.
                 """
                 if not self._hash_type:
-                    raise WolfCryptError(("Hash type not set. Cannot verify a "
-                        "PSS signature without a hash type."))
+                    raise WolfCryptError("Hash type not set. Cannot verify a PSS signature without a hash type.")
 
                 hash_cls = hash_type_to_cls(self._hash_type)
                 if not hash_cls:
@@ -1057,7 +1058,7 @@ if _lib.ECC_ENABLED:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
         # making sure _lib.wc_ecc_free outlives ecc_key instances
-        _delete = _lib.wc_ecc_free
+        _delete = staticmethod(_lib.wc_ecc_free)
 
         def __del__(self):
             if self.native_object:
@@ -1128,8 +1129,8 @@ if _lib.ECC_ENABLED:
 
             Returns (Qx, Qy)
             """
-            Qx = _ffi.new("byte[%d]" % (self.size))
-            Qy = _ffi.new("byte[%d]" % (self.size))
+            Qx = _ffi.new("byte[%d]" % self.size)
+            Qy = _ffi.new("byte[%d]" % self.size)
             qx_size = _ffi.new("word32[1]")
             qy_size = _ffi.new("word32[1]")
             qx_size[0] = self.size
@@ -1229,6 +1230,11 @@ if _lib.ECC_ENABLED:
 
 
     class EccPrivate(EccPublic):
+
+        def __init__(self, key=None, rng=None):
+            super().__init__(key)
+            self._rng = rng
+
         @classmethod
         def make_key(cls, size, rng=None):
             """
@@ -1236,23 +1242,18 @@ if _lib.ECC_ENABLED:
             """
             if rng is None:
                 rng = Random()
-            ecc = cls()
+            ecc = cls(rng=rng)
 
-            ret = _lib.wc_ecc_make_key(rng.native_object, size,
+            ret = _lib.wc_ecc_make_key(ecc._rng.native_object, size,
                     ecc.native_object)
             if ret < 0:
                 raise WolfCryptError("Key generation error (%d)" % ret)
 
             if _lib.ECC_TIMING_RESISTANCE_ENABLED and (not _lib.FIPS_ENABLED or
                _lib.FIPS_VERSION > 2):
-                ret = _lib.wc_ecc_set_rng(ecc.native_object, rng.native_object)
+                ret = _lib.wc_ecc_set_rng(ecc.native_object, ecc._rng.native_object)
                 if ret < 0:
                     raise WolfCryptError("Error setting ECC RNG (%d)" % ret)
-
-            # Retain the RNG so it outlives the ECC key. Even outside the
-            # timing-resistance path, wolfSSL internals may retain a pointer
-            # to the RNG; keeping the reference avoids any UAF risk.
-            ecc._rng = rng
 
             return ecc
 
@@ -1305,9 +1306,9 @@ if _lib.ECC_ENABLED:
 
             Returns (Qx, Qy, d)
             """
-            Qx = _ffi.new("byte[%d]" % (self.size))
-            Qy = _ffi.new("byte[%d]" % (self.size))
-            d = _ffi.new("byte[%d]" % (self.size))
+            Qx = _ffi.new("byte[%d]" % self.size)
+            Qy = _ffi.new("byte[%d]" % self.size)
+            d = _ffi.new("byte[%d]" % self.size)
             qx_size = _ffi.new("word32[1]")
             qy_size = _ffi.new("word32[1]")
             d_size = _ffi.new("word32[1]")
@@ -1423,7 +1424,7 @@ if _lib.ED25519_ENABLED:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
         # making sure _lib.wc_ed25519_free outlives ed25519_key instances
-        _delete = _lib.wc_ed25519_free
+        _delete = staticmethod(_lib.wc_ed25519_free)
 
         def __del__(self):
             if self.native_object:
@@ -1450,7 +1451,7 @@ if _lib.ED25519_ENABLED:
             Decodes an ED25519 public key
             """
             key = t2b(key)
-            if (len(key) < _lib.wc_ed25519_pub_size(self.native_object)):
+            if len(key) < _lib.wc_ed25519_pub_size(self.native_object):
                 raise WolfCryptError("Key decode error: key too short")
 
             idx = _ffi.new("word32*")
@@ -1537,7 +1538,7 @@ if _lib.ED25519_ENABLED:
             """
             key = t2b(key)
 
-            if (len(key) < _lib.wc_ed25519_priv_size(self.native_object)/2):
+            if len(key) < _lib.wc_ed25519_priv_size(self.native_object)/2:
                 raise WolfCryptError("Key decode error: key too short")
 
             idx = _ffi.new("word32*")
@@ -1623,7 +1624,7 @@ if _lib.ED448_ENABLED:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
         # making sure _lib.wc_ed448_free outlives ed448_key instances
-        _delete = _lib.wc_ed448_free
+        _delete = staticmethod(_lib.wc_ed448_free)
 
         def __del__(self):
             if self.native_object:
@@ -1650,7 +1651,7 @@ if _lib.ED448_ENABLED:
             Decodes an ED448 public key
             """
             key = t2b(key)
-            if (len(key) < _lib.wc_ed448_pub_size(self.native_object)):
+            if len(key) < _lib.wc_ed448_pub_size(self.native_object):
                 raise WolfCryptError("Key decode error: key too short")
 
             idx = _ffi.new("word32*")
@@ -1743,7 +1744,7 @@ if _lib.ED448_ENABLED:
             """
             key = t2b(key)
 
-            if (len(key) < _lib.wc_ed448_priv_size(self.native_object)/2):
+            if len(key) < _lib.wc_ed448_priv_size(self.native_object)/2:
                 raise WolfCryptError("Key decode error: key too short")
 
             idx = _ffi.new("word32*")
@@ -2139,6 +2140,7 @@ if _lib.ML_DSA_ENABLED:
 
     class _MlDsaBase:
         INVALID_DEVID = _lib.INVALID_DEVID
+        ML_DSA_KEYGEN_SEED_LENGTH = _lib.DILITHIUM_SEED_SZ
 
         def __init__(self, mldsa_type):
             self._init_done = False
@@ -2300,9 +2302,9 @@ if _lib.ML_DSA_ENABLED:
                 raise TypeError(
                     "seed must support the buffer protocol, such as `bytes` or `bytearray`"
                 ) from exception
-            if len(seed_view) != ML_DSA_KEYGEN_SEED_LENGTH:
+            if len(seed_view) != cls.ML_DSA_KEYGEN_SEED_LENGTH:
                 raise ValueError(
-                    f"Seed for generating ML-DSA key must be {ML_DSA_KEYGEN_SEED_LENGTH} bytes"
+                    f"Seed for generating ML-DSA key must be {cls.ML_DSA_KEYGEN_SEED_LENGTH} bytes"
                 )
 
             ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object,

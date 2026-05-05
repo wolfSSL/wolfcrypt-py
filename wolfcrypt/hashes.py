@@ -157,8 +157,8 @@ if _lib.SHA_ENABLED:
         digest_size = 20
         _native_type = "wc_Sha *"
         _native_size = _ffi.sizeof("wc_Sha")
-        _delete = _lib.wc_ShaFree
-        _copy = _lib.wc_ShaCopy
+        _delete = staticmethod(_lib.wc_ShaFree)
+        _copy = staticmethod(_lib.wc_ShaCopy)
 
         def __del__(self):
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
@@ -185,8 +185,8 @@ if _lib.SHA256_ENABLED:
         digest_size = 32
         _native_type = "wc_Sha256 *"
         _native_size = _ffi.sizeof("wc_Sha256")
-        _delete = _lib.wc_Sha256Free
-        _copy = _lib.wc_Sha256Copy
+        _delete = staticmethod(_lib.wc_Sha256Free)
+        _copy = staticmethod(_lib.wc_Sha256Copy)
 
         def __del__(self):
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
@@ -213,8 +213,8 @@ if _lib.SHA384_ENABLED:
         digest_size = 48
         _native_type = "wc_Sha384 *"
         _native_size = _ffi.sizeof("wc_Sha384")
-        _delete = _lib.wc_Sha384Free
-        _copy = _lib.wc_Sha384Copy
+        _delete = staticmethod(_lib.wc_Sha384Free)
+        _copy = staticmethod(_lib.wc_Sha384Copy)
 
         def __del__(self):
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
@@ -241,8 +241,8 @@ if _lib.SHA512_ENABLED:
         digest_size = 64
         _native_type = "wc_Sha512 *"
         _native_size = _ffi.sizeof("wc_Sha512")
-        _delete = _lib.wc_Sha512Free
-        _copy = _lib.wc_Sha512Copy
+        _delete = staticmethod(_lib.wc_Sha512Free)
+        _copy = staticmethod(_lib.wc_Sha512Copy)
 
         def __del__(self):
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
@@ -403,7 +403,7 @@ if _lib.HMAC_ENABLED:
         digest_size = None
         _native_type = "Hmac *"
         _native_size = _ffi.sizeof("Hmac")
-        _delete = _lib.wc_HmacFree
+        _delete = staticmethod(_lib.wc_HmacFree)
 
         def __del__(self):
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):

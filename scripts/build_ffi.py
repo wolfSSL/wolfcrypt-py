@@ -101,10 +101,10 @@ def wolfssl_lib_dir(local_wolfssl=None, fips=False):
     return lib_dir
 
 def call(cmd):
-    print("Calling: '{}' from working directory {}".format(cmd, os.getcwd()))
+    print(f"Calling: '{cmd}' from working directory {os.getcwd()}")
 
     old_env = os.environ["PATH"]
-    os.environ["PATH"] = "{}:{}".format(WOLFSSL_SRC_PATH, old_env)
+    os.environ["PATH"] = f"{WOLFSSL_SRC_PATH}:{old_env}"
     subprocess.check_call(cmd, shell=True, env=os.environ)
     os.environ["PATH"] = old_env
 
@@ -133,7 +133,7 @@ def checkout_version(version):
             current = subprocess.check_output(
                 ["git", "describe", "--all", "--exact-match"]
             ).strip().decode().split('/')[-1]
-        except:
+        except subprocess.CalledProcessError:
             pass
 
         if current != version:
@@ -142,9 +142,9 @@ def checkout_version(version):
             ).strip().decode().split("\n")
 
             if version != "master" and version not in tags:
-                call("git fetch --depth=1 origin tag {}".format(version))
+                call(f"git fetch --depth=1 origin tag {version}")
 
-            call("git checkout --force {}".format(version))
+            call(f"git checkout --force {version}")
 
             return True  # rebuild needed
 
@@ -171,7 +171,7 @@ def make_flags(prefix, fips):
     """
     if sys.platform == "win32":
         flags = []
-        flags.append("-DCMAKE_INSTALL_PREFIX={}".format(prefix))
+        flags.append(f"-DCMAKE_INSTALL_PREFIX={prefix}")
         flags.append("-DWOLFSSL_CRYPT_TESTS=no")
         flags.append("-DWOLFSSL_EXAMPLES=no")
         flags.append("-DBUILD_SHARED_LIBS=no")
@@ -188,7 +188,7 @@ def make_flags(prefix, fips):
             flags.append("CFLAGS=-fPIC")
 
         # install location
-        flags.append("--prefix={}".format(prefix))
+        flags.append(f"--prefix={prefix}")
 
         # crypt only, lib only
         flags.append("--enable-cryptonly")
@@ -261,7 +261,7 @@ def make(configure_flags, fips=False):
             raise Exception("Cannot build wolfSSL FIPS from git repo.")
 
         with chdir(build_path):
-            call("cmake {} ..".format(configure_flags))
+            call(f"cmake {configure_flags} ..")
             call("cmake --build . --config Release")
             call("cmake --install . --config Release")
     else:
@@ -274,7 +274,7 @@ def make(configure_flags, fips=False):
                 call("libtoolize")
                 call("./autogen.sh")
 
-            call("./configure {}".format(configure_flags))
+            call(f"./configure {configure_flags}")
             call("make")
             call("make install")
 
@@ -458,45 +458,45 @@ def build_ffi(local_wolfssl, features):
         #include <wolfssl/wolfcrypt/dilithium.h>
     """
 
-    init_source_string = """
+    init_source_string = f"""
         #ifdef __cplusplus
-        extern "C" {
+        extern "C" {{
         #endif
-           """ + includes_string + """
+        {includes_string}
         #ifdef __cplusplus
-        }
+        }}
         #endif
 
-        int ERROR_STRINGS_ENABLED = """ + str(features["ERROR_STRINGS"]) + """;
-        int MPAPI_ENABLED = """ + str(features["MPAPI"]) + """;
-        int SHA_ENABLED = """ + str(features["SHA"]) + """;
-        int SHA256_ENABLED = """ + str(features["SHA256"]) + """;
-        int SHA384_ENABLED = """ + str(features["SHA384"]) + """;
-        int SHA512_ENABLED = """ + str(features["SHA512"]) + """;
-        int SHA3_ENABLED = """ + str(features["SHA3"]) + """;
-        int DES3_ENABLED = """ + str(features["DES3"]) + """;
-        int AES_ENABLED = """ + str(features["AES"]) + """;
-        int AES_SIV_ENABLED = """ + str(features["AES_SIV"]) + """;
-        int CHACHA_ENABLED = """ + str(features["CHACHA"]) + """;
-        int HMAC_ENABLED = """ + str(features["HMAC"]) + """;
-        int RSA_ENABLED = """ + str(features["RSA"]) + """;
-        int RSA_BLINDING_ENABLED = """ + str(features["RSA_BLINDING"]) + """;
-        int ECC_TIMING_RESISTANCE_ENABLED = """ + str(features["ECC_TIMING_RESISTANCE"]) + """;
-        int ECC_ENABLED = """ + str(features["ECC"]) + """;
-        int ED25519_ENABLED = """ + str(features["ED25519"]) + """;
-        int ED448_ENABLED = """ + str(features["ED448"]) + """;
-        int KEYGEN_ENABLED = """ + str(features["KEYGEN"]) + """;
-        int PWDBASED_ENABLED = """ + str(features["PWDBASED"]) + """;
-        int FIPS_ENABLED = """ + str(features["FIPS"]) + """;
-        int FIPS_VERSION = """ + str(features["FIPS_VERSION"]) + """;
-        int ASN_ENABLED = """ + str(features["ASN"]) + """;
-        int WC_RNG_SEED_CB_ENABLED = """ + str(features["WC_RNG_SEED_CB"]) + """;
-        int AESGCM_STREAM_ENABLED = """ + str(features["AESGCM_STREAM"]) + """;
-        int RSA_PSS_ENABLED = """ + str(features["RSA_PSS"]) + """;
-        int CHACHA20_POLY1305_ENABLED = """ + str(features["CHACHA20_POLY1305"]) + """;
-        int ML_KEM_ENABLED = """ + str(features["ML_KEM"]) + """;
-        int ML_DSA_ENABLED = """ + str(features["ML_DSA"]) + """;
-        int HKDF_ENABLED = """ + str(features["HKDF"]) + """;
+        int ERROR_STRINGS_ENABLED = {features["ERROR_STRINGS"]};
+        int MPAPI_ENABLED = {features["MPAPI"]};
+        int SHA_ENABLED = {features["SHA"]};
+        int SHA256_ENABLED = {features["SHA256"]};
+        int SHA384_ENABLED = {features["SHA384"]};
+        int SHA512_ENABLED = {features["SHA512"]};
+        int SHA3_ENABLED = {features["SHA3"]};
+        int DES3_ENABLED = {features["DES3"]};
+        int AES_ENABLED = {features["AES"]};
+        int AES_SIV_ENABLED = {features["AES_SIV"]};
+        int CHACHA_ENABLED = {features["CHACHA"]};
+        int HMAC_ENABLED = {features["HMAC"]};
+        int RSA_ENABLED = {features["RSA"]};
+        int RSA_BLINDING_ENABLED = {features["RSA_BLINDING"]};
+        int ECC_TIMING_RESISTANCE_ENABLED = {features["ECC_TIMING_RESISTANCE"]};
+        int ECC_ENABLED = {features["ECC"]};
+        int ED25519_ENABLED = {features["ED25519"]};
+        int ED448_ENABLED = {features["ED448"]};
+        int KEYGEN_ENABLED = {features["KEYGEN"]};
+        int PWDBASED_ENABLED = {features["PWDBASED"]};
+        int FIPS_ENABLED = {features["FIPS"]};
+        int FIPS_VERSION = {features["FIPS_VERSION"]};
+        int ASN_ENABLED = {features["ASN"]};
+        int WC_RNG_SEED_CB_ENABLED = {features["WC_RNG_SEED_CB"]};
+        int AESGCM_STREAM_ENABLED = {features["AESGCM_STREAM"]};
+        int RSA_PSS_ENABLED = {features["RSA_PSS"]};
+        int CHACHA20_POLY1305_ENABLED = {features["CHACHA20_POLY1305"]};
+        int ML_KEM_ENABLED = {features["ML_KEM"]};
+        int ML_DSA_ENABLED = {features["ML_DSA"]};
+        int HKDF_ENABLED = {features["HKDF"]};
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -1306,6 +1306,7 @@ def build_ffi(local_wolfssl, features):
 
     if features["ML_DSA"]:
         cdef += """
+        static const int DILITHIUM_SEED_SZ;
         static const int WC_ML_DSA_44;
         static const int WC_ML_DSA_65;
         static const int WC_ML_DSA_87;
@@ -1375,9 +1376,9 @@ def main(ffibuilder):
 
     local_wolfssl = os.environ.get("USE_LOCAL_WOLFSSL")
     if local_wolfssl:
-        print("Using local wolfSSL at {}.".format(local_wolfssl))
+        print(f"Using local wolfSSL at {local_wolfssl}.")
         if not os.path.exists(local_wolfssl):
-            e = "Local wolfssl installation path {} doesn't exist.".format(local_wolfssl)
+            e = f"Local wolfssl installation path {local_wolfssl} doesn't exist."
             raise FileNotFoundError(e)
 
     if not local_wolfssl:
