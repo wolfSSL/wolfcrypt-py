@@ -203,3 +203,14 @@ if _lib.ML_DSA_ENABLED:
         with pytest.raises(ValueError):
             _ = mldsa_priv.sign_with_seed(message, signature_seed[:-1], ctx=bytes(1000))
 
+    def test_make_key_from_seed(mldsa_type):
+        seed = bytes(MlDsaPrivate.ML_DSA_KEYGEN_SEED_LENGTH)
+        assert MlDsaPrivate.make_key_from_seed(mldsa_type, seed)
+
+    @pytest.mark.parametrize(
+        "seed_length", [MlDsaPrivate.ML_DSA_KEYGEN_SEED_LENGTH - 1, MlDsaPrivate.ML_DSA_KEYGEN_SEED_LENGTH + 1]
+    )
+    def test_make_key_from_seed_bad_length(mldsa_type, seed_length):
+        seed = bytes(seed_length)
+        with pytest.raises(ValueError):
+            MlDsaPrivate.make_key_from_seed(mldsa_type, seed)

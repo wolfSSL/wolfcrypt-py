@@ -74,6 +74,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Security",
         "Topic :: Security :: Cryptography",
         "Topic :: Software Development"
@@ -83,5 +84,5 @@ setup(
     install_requires=["cffi>=1.0.0"],
     cffi_modules=["./scripts/build_ffi.py:ffibuilder"],
 
-    package_data={"wolfcrypt": ["*.dll"]}
+    package_data={"wolfcrypt": ["*.dll", "**/*.pyi"]}
 )

@@ -1,3 +1,9 @@
+wolfCrypt-py Release NEXT (TBD, 2026)
+==========================================
+
+* Add extra nonce parameter to Random generator
+
+
 wolfCrypt-py Release 5.8.4 (Jan 7, 2026)
 ==========================================
 
