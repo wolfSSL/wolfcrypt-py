@@ -1306,6 +1306,7 @@ def build_ffi(local_wolfssl, features):
 
     if features["ML_DSA"]:
         cdef += """
+        static const int DILITHIUM_SEED_SZ;
         static const int WC_ML_DSA_44;
         static const int WC_ML_DSA_65;
         static const int WC_ML_DSA_87;

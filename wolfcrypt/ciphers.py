@@ -2139,6 +2139,7 @@ if _lib.ML_DSA_ENABLED:
 
     class _MlDsaBase:
         INVALID_DEVID = _lib.INVALID_DEVID
+        ML_DSA_KEYGEN_SEED_LENGTH = _lib.DILITHIUM_SEED_SZ
 
         def __init__(self, mldsa_type):
             self._init_done = False
@@ -2300,9 +2301,9 @@ if _lib.ML_DSA_ENABLED:
                 raise TypeError(
                     "seed must support the buffer protocol, such as `bytes` or `bytearray`"
                 ) from exception
-            if len(seed_view) != ML_DSA_KEYGEN_SEED_LENGTH:
+            if len(seed_view) != cls.ML_DSA_KEYGEN_SEED_LENGTH:
                 raise ValueError(
-                    f"Seed for generating ML-DSA key must be {ML_DSA_KEYGEN_SEED_LENGTH} bytes"
+                    f"Seed for generating ML-DSA key must be {cls.ML_DSA_KEYGEN_SEED_LENGTH} bytes"
                 )
 
             ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object,
