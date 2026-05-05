@@ -42,7 +42,7 @@ class Random:
             raise WolfCryptError("RNG init error (%d)" % ret)
 
     # making sure _lib.wc_FreeRng outlives WC_RNG instances
-    _delete = _lib.wc_FreeRng
+    _delete = staticmethod(_lib.wc_FreeRng)
 
     def __del__(self) -> None:
         if self.native_object:

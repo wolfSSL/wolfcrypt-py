@@ -397,7 +397,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         _key_sizes = [16, 24, 32]
         _native_type = "Aes *"
         # making sure _lib.wc_AesFree outlives Aes instances
-        _delete = _lib.wc_AesFree
+        _delete = staticmethod(_lib.wc_AesFree)
 
         def __init__(self, key, IV, tag_bytes=16):
             """
@@ -701,7 +701,7 @@ if _lib.RSA_ENABLED:
                     raise WolfCryptError("Key initialization error (%d)" % ret)
 
         # making sure _lib.wc_FreeRsaKey outlives RsaKey instances
-        _delete = _lib.wc_FreeRsaKey
+        _delete = staticmethod(_lib.wc_FreeRsaKey)
 
         def __del__(self):
             if self.native_object:
@@ -1060,7 +1060,7 @@ if _lib.ECC_ENABLED:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
         # making sure _lib.wc_ecc_free outlives ecc_key instances
-        _delete = _lib.wc_ecc_free
+        _delete = staticmethod(_lib.wc_ecc_free)
 
         def __del__(self):
             if self.native_object:
@@ -1426,7 +1426,7 @@ if _lib.ED25519_ENABLED:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
         # making sure _lib.wc_ed25519_free outlives ed25519_key instances
-        _delete = _lib.wc_ed25519_free
+        _delete = staticmethod(_lib.wc_ed25519_free)
 
         def __del__(self):
             if self.native_object:
@@ -1626,7 +1626,7 @@ if _lib.ED448_ENABLED:
                 raise WolfCryptError("Invalid key error (%d)" % ret)
 
         # making sure _lib.wc_ed448_free outlives ed448_key instances
-        _delete = _lib.wc_ed448_free
+        _delete = staticmethod(_lib.wc_ed448_free)
 
         def __del__(self):
             if self.native_object:
