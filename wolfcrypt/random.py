@@ -20,6 +20,8 @@
 
 # pylint: disable=no-member,no-name-in-module
 
+from __future__ import annotations
+
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 
@@ -31,14 +33,10 @@ class Random:
     A Cryptographically Secure Pseudo Random Number Generator - CSPRNG
     """
 
-    def __init__(self, nonce=_ffi.NULL, device_id=_lib.INVALID_DEVID):
-        self.native_object = _ffi.new("WC_RNG *")
+    def __init__(self, nonce: __builtins__.bytes = b"", device_id: int = _lib.INVALID_DEVID) -> None:
+        self.native_object: _lib.RNG | None = _ffi.new("WC_RNG *")
 
-        if nonce == _ffi.NULL:
-            nonce_size = 0
-        else:
-            nonce_size = len(nonce)
-        ret = _lib.wc_InitRngNonce_ex(self.native_object, nonce, nonce_size, _ffi.NULL, device_id)
+        ret = _lib.wc_InitRngNonce_ex(self.native_object, nonce, len(nonce), _ffi.NULL, device_id)
         if ret < 0:  # pragma: no cover
             self.native_object = None
             raise WolfCryptError("RNG init error (%d)" % ret)
@@ -46,7 +44,7 @@ class Random:
     # making sure _lib.wc_FreeRng outlives WC_RNG instances
     _delete = _lib.wc_FreeRng
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self.native_object:
             try:
                 self._delete(self.native_object)
@@ -54,24 +52,26 @@ class Random:
                 # Can occur during interpreter shutdown
                 pass
 
-    def byte(self):
+    def byte(self) -> __builtins__.bytes:
         """
         Generate and return a random byte.
         """
-        result = _ffi.new('byte[1]')
+        result = _ffi.new("byte[1]")
 
+        assert self.native_object is not None
         ret = _lib.wc_RNG_GenerateByte(self.native_object, result)
         if ret < 0:  # pragma: no cover
             raise WolfCryptError("RNG generate byte error (%d)" % ret)
 
         return _ffi.buffer(result, 1)[:]
 
-    def bytes(self, length):
+    def bytes(self, length: int) -> __builtins__.bytes:
         """
         Generate and return a random sequence of length bytes.
         """
-        result = _ffi.new('byte[%d]' % length)
+        result = _ffi.new("byte[%d]" % length)
 
+        assert self.native_object is not None
         ret = _lib.wc_RNG_GenerateBlock(self.native_object, result, length)
         if ret < 0:  # pragma: no cover
             raise WolfCryptError("RNG generate block error (%d)" % ret)
