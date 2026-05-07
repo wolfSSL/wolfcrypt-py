@@ -1,6 +1,6 @@
-wolfCrypt-py Release NEXT (TBD, 2026)
-==========================================
+wolfCrypt-py Release next (TBD, 2026)
 
+* Drop support for end-of-life Python versions (<= 3.9)
 * Add extra nonce parameter to Random generator
 
 

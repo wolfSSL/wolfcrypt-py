@@ -55,30 +55,10 @@ with open("LICENSING.rst") as licensing_file:
 setup(
     name="wolfcrypt",
     version=verstr,
-    description="Python module that encapsulates wolfSSL's crypto engine API.",
     long_description=long_description,
     long_description_content_type='text/x-rst',
-    author="wolfSSL Inc.",
-    author_email="info@wolfssl.com",
-    url="https://github.com/wolfssl/wolfcrypt-py",
-    license="GPLv2 or Commercial License",
 
     packages=find_packages(),
-    keywords="wolfssl, wolfcrypt, security, cryptography",
-    classifiers=[
-        u"License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
-        u"License :: Other/Proprietary License",
-        u"Operating System :: OS Independent",
-        u"Programming Language :: Python :: 3",
-        u"Programming Language :: Python :: 3.6",
-        u"Programming Language :: Python :: 3.7",
-        u"Programming Language :: Python :: 3.8",
-        u"Programming Language :: Python :: 3.9",
-        u"Programming Language :: Python :: 3.10",
-        u"Topic :: Security",
-        u"Topic :: Security :: Cryptography",
-        u"Topic :: Software Development"
-    ],
 
     setup_requires=["cffi>=1.0.0"],
     install_requires=["cffi>=1.0.0"],
