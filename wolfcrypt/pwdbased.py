@@ -23,7 +23,7 @@
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 
-from wolfcrypt.exceptions import WolfCryptError
+from wolfcrypt.exceptions import WolfCryptApiError
 
 if _lib.PWDBASED_ENABLED:
     def PBKDF2(password, salt, iterations, key_length, hash_type):
@@ -38,6 +38,6 @@ if _lib.PWDBASED_ENABLED:
                              iterations, key_length, hash_type)
 
         if ret != 0:
-            raise WolfCryptError("PBKDF2 error (%d)" % ret)
+            raise WolfCryptApiError("PBKDF2 error", ret)
 
         return _ffi.buffer(key, key_length)[:]

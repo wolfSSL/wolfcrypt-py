@@ -24,7 +24,7 @@ import hmac as _hmac
 
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
-from wolfcrypt.exceptions import WolfCryptError
+from wolfcrypt.exceptions import WolfCryptError, WolfCryptApiError
 
 if _lib.SHA_ENABLED:
     from wolfcrypt.hashes import Sha
@@ -41,8 +41,7 @@ if _lib.ASN_ENABLED:
         ret = _lib.wc_PemToDer(pem, len(pem), pem_type, der, _ffi.NULL,
                                _ffi.NULL, _ffi.NULL)
         if ret != 0:
-            err = "Error converting from PEM to DER. ({})".format(ret)
-            raise WolfCryptError(err)
+            raise WolfCryptApiError("Error converting from PEM to DER.", ret)
 
         try:
             result = _ffi.buffer(der[0][0].buffer, der[0][0].length)[:]
@@ -54,15 +53,13 @@ if _lib.ASN_ENABLED:
         pem_length = _lib.wc_DerToPemEx(der, len(der), _ffi.NULL, 0, _ffi.NULL,
                                         pem_type)
         if pem_length <= 0:
-            err = "Error getting required PEM buffer length. ({})".format(pem_length)
-            raise WolfCryptError(err)
+            raise WolfCryptApiError("Error getting required PEM buffer length.", pem_length)
 
         pem = _ffi.new("byte[%d]" % pem_length)
         pem_length = _lib.wc_DerToPemEx(der, len(der), pem, pem_length,
                                         _ffi.NULL, pem_type)
         if pem_length <= 0:
-            err = "Error converting from DER to PEM. ({})".format(pem_length)
-            raise WolfCryptError(err)
+            raise WolfCryptApiError("Error converting from DER to PEM.", pem_length)
 
         return _ffi.buffer(pem, pem_length)[:]
 
@@ -76,8 +73,7 @@ if _lib.ASN_ENABLED:
         elif _lib.SHA512_ENABLED and hash_cls == Sha512:
             return _lib.SHA512h
         else:
-            err = "Unknown hash class {}.".format(hash_cls.__name__)
-            raise WolfCryptError(err)
+            raise WolfCryptError(f"Unknown hash class {hash_cls.__name__}")
 
     def make_signature(data, hash_cls, key=None):
         hash_obj = hash_cls()
@@ -89,8 +85,7 @@ if _lib.ASN_ENABLED:
         plaintext_len = _lib.wc_EncodeSignature(plaintext_sig, digest,
                                                 len(digest), hash_oid)
         if plaintext_len == 0:
-            err = "Error calling wc_EncodeSignature. ({})".format(plaintext_len)
-            raise WolfCryptError(err)
+            raise WolfCryptError(f"Error calling wc_EncodeSignature. ({plaintext_len})")
 
         plaintext_sig = _ffi.buffer(plaintext_sig, plaintext_len)[:]
         if key:

@@ -23,7 +23,7 @@
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 
-from wolfcrypt.exceptions import WolfCryptError
+from wolfcrypt.exceptions import WolfCryptApiError
 from wolfcrypt.utils import t2b
 
 
@@ -46,7 +46,7 @@ if _lib.HKDF_ENABLED:
         - bytes object containing the derived key of length `out_len`.
 
         Raises:
-        - WolfCryptError on failure.
+        - WolfCryptApiError on failure.
         - ValueError for invalid arguments.
         """
         in_key = t2b(in_key)
@@ -69,7 +69,7 @@ if _lib.HKDF_ENABLED:
             out_len,
         )
         if ret != 0:
-            raise WolfCryptError("HKDF error (%d)" % ret)
+            raise WolfCryptApiError("HKDF error", ret)
 
         return _ffi.buffer(out, out_len)[:]
 
@@ -86,7 +86,7 @@ if _lib.HKDF_ENABLED:
         Returns:
         - PRK as bytes (length == hash digest size).
 
-        Raises WolfCryptError on failure.
+        Raises WolfCryptApiError on failure.
         """
         salt = b"" if salt is None else t2b(salt)
         in_key = t2b(in_key)
@@ -96,7 +96,7 @@ if _lib.HKDF_ENABLED:
 
         ret = _lib.wc_HKDF_Extract(hash_cls._type, salt, len(salt), in_key, len(in_key), out)
         if ret != 0:
-            raise WolfCryptError("HKDF_Extract error (%d)" % ret)
+            raise WolfCryptApiError("HKDF_Extract error", ret)
 
         return _ffi.buffer(out, out_len)[:]
 
@@ -114,7 +114,7 @@ if _lib.HKDF_ENABLED:
         Returns:
         - OKM as bytes of length `out_len`.
 
-        Raises WolfCryptError on failure.
+        Raises WolfCryptApiError on failure.
         """
         prk = t2b(prk)
         info = b"" if info is None else t2b(info)
@@ -128,6 +128,6 @@ if _lib.HKDF_ENABLED:
             hash_cls._type, prk, len(prk), info, len(info), out, out_len
         )
         if ret != 0:
-            raise WolfCryptError("HKDF_Expand error (%d)" % ret)
+            raise WolfCryptApiError("HKDF_Expand error", ret)
 
         return _ffi.buffer(out, out_len)[:]

@@ -24,7 +24,7 @@ from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import t2b, b2h
 
-from wolfcrypt.exceptions import WolfCryptError, error_string
+from wolfcrypt.exceptions import WolfCryptApiError
 
 
 class _Hash:
@@ -37,7 +37,7 @@ class _Hash:
         self._shallow_copy = False
         ret = self._init()
         if ret < 0:  # pragma: no cover
-            raise WolfCryptError("Hash init error (%d)" % ret)
+            raise WolfCryptApiError("Hash init error", ret)
 
         if string:
             self.update(string)
@@ -75,7 +75,7 @@ class _Hash:
                 delete = getattr(self, '_delete', None)
                 if delete:
                     delete(copy._native_object)  # pylint: disable=protected-access
-                raise WolfCryptError("Hash copy error (%d)" % ret)
+                raise WolfCryptApiError("Hash copy error", ret)
             copy._shallow_copy = False  # pylint: disable=protected-access
         else:
             _ffi.memmove(copy._native_object,  # pylint: disable=protected-access
@@ -96,7 +96,7 @@ class _Hash:
 
         ret = self._update(string)
         if ret < 0:  # pragma: no cover
-            raise WolfCryptError("Hash update error (%d)" % ret)
+            raise WolfCryptApiError("Hash update error", ret)
 
     def digest(self):
         """
@@ -119,13 +119,13 @@ class _Hash:
                 if copy_fn:
                     ret = copy_fn(self._native_object, obj)
                     if ret < 0:  # pragma: no cover
-                        raise WolfCryptError("Hash copy error (%d)" % ret)
+                        raise WolfCryptApiError("Hash copy error", ret)
                 else:
                     _ffi.memmove(obj, self._native_object, self._native_size)
 
                 ret = self._final(obj, result)
                 if ret < 0:  # pragma: no cover
-                    raise WolfCryptError("Hash finalize error (%d)" % ret)
+                    raise WolfCryptApiError("Hash finalize error", ret)
             finally:
                 # Only free when we did a deep copy; memmove'd temps share
                 # internal resources with self and must not be separately freed.
@@ -305,7 +305,7 @@ if _lib.SHA3_ENABLED:
             self._copy = self._SHA3_COPY.get(size)
             ret = self._init()
             if ret < 0:  # pragma: no cover
-                raise WolfCryptError("Sha3 init error (%d)" % ret)
+                raise WolfCryptApiError("Sha3 init error", ret)
             if string:
                 self.update(string)
 
@@ -330,7 +330,7 @@ if _lib.SHA3_ENABLED:
                     # Free any partial allocation before raising.
                     if self._delete:
                         self._delete(c._native_object)
-                    raise WolfCryptError("Hash copy error (%d)" % ret)
+                    raise WolfCryptApiError("Hash copy error", ret)
                 c._shallow_copy = False
             else:
                 _ffi.memmove(c._native_object, self._native_object, self._native_size)
@@ -416,7 +416,7 @@ if _lib.HMAC_ENABLED:
             self._shallow_copy = False
             ret = self._init(self._type, key)
             if ret < 0:  # pragma: no cover
-                raise WolfCryptError("Hmac init error (%d)" % ret)
+                raise WolfCryptApiError("Hmac init error", ret)
 
             if string:
                 self.update(string)
@@ -433,8 +433,9 @@ if _lib.HMAC_ENABLED:
             return cls(key, string)
 
         def _init(self, hmac, key):
-            if _lib.wc_HmacInit(self._native_object, _ffi.NULL, -2) != 0:
-                raise WolfCryptError("wc_HmacInit error")
+            ret = _lib.wc_HmacInit(self._native_object, _ffi.NULL, -2)
+            if ret < 0:
+                raise WolfCryptApiError("wc_HmacInit error", ret)
             # If the key isn't set, don't call wc_HmacSetKey. This can happen,
             # for example, when the HMAC object is being copied. See the copy
             # function of _Hash.
@@ -442,8 +443,7 @@ if _lib.HMAC_ENABLED:
             if len(key) > 0:
                 ret = _lib.wc_HmacSetKey(self._native_object, hmac, key, len(key))
                 if ret < 0:
-                    err_str = error_string(ret)
-                    raise WolfCryptError("wc_HmacSetKey returned {}: {}".format(ret, err_str))
+                    raise WolfCryptApiError("wc_HmacSetKey error", ret)
             return ret
 
         def _update(self, data):
