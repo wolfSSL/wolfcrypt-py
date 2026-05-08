@@ -1266,7 +1266,7 @@ if _lib.ECC_ENABLED:
             if ret < 0:
                 raise WolfCryptApiError("Key decode error", ret)
             if self.size <= 0:  # pragma: no cover
-                raise WolfCryptApiError("Key decode error", self.size)
+                raise WolfCryptError(f"Key decode error {self.size}")
             if self.max_signature_size <= 0:  # pragma: no cover
                 raise WolfCryptError(
                     "Key decode error (%d)" % self.max_signature_size)
