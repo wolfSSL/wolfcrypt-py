@@ -873,8 +873,8 @@ if _lib.RSA_ENABLED:
 
                 rsa.output_size = _lib.wc_RsaEncryptSize(rsa.native_object)
                 rsa.size = size
-                if rsa.output_size <= 0:  # pragma: no cover
-                    raise WolfCryptApiError("Invalid key size error", ret)
+                if rsa.output_size < 0:  # pragma: no cover
+                    raise WolfCryptApiError("Invalid key size error", rsa.output_size)
 
                 # Retain RNG reference defensively.
                 rsa._rng = rng
