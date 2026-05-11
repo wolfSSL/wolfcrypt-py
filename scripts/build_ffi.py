@@ -1092,8 +1092,8 @@ def build_ffi(local_wolfssl, features):
         int wc_ecc_import_x963(const byte* in, word32 inLen, ecc_key* key);
         int wc_ecc_export_private_raw(ecc_key* key, byte* qx, word32* qxLen,
                                   byte* qy, word32* qyLen, byte* d, word32* dLen);
-        int wc_ecc_import_unsigned(ecc_key* key, byte* qx, byte* qy,
-                       byte* d, int curve_id);
+        int wc_ecc_import_unsigned(ecc_key* key, const byte* qx, const byte* qy,
+                       const byte* d, int curve_id);
         int wc_ecc_export_public_raw(ecc_key* key, byte* qx, word32* qxLen,
                                  byte* qy, word32* qyLen);
 
