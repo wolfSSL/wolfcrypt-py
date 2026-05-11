@@ -938,6 +938,35 @@ def test_aessiv_decrypt_kat_openssl():
     assert plaintext == TEST_VECTOR_PLAINTEXT_OPENSSL
 
 
+@pytest.mark.skipif(not _lib.AES_SIV_ENABLED, reason="AES-SIV not enabled")
+@pytest.mark.parametrize("wrap", [bytes, bytearray, memoryview],
+                         ids=["bytes", "bytearray", "memoryview"])
+def test_aessiv_associated_data_accepts_buffer_types(wrap):
+    """
+    Single-block associated_data passed as bytes, bytearray, or memoryview
+    must all produce the same SIV/ciphertext as the OpenSSL KAT. A previous
+    bug treated bytearray/memoryview as a sequence of int blocks, producing
+    a different (incorrect) tag without raising.
+    """
+    aessiv = AesSiv(TEST_VECTOR_KEY_OPENSSL)
+    associated_data = wrap(TEST_VECTOR_ASSOCIATED_DATA_OPENSSL)
+    siv, ciphertext = aessiv.encrypt(
+        associated_data,
+        TEST_VECTOR_NONCE_OPENSSL,
+        TEST_VECTOR_PLAINTEXT_OPENSSL
+    )
+    assert siv == TEST_VECTOR_SIV_OPENSSL
+    assert ciphertext == TEST_VECTOR_CIPHERTEXT_OPENSSL
+
+    plaintext = aessiv.decrypt(
+        wrap(TEST_VECTOR_ASSOCIATED_DATA_OPENSSL),
+        TEST_VECTOR_NONCE_OPENSSL,
+        TEST_VECTOR_SIV_OPENSSL,
+        TEST_VECTOR_CIPHERTEXT_OPENSSL
+    )
+    assert plaintext == TEST_VECTOR_PLAINTEXT_OPENSSL
+
+
 if _lib.DES3_ENABLED:
     def test_des3_rejects_mode_ctr():
         key = b"\x01\x23\x45\x67\x89\xab\xcd\xef" * 3

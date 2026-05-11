@@ -363,7 +363,7 @@ if _lib.AES_SIV_ENABLED:
             C function has been called, in order to make sure that the memory
             is not freed by the FFI garbage collector before the data is read.
             """
-            if isinstance(associated_data, str) or isinstance(associated_data, bytes):
+            if isinstance(associated_data, (str, bytes, bytearray, memoryview)):
                 # A single block is provided.
                 # Make sure we have bytes.
                 associated_data = t2b(associated_data)
