@@ -1032,17 +1032,21 @@ if _lib.CHACHA_ENABLED:
     def test_chacha_decrypt_does_not_reset_encrypt_stream():
         """
         Interleaving decrypt() between two encrypt() calls on the same
-        ChaCha instance must not reset the encryption stream counter.
-        A previous bug in _set_key re-keyed both contexts whenever either
-        was allocated, so the first decrypt() (which lazily allocates the
-        decryption context) silently rewound the encryption stream to
-        counter 0, producing the wrong ciphertext on subsequent encrypts.
+        ChaCha instance must not reset the encryption stream counter, and
+        symmetrically interleaving encrypt() between two decrypt() calls
+        must not reset the decryption stream counter. A previous bug in
+        _set_key re-keyed both contexts whenever either was allocated, so
+        the first call to the other direction (which lazily allocates the
+        opposite context) silently rewound the existing stream to
+        counter 0, producing the wrong ciphertext/plaintext on subsequent
+        calls.
         """
         key = b"\x00" * 32
         nonce = b"\x00" * 12
         block1 = b"A" * 64
         block2 = b"B" * 64
 
+        # --- encrypt -> decrypt -> encrypt: the lazy _dec must not wipe _enc.
         baseline = ChaCha(key)
         baseline.set_iv(nonce)
         expected_ct1 = baseline.encrypt(block1)
@@ -1053,11 +1057,26 @@ if _lib.CHACHA_ENABLED:
         chacha.set_iv(nonce)
         ct1 = chacha.encrypt(block1)
         assert ct1 == expected_ct1
-        # First decrypt() lazily allocates the decryption context and must
-        # not disturb the encryption stream state.
         chacha.decrypt(b"\x00" * 16)
         ct2 = chacha.encrypt(block2)
         assert ct2 == expected_ct2
+
+        # --- decrypt -> encrypt -> decrypt: the lazy _enc must not wipe _dec.
+        # Pre-compute the two ciphertexts that would decrypt back to
+        # block1, block2 in stream order.
+        producer = ChaCha(key)
+        producer.set_iv(nonce)
+        ct_a = producer.encrypt(block1)
+        ct_b = producer.encrypt(block2)
+
+        chacha = ChaCha(key)
+        chacha.set_iv(nonce)
+        pt1 = chacha.decrypt(ct_a)
+        assert pt1 == block1
+        # encrypt() now lazily allocates _enc; it must not reset _dec.
+        chacha.encrypt(b"\x00" * 16)
+        pt2 = chacha.decrypt(ct_b)
+        assert pt2 == block2
 
     def test_chacha_set_iv_resets_both_directions():
         """

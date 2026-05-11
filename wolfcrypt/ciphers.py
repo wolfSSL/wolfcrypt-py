@@ -299,8 +299,9 @@ if _lib.AES_SIV_ENABLED:
             Encrypt plaintext data using the nonce provided. The associated
             data is not encrypted but is included in the authentication tag.
 
-            Associated data may be provided as single str or bytes, or as a
-            list of str or bytes in case of multiple blocks.
+            Associated data may be provided as a single str, bytes,
+            bytearray, or memoryview, or as a list of any of those in case
+            of multiple blocks.
 
             Returns a tuple of the IV and ciphertext.
             """
@@ -325,8 +326,9 @@ if _lib.AES_SIV_ENABLED:
             Decrypt the ciphertext using the nonce and SIV provided.
             The integrity of the associated data is checked.
 
-            Associated data may be provided as single str or bytes, or as a
-            list of str or bytes in case of multiple blocks.
+            Associated data may be provided as a single str, bytes,
+            bytearray, or memoryview, or as a list of any of those in case
+            of multiple blocks.
 
             Returns the decrypted plaintext.
             """
@@ -354,8 +356,9 @@ if _lib.AES_SIV_ENABLED:
             """
             Prepare associated data for sending to C library.
 
-            Associated data may be provided as single str or bytes, or as a
-            list of str or bytes in case of multiple blocks.
+            Associated data may be provided as a single str, bytes,
+            bytearray, or memoryview, or as a list of any of those in case
+            of multiple blocks.
 
             The result is a tuple of the list of cffi cdata pointers to
             AesSivAssoc structures, as well as the converted associated
@@ -527,17 +530,20 @@ if _lib.CHACHA_ENABLED:
             self._IV_nonce = b""
             self._IV_counter = 0
 
+        # Sentinel for "rekey both contexts" used by set_iv. Must not
+        # collide with _ENCRYPTION (0) or _DECRYPTION (1).
+        _REKEY_BOTH = -1
+
         def _set_key(self, direction):
             if self._key is None:
                 return -1
-            # direction 0 (used by set_iv) re-keys whichever contexts are
-            # already allocated, since changing the IV must reset both
-            # encrypt and decrypt streams. Direction _ENCRYPTION /
-            # _DECRYPTION only touches the matching context so that lazy
-            # allocation from encrypt()/decrypt() does not wipe the other
-            # direction's stream state.
-            do_enc = self._enc and direction in (0, _ENCRYPTION)
-            do_dec = self._dec and direction in (0, _DECRYPTION)
+            # _REKEY_BOTH re-keys whichever contexts are already allocated,
+            # since changing the IV must reset both encrypt and decrypt
+            # streams. _ENCRYPTION / _DECRYPTION only touch the matching
+            # context so that lazy allocation from encrypt()/decrypt() does
+            # not wipe the other direction's stream state.
+            do_enc = self._enc and direction in (self._REKEY_BOTH, _ENCRYPTION)
+            do_dec = self._dec and direction in (self._REKEY_BOTH, _DECRYPTION)
             if do_enc:
                 ret = _lib.wc_Chacha_SetKey(self._enc, self._key, len(self._key))
                 if ret == 0:
@@ -568,7 +574,7 @@ if _lib.CHACHA_ENABLED:
                 raise ValueError("nonce must be %d bytes, got %d" %
                                  (self._NONCE_SIZE, len(self._IV_nonce)))
             self._IV_counter = counter
-            ret = self._set_key(0)
+            ret = self._set_key(self._REKEY_BOTH)
             if ret < 0:
                 raise WolfCryptApiError("ChaCha set_iv error", ret)
 
