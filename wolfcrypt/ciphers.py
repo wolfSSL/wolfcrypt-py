@@ -530,13 +530,21 @@ if _lib.CHACHA_ENABLED:
         def _set_key(self, direction):
             if self._key is None:
                 return -1
-            if self._enc:
+            # direction 0 (used by set_iv) re-keys whichever contexts are
+            # already allocated, since changing the IV must reset both
+            # encrypt and decrypt streams. Direction _ENCRYPTION /
+            # _DECRYPTION only touches the matching context so that lazy
+            # allocation from encrypt()/decrypt() does not wipe the other
+            # direction's stream state.
+            do_enc = self._enc and direction in (0, _ENCRYPTION)
+            do_dec = self._dec and direction in (0, _DECRYPTION)
+            if do_enc:
                 ret = _lib.wc_Chacha_SetKey(self._enc, self._key, len(self._key))
                 if ret == 0:
                     ret = _lib.wc_Chacha_SetIV(self._enc, self._IV_nonce, self._IV_counter)
                 if ret != 0:
                     return ret
-            if self._dec:
+            if do_dec:
                 ret = _lib.wc_Chacha_SetKey(self._dec, self._key, len(self._key))
                 if ret == 0:
                     ret = _lib.wc_Chacha_SetIV(self._dec, self._IV_nonce, self._IV_counter)

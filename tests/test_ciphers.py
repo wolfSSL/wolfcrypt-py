@@ -998,6 +998,64 @@ if _lib.CHACHA_ENABLED:
         with pytest.raises(ValueError, match="key must be"):
             ChaCha(b"\x00" * 20)
 
+    def test_chacha_decrypt_does_not_reset_encrypt_stream():
+        """
+        Interleaving decrypt() between two encrypt() calls on the same
+        ChaCha instance must not reset the encryption stream counter.
+        A previous bug in _set_key re-keyed both contexts whenever either
+        was allocated, so the first decrypt() (which lazily allocates the
+        decryption context) silently rewound the encryption stream to
+        counter 0, producing the wrong ciphertext on subsequent encrypts.
+        """
+        key = b"\x00" * 32
+        nonce = b"\x00" * 12
+        block1 = b"A" * 64
+        block2 = b"B" * 64
+
+        baseline = ChaCha(key)
+        baseline.set_iv(nonce)
+        expected_ct1 = baseline.encrypt(block1)
+        expected_ct2 = baseline.encrypt(block2)
+        assert expected_ct1 != expected_ct2
+
+        chacha = ChaCha(key)
+        chacha.set_iv(nonce)
+        ct1 = chacha.encrypt(block1)
+        assert ct1 == expected_ct1
+        # First decrypt() lazily allocates the decryption context and must
+        # not disturb the encryption stream state.
+        chacha.decrypt(b"\x00" * 16)
+        ct2 = chacha.encrypt(block2)
+        assert ct2 == expected_ct2
+
+    def test_chacha_set_iv_resets_both_directions():
+        """
+        set_iv() is documented to reset the stream, and the existing
+        implementation relies on _set_key re-keying both contexts when
+        the IV changes. Lock that behavior in so a fix to the
+        interleave bug does not regress set_iv semantics.
+        """
+        key = b"\x00" * 32
+        nonce_a = b"\x00" * 12
+        nonce_b = b"\x01" + b"\x00" * 11
+        plaintext = b"Z" * 32
+
+        chacha = ChaCha(key)
+        chacha.set_iv(nonce_a)
+        ct_a1 = chacha.encrypt(plaintext)
+        # Allocate the decryption context too.
+        chacha.decrypt(b"\x00" * 16)
+        # Changing IV must reset both contexts: subsequent encrypt/decrypt
+        # under nonce_b must match a freshly-keyed instance under nonce_b.
+        chacha.set_iv(nonce_b)
+        ct_b = chacha.encrypt(plaintext)
+        pt_back = chacha.decrypt(ct_b)
+        assert pt_back == plaintext
+
+        fresh = ChaCha(key)
+        fresh.set_iv(nonce_b)
+        assert fresh.encrypt(plaintext) == ct_b
+
 
 if _lib.RSA_ENABLED:
     def test_encrypt_oaep_requires_hash_type(vectors):
