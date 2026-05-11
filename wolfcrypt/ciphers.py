@@ -1112,6 +1112,15 @@ if _lib.ECC_ENABLED:
             """
             Decodes an ECC public key from its raw elements: (Qx,Qy)
             """
+            qx = t2b(qx)
+            qy = t2b(qy)
+            curve_size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
+            if curve_size <= 0:
+                raise ValueError("Unknown ECC curve_id %d" % curve_id)
+            if len(qx) != curve_size or len(qy) != curve_size:
+                raise ValueError(
+                    "qx and qy must each be %d bytes for curve_id %d, got "
+                    "qx=%d qy=%d" % (curve_size, curve_id, len(qx), len(qy)))
             ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy,
                     _ffi.NULL, curve_id)
             if ret != 0:
@@ -1290,6 +1299,18 @@ if _lib.ECC_ENABLED:
             Decodes an ECC private key from its raw elements: public (Qx,Qy)
             and private(d)
             """
+            qx = t2b(qx)
+            qy = t2b(qy)
+            d = t2b(d)
+            curve_size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
+            if curve_size <= 0:
+                raise ValueError("Unknown ECC curve_id %d" % curve_id)
+            if (len(qx) != curve_size or len(qy) != curve_size
+                    or len(d) != curve_size):
+                raise ValueError(
+                    "qx, qy and d must each be %d bytes for curve_id %d, got "
+                    "qx=%d qy=%d d=%d" % (curve_size, curve_id,
+                                          len(qx), len(qy), len(d)))
             ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy, d,
                     curve_id)
             if ret != 0:

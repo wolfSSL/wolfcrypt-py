@@ -614,6 +614,37 @@ if _lib.ECC_ENABLED:
         assert qy[0:32] == vectors[EccPublic].raw_key[32:64]
 
 
+    def test_ecc_decode_key_raw_rejects_wrong_length(vectors):
+        """
+        wc_ecc_import_unsigned reads exactly curve_size bytes from each
+        of qx/qy/d with no length information from the caller. The
+        Python wrappers must validate the lengths up-front so a short
+        buffer cannot cause an out-of-bounds read in the C library.
+        """
+        raw_priv = EccPrivate()
+        raw_pub = EccPublic()
+        key = vectors[EccPrivate].raw_key
+        qx_good, qy_good, d_good = key[0:32], key[32:64], key[64:96]
+
+        # Short qx
+        with pytest.raises(ValueError, match="must each be 32 bytes"):
+            raw_pub.decode_key_raw(qx_good[:-1], qy_good)
+        with pytest.raises(ValueError, match="must each be 32 bytes"):
+            raw_priv.decode_key_raw(qx_good[:-1], qy_good, d_good)
+        # Long qy
+        with pytest.raises(ValueError, match="must each be 32 bytes"):
+            raw_pub.decode_key_raw(qx_good, qy_good + b"\x00")
+        with pytest.raises(ValueError, match="must each be 32 bytes"):
+            raw_priv.decode_key_raw(qx_good, qy_good + b"\x00", d_good)
+        # Short d
+        with pytest.raises(ValueError, match="must each be 32 bytes"):
+            raw_priv.decode_key_raw(qx_good, qy_good, d_good[:-1])
+        # Unknown curve id
+        with pytest.raises(ValueError, match="Unknown ECC curve_id"):
+            raw_pub.decode_key_raw(qx_good, qy_good, curve_id=-99999)
+        # Happy path still works after validation
+        raw_pub.decode_key_raw(qx_good, qy_good)
+        raw_priv.decode_key_raw(qx_good, qy_good, d_good)
 
 
 

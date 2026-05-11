@@ -1096,6 +1096,7 @@ def build_ffi(local_wolfssl, features):
                        const byte* d, int curve_id);
         int wc_ecc_export_public_raw(ecc_key* key, byte* qx, word32* qxLen,
                                  byte* qy, word32* qyLen);
+        int wc_ecc_get_curve_size_from_id(int curve_id);
 
 
         int wc_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
