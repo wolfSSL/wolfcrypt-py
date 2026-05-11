@@ -1172,11 +1172,11 @@ def build_ffi(local_wolfssl, features):
         int wc_ed448_size(ed448_key* key);
         int wc_ed448_sig_size(ed448_key* key);
         int wc_ed448_sign_msg(const byte* in, word32 inlen, byte* out,
-                            word32 *outlen, ed448_key* key, byte* ctx,
-                            word32 ctx_len);
+                            word32 *outlen, ed448_key* key, const byte* ctx,
+                            byte ctx_len);
         int wc_ed448_verify_msg(const byte* sig, word32 siglen, const byte* msg,
-                              word32 msglen, int* stat, ed448_key* key, byte *ctx,
-                              word32 ctx_len);
+                              word32 msglen, int* stat, ed448_key* key, const byte *ctx,
+                              byte ctx_len);
         int wc_Ed448PrivateKeyDecode(const byte*, word32*, ed448_key*, word32);
         int wc_Ed448KeyToDer(ed448_key*, byte* output, word32 inLen);
 

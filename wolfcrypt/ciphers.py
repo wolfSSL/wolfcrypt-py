@@ -1705,6 +1705,9 @@ if _lib.ED448_ENABLED:
             if ctx is not None:
                 ctx_buf = t2b(ctx)
                 ctx_buf_len = len(ctx_buf)
+                if ctx_buf_len > 255:
+                    raise ValueError("Ed448 ctx must be at most 255 bytes, got %d" %
+                                     ctx_buf_len)
 
             ret = _lib.wc_ed448_verify_msg(signature, len(signature),
                                           data, len(data), status,
@@ -1825,6 +1828,9 @@ if _lib.ED448_ENABLED:
             if ctx is not None:
                 ctx_buf = t2b(ctx)
                 ctx_buf_len = len(ctx_buf)
+                if ctx_buf_len > 255:
+                    raise ValueError("Ed448 ctx must be at most 255 bytes, got %d" %
+                                     ctx_buf_len)
 
             ret = _lib.wc_ed448_sign_msg(plaintext, len(plaintext),
                                         signature, signature_size,
