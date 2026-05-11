@@ -904,7 +904,12 @@ if _lib.RSA_ENABLED:
                                               self.native_object, len(key))
                 if ret < 0:
                     idx[0] = 0
-                    ret = _lib.wc_GetPkcs8TraditionalOffset(key, idx, len(key))
+                    # wc_GetPkcs8TraditionalOffset takes byte* (non-const) per
+                    # the wolfSSL public header, so route it through a CFFI-
+                    # owned buffer rather than handing it a writable pointer
+                    # into the Python bytes object.
+                    key_buf = _ffi.new("byte[]", key)
+                    ret = _lib.wc_GetPkcs8TraditionalOffset(key_buf, idx, len(key))
                     if ret < 0:
                         raise WolfCryptApiError("Invalid key error", ret)
 
