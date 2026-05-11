@@ -38,3 +38,55 @@ jobs:
     - name: Test with tox
       run: |
         tox
+
+  build-no-pqc:
+    # Regression coverage for issue #2659: INVALID_DEVID is only declared
+    # in the CFFI cdef when ML_KEM or ML_DSA is enabled, so a wolfSSL build
+    # without those features must still import wolfcrypt.random successfully.
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    - name: Install build deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y autoconf automake libtool
+    - name: Build wolfSSL without ML-KEM/ML-DSA
+      run: |
+        cd lib/wolfssl
+        ./autogen.sh
+        ./configure --enable-cryptonly --disable-shared \
+                    --disable-kyber --disable-dilithium \
+                    --enable-aes --enable-aesgcm --enable-aessiv \
+                    --enable-aesctr --enable-aesgcm-stream \
+                    --enable-des3 --enable-chacha --enable-poly1305 \
+                    --enable-sha --enable-sha384 --enable-sha512 --enable-sha3 \
+                    --enable-hkdf --enable-rsa --enable-rsapss --enable-ecc \
+                    --enable-ed25519 --enable-ed448 --enable-curve25519 \
+                    --enable-keygen --enable-pwdbased --enable-pkcs7 \
+                    --disable-md5 --disable-sha224 --disable-dh \
+                    --disable-oldtls --disable-oldnames --disable-extended-master \
+                    CFLAGS=-fPIC \
+                    --prefix=$GITHUB_WORKSPACE/wolfssl-install
+        make
+        make install
+    - name: Install wolfcrypt-py against the local wolfSSL
+      env:
+        USE_LOCAL_WOLFSSL: ${{ github.workspace }}/wolfssl-install
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/test.txt
+        pip install -e .
+    - name: Import smoke (regression for INVALID_DEVID)
+      run: python -c "from wolfcrypt.random import Random; Random()"
+    - name: Run tests
+      env:
+        USE_LOCAL_WOLFSSL: ${{ github.workspace }}/wolfssl-install
+      run: pytest tests/
