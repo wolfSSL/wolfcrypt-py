@@ -1051,7 +1051,7 @@ def build_ffi(local_wolfssl, features):
             cdef += """
             int wc_RsaPSS_Sign(const byte* in, word32 inLen, byte* out, word32 outLen,
                                enum wc_HashType hash, int mgf, RsaKey* key, WC_RNG* rng);
-            int wc_RsaPSS_Verify(byte* in, word32 inLen, byte* out, word32 outLen,
+            int wc_RsaPSS_Verify(const byte* in, word32 inLen, byte* out, word32 outLen,
                                    enum wc_HashType hash, int mgf, RsaKey* key);
             int wc_RsaPSS_CheckPadding(const byte* in, word32 inSz, byte* sig,
                                    word32 sigSz, enum wc_HashType hashType);
@@ -1092,10 +1092,11 @@ def build_ffi(local_wolfssl, features):
         int wc_ecc_import_x963(const byte* in, word32 inLen, ecc_key* key);
         int wc_ecc_export_private_raw(ecc_key* key, byte* qx, word32* qxLen,
                                   byte* qy, word32* qyLen, byte* d, word32* dLen);
-        int wc_ecc_import_unsigned(ecc_key* key, byte* qx, byte* qy,
-                       byte* d, int curve_id);
+        int wc_ecc_import_unsigned(ecc_key* key, const byte* qx, const byte* qy,
+                       const byte* d, int curve_id);
         int wc_ecc_export_public_raw(ecc_key* key, byte* qx, word32* qxLen,
                                  byte* qy, word32* qyLen);
+        int wc_ecc_get_curve_size_from_id(int curve_id);
 
 
         int wc_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
@@ -1172,11 +1173,11 @@ def build_ffi(local_wolfssl, features):
         int wc_ed448_size(ed448_key* key);
         int wc_ed448_sig_size(ed448_key* key);
         int wc_ed448_sign_msg(const byte* in, word32 inlen, byte* out,
-                            word32 *outlen, ed448_key* key, byte* ctx,
-                            word32 ctx_len);
+                            word32 *outlen, ed448_key* key, const byte* ctx,
+                            byte ctx_len);
         int wc_ed448_verify_msg(const byte* sig, word32 siglen, const byte* msg,
-                              word32 msglen, int* stat, ed448_key* key, byte *ctx,
-                              word32 ctx_len);
+                              word32 msglen, int* stat, ed448_key* key, const byte *ctx,
+                              byte ctx_len);
         int wc_Ed448PrivateKeyDecode(const byte*, word32*, ed448_key*, word32);
         int wc_Ed448KeyToDer(ed448_key*, byte* output, word32 inLen);
 

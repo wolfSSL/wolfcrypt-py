@@ -299,8 +299,9 @@ if _lib.AES_SIV_ENABLED:
             Encrypt plaintext data using the nonce provided. The associated
             data is not encrypted but is included in the authentication tag.
 
-            Associated data may be provided as single str or bytes, or as a
-            list of str or bytes in case of multiple blocks.
+            Associated data may be provided as a single str, bytes,
+            bytearray, or memoryview, or as a list of any of those in case
+            of multiple blocks.
 
             Returns a tuple of the IV and ciphertext.
             """
@@ -325,8 +326,9 @@ if _lib.AES_SIV_ENABLED:
             Decrypt the ciphertext using the nonce and SIV provided.
             The integrity of the associated data is checked.
 
-            Associated data may be provided as single str or bytes, or as a
-            list of str or bytes in case of multiple blocks.
+            Associated data may be provided as a single str, bytes,
+            bytearray, or memoryview, or as a list of any of those in case
+            of multiple blocks.
 
             Returns the decrypted plaintext.
             """
@@ -354,8 +356,9 @@ if _lib.AES_SIV_ENABLED:
             """
             Prepare associated data for sending to C library.
 
-            Associated data may be provided as single str or bytes, or as a
-            list of str or bytes in case of multiple blocks.
+            Associated data may be provided as a single str, bytes,
+            bytearray, or memoryview, or as a list of any of those in case
+            of multiple blocks.
 
             The result is a tuple of the list of cffi cdata pointers to
             AesSivAssoc structures, as well as the converted associated
@@ -363,7 +366,7 @@ if _lib.AES_SIV_ENABLED:
             C function has been called, in order to make sure that the memory
             is not freed by the FFI garbage collector before the data is read.
             """
-            if isinstance(associated_data, str) or isinstance(associated_data, bytes):
+            if isinstance(associated_data, (str, bytes, bytearray, memoryview)):
                 # A single block is provided.
                 # Make sure we have bytes.
                 associated_data = t2b(associated_data)
@@ -527,16 +530,27 @@ if _lib.CHACHA_ENABLED:
             self._IV_nonce = b""
             self._IV_counter = 0
 
+        # Sentinel for "rekey both contexts" used by set_iv. Must not
+        # collide with _ENCRYPTION (0) or _DECRYPTION (1).
+        _REKEY_BOTH = -1
+
         def _set_key(self, direction):
             if self._key is None:
                 return -1
-            if self._enc:
+            # _REKEY_BOTH re-keys whichever contexts are already allocated,
+            # since changing the IV must reset both encrypt and decrypt
+            # streams. _ENCRYPTION / _DECRYPTION only touch the matching
+            # context so that lazy allocation from encrypt()/decrypt() does
+            # not wipe the other direction's stream state.
+            do_enc = self._enc and direction in (self._REKEY_BOTH, _ENCRYPTION)
+            do_dec = self._dec and direction in (self._REKEY_BOTH, _DECRYPTION)
+            if do_enc:
                 ret = _lib.wc_Chacha_SetKey(self._enc, self._key, len(self._key))
                 if ret == 0:
                     ret = _lib.wc_Chacha_SetIV(self._enc, self._IV_nonce, self._IV_counter)
                 if ret != 0:
                     return ret
-            if self._dec:
+            if do_dec:
                 ret = _lib.wc_Chacha_SetKey(self._dec, self._key, len(self._key))
                 if ret == 0:
                     ret = _lib.wc_Chacha_SetIV(self._dec, self._IV_nonce, self._IV_counter)
@@ -560,7 +574,7 @@ if _lib.CHACHA_ENABLED:
                 raise ValueError("nonce must be %d bytes, got %d" %
                                  (self._NONCE_SIZE, len(self._IV_nonce)))
             self._IV_counter = counter
-            ret = self._set_key(0)
+            ret = self._set_key(self._REKEY_BOTH)
             if ret < 0:
                 raise WolfCryptApiError("ChaCha set_iv error", ret)
 
@@ -896,7 +910,12 @@ if _lib.RSA_ENABLED:
                                               self.native_object, len(key))
                 if ret < 0:
                     idx[0] = 0
-                    ret = _lib.wc_GetPkcs8TraditionalOffset(key, idx, len(key))
+                    # wc_GetPkcs8TraditionalOffset takes byte* (non-const) per
+                    # the wolfSSL public header, so route it through a CFFI-
+                    # owned buffer rather than handing it a writable pointer
+                    # into the Python bytes object.
+                    key_buf = _ffi.new("byte[]", key)
+                    ret = _lib.wc_GetPkcs8TraditionalOffset(key_buf, idx, len(key))
                     if ret < 0:
                         raise WolfCryptApiError("Invalid key error", ret)
 
@@ -1099,6 +1118,15 @@ if _lib.ECC_ENABLED:
             """
             Decodes an ECC public key from its raw elements: (Qx,Qy)
             """
+            qx = t2b(qx)
+            qy = t2b(qy)
+            curve_size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
+            if curve_size <= 0:
+                raise ValueError("Unknown ECC curve_id %d" % curve_id)
+            if len(qx) != curve_size or len(qy) != curve_size:
+                raise ValueError(
+                    "qx and qy must each be %d bytes for curve_id %d, got "
+                    "qx=%d qy=%d" % (curve_size, curve_id, len(qx), len(qy)))
             ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy,
                     _ffi.NULL, curve_id)
             if ret != 0:
@@ -1277,6 +1305,18 @@ if _lib.ECC_ENABLED:
             Decodes an ECC private key from its raw elements: public (Qx,Qy)
             and private(d)
             """
+            qx = t2b(qx)
+            qy = t2b(qy)
+            d = t2b(d)
+            curve_size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
+            if curve_size <= 0:
+                raise ValueError("Unknown ECC curve_id %d" % curve_id)
+            if (len(qx) != curve_size or len(qy) != curve_size
+                    or len(d) != curve_size):
+                raise ValueError(
+                    "qx, qy and d must each be %d bytes for curve_id %d, got "
+                    "qx=%d qy=%d d=%d" % (curve_size, curve_id,
+                                          len(qx), len(qy), len(d)))
             ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy, d,
                     curve_id)
             if ret != 0:
@@ -1692,6 +1732,9 @@ if _lib.ED448_ENABLED:
             if ctx is not None:
                 ctx_buf = t2b(ctx)
                 ctx_buf_len = len(ctx_buf)
+                if ctx_buf_len > 255:
+                    raise ValueError("Ed448 ctx must be at most 255 bytes, got %d" %
+                                     ctx_buf_len)
 
             ret = _lib.wc_ed448_verify_msg(signature, len(signature),
                                           data, len(data), status,
@@ -1812,6 +1855,9 @@ if _lib.ED448_ENABLED:
             if ctx is not None:
                 ctx_buf = t2b(ctx)
                 ctx_buf_len = len(ctx_buf)
+                if ctx_buf_len > 255:
+                    raise ValueError("Ed448 ctx must be at most 255 bytes, got %d" %
+                                     ctx_buf_len)
 
             ret = _lib.wc_ed448_sign_msg(plaintext, len(plaintext),
                                         signature, signature_size,

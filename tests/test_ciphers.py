@@ -614,6 +614,37 @@ if _lib.ECC_ENABLED:
         assert qy[0:32] == vectors[EccPublic].raw_key[32:64]
 
 
+    def test_ecc_decode_key_raw_rejects_wrong_length(vectors):
+        """
+        wc_ecc_import_unsigned reads exactly curve_size bytes from each
+        of qx/qy/d with no length information from the caller. The
+        Python wrappers must validate the lengths up-front so a short
+        buffer cannot cause an out-of-bounds read in the C library.
+        """
+        raw_priv = EccPrivate()
+        raw_pub = EccPublic()
+        key = vectors[EccPrivate].raw_key
+        qx_good, qy_good, d_good = key[0:32], key[32:64], key[64:96]
+
+        # Short qx
+        with pytest.raises(ValueError, match="must each be 32 bytes"):
+            raw_pub.decode_key_raw(qx_good[:-1], qy_good)
+        with pytest.raises(ValueError, match="must each be 32 bytes"):
+            raw_priv.decode_key_raw(qx_good[:-1], qy_good, d_good)
+        # Long qy
+        with pytest.raises(ValueError, match="must each be 32 bytes"):
+            raw_pub.decode_key_raw(qx_good, qy_good + b"\x00")
+        with pytest.raises(ValueError, match="must each be 32 bytes"):
+            raw_priv.decode_key_raw(qx_good, qy_good + b"\x00", d_good)
+        # Short d
+        with pytest.raises(ValueError, match="must each be 32 bytes"):
+            raw_priv.decode_key_raw(qx_good, qy_good, d_good[:-1])
+        # Unknown curve id
+        with pytest.raises(ValueError, match="Unknown ECC curve_id"):
+            raw_pub.decode_key_raw(qx_good, qy_good, curve_id=-99999)
+        # Happy path still works after validation
+        raw_pub.decode_key_raw(qx_good, qy_good)
+        raw_priv.decode_key_raw(qx_good, qy_good, d_good)
 
 
 
@@ -938,6 +969,35 @@ def test_aessiv_decrypt_kat_openssl():
     assert plaintext == TEST_VECTOR_PLAINTEXT_OPENSSL
 
 
+@pytest.mark.skipif(not _lib.AES_SIV_ENABLED, reason="AES-SIV not enabled")
+@pytest.mark.parametrize("wrap", [bytes, bytearray, memoryview],
+                         ids=["bytes", "bytearray", "memoryview"])
+def test_aessiv_associated_data_accepts_buffer_types(wrap):
+    """
+    Single-block associated_data passed as bytes, bytearray, or memoryview
+    must all produce the same SIV/ciphertext as the OpenSSL KAT. A previous
+    bug treated bytearray/memoryview as a sequence of int blocks, producing
+    a different (incorrect) tag without raising.
+    """
+    aessiv = AesSiv(TEST_VECTOR_KEY_OPENSSL)
+    associated_data = wrap(TEST_VECTOR_ASSOCIATED_DATA_OPENSSL)
+    siv, ciphertext = aessiv.encrypt(
+        associated_data,
+        TEST_VECTOR_NONCE_OPENSSL,
+        TEST_VECTOR_PLAINTEXT_OPENSSL
+    )
+    assert siv == TEST_VECTOR_SIV_OPENSSL
+    assert ciphertext == TEST_VECTOR_CIPHERTEXT_OPENSSL
+
+    plaintext = aessiv.decrypt(
+        wrap(TEST_VECTOR_ASSOCIATED_DATA_OPENSSL),
+        TEST_VECTOR_NONCE_OPENSSL,
+        TEST_VECTOR_SIV_OPENSSL,
+        TEST_VECTOR_CIPHERTEXT_OPENSSL
+    )
+    assert plaintext == TEST_VECTOR_PLAINTEXT_OPENSSL
+
+
 if _lib.DES3_ENABLED:
     def test_des3_rejects_mode_ctr():
         key = b"\x01\x23\x45\x67\x89\xab\xcd\xef" * 3
@@ -968,6 +1028,83 @@ if _lib.CHACHA_ENABLED:
     def test_chacha_invalid_key_length():
         with pytest.raises(ValueError, match="key must be"):
             ChaCha(b"\x00" * 20)
+
+    def test_chacha_decrypt_does_not_reset_encrypt_stream():
+        """
+        Interleaving decrypt() between two encrypt() calls on the same
+        ChaCha instance must not reset the encryption stream counter, and
+        symmetrically interleaving encrypt() between two decrypt() calls
+        must not reset the decryption stream counter. A previous bug in
+        _set_key re-keyed both contexts whenever either was allocated, so
+        the first call to the other direction (which lazily allocates the
+        opposite context) silently rewound the existing stream to
+        counter 0, producing the wrong ciphertext/plaintext on subsequent
+        calls.
+        """
+        key = b"\x00" * 32
+        nonce = b"\x00" * 12
+        block1 = b"A" * 64
+        block2 = b"B" * 64
+
+        # --- encrypt -> decrypt -> encrypt: the lazy _dec must not wipe _enc.
+        baseline = ChaCha(key)
+        baseline.set_iv(nonce)
+        expected_ct1 = baseline.encrypt(block1)
+        expected_ct2 = baseline.encrypt(block2)
+        assert expected_ct1 != expected_ct2
+
+        chacha = ChaCha(key)
+        chacha.set_iv(nonce)
+        ct1 = chacha.encrypt(block1)
+        assert ct1 == expected_ct1
+        chacha.decrypt(b"\x00" * 16)
+        ct2 = chacha.encrypt(block2)
+        assert ct2 == expected_ct2
+
+        # --- decrypt -> encrypt -> decrypt: the lazy _enc must not wipe _dec.
+        # Pre-compute the two ciphertexts that would decrypt back to
+        # block1, block2 in stream order.
+        producer = ChaCha(key)
+        producer.set_iv(nonce)
+        ct_a = producer.encrypt(block1)
+        ct_b = producer.encrypt(block2)
+
+        chacha = ChaCha(key)
+        chacha.set_iv(nonce)
+        pt1 = chacha.decrypt(ct_a)
+        assert pt1 == block1
+        # encrypt() now lazily allocates _enc; it must not reset _dec.
+        chacha.encrypt(b"\x00" * 16)
+        pt2 = chacha.decrypt(ct_b)
+        assert pt2 == block2
+
+    def test_chacha_set_iv_resets_both_directions():
+        """
+        set_iv() is documented to reset the stream, and the existing
+        implementation relies on _set_key re-keying both contexts when
+        the IV changes. Lock that behavior in so a fix to the
+        interleave bug does not regress set_iv semantics.
+        """
+        key = b"\x00" * 32
+        nonce_a = b"\x00" * 12
+        nonce_b = b"\x01" + b"\x00" * 11
+        plaintext = b"Z" * 32
+
+        chacha = ChaCha(key)
+        chacha.set_iv(nonce_a)
+        ct_a1 = chacha.encrypt(plaintext)
+        # Allocate the decryption context too.
+        chacha.decrypt(b"\x00" * 16)
+        # Changing IV must reset both contexts: subsequent encrypt/decrypt
+        # under nonce_b must match a freshly-keyed instance under nonce_b.
+        chacha.set_iv(nonce_b)
+        ct_b = chacha.encrypt(plaintext)
+        pt_back = chacha.decrypt(ct_b)
+        assert pt_back == plaintext
+
+        fresh = ChaCha(key)
+        fresh.set_iv(nonce_b)
+        assert fresh.encrypt(plaintext) == ct_b
 
 
 if _lib.RSA_ENABLED:
