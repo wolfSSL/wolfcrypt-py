@@ -1051,7 +1051,7 @@ def build_ffi(local_wolfssl, features):
             cdef += """
             int wc_RsaPSS_Sign(const byte* in, word32 inLen, byte* out, word32 outLen,
                                enum wc_HashType hash, int mgf, RsaKey* key, WC_RNG* rng);
-            int wc_RsaPSS_Verify(byte* in, word32 inLen, byte* out, word32 outLen,
+            int wc_RsaPSS_Verify(const byte* in, word32 inLen, byte* out, word32 outLen,
                                    enum wc_HashType hash, int mgf, RsaKey* key);
             int wc_RsaPSS_CheckPadding(const byte* in, word32 inSz, byte* sig,
                                    word32 sigSz, enum wc_HashType hashType);
