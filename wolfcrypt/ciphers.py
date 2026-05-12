@@ -496,7 +496,12 @@ if _lib.AESGCM_STREAM_ENABLED:
                 if authTag is None:
                     raise WolfCryptError("authTag parameter required")
                 authTag = t2b(authTag)
-                ret = _lib.wc_AesGcmDecryptFinal(self._native_object, authTag, len(authTag))
+                if len(authTag) != self._tag_bytes:
+                    raise ValueError(
+                        "authTag must be %d bytes, got %d" %
+                        (self._tag_bytes, len(authTag)))
+                ret = _lib.wc_AesGcmDecryptFinal(
+                    self._native_object, authTag, self._tag_bytes)
                 if ret < 0:
                     raise WolfCryptApiError("Decryption error", ret)
 

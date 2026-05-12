@@ -50,7 +50,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         authTag = gcm.final()
         assert b2h(authTag) == bytes('ac8fcee96dc6ef8e5236da19', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
-        gcmdec = AesGcmStream(key, iv)
+        gcmdec = AesGcmStream(key, iv, 12)
         bufdec = gcmdec.decrypt(buf)
         gcmdec.final(authTag)
         assert bufdec == t2b("hello world")
@@ -143,6 +143,33 @@ if _lib.AESGCM_STREAM_ENABLED:
             gcm.encrypt("hello world")
             tag = gcm.final()
             assert len(tag) == good
+
+    def test_decrypt_rejects_wrong_tag_length():
+        key = "fedcba9876543210"
+        iv = "0123456789abcdef"
+        gcm = AesGcmStream(key, iv, tag_bytes=16)
+        buf = gcm.encrypt("hello world")
+        authTag = gcm.final()
+        assert len(authTag) == 16
+
+        # Truncated tag: would silently lower the verification window to
+        # 32-bit forgery probability without this check.
+        gcmdec = AesGcmStream(key, iv, tag_bytes=16)
+        gcmdec.decrypt(buf)
+        with pytest.raises(ValueError, match="authTag must be 16 bytes"):
+            gcmdec.final(authTag[:4])
+
+        # Over-long tag is also rejected.
+        gcmdec2 = AesGcmStream(key, iv, tag_bytes=16)
+        gcmdec2.decrypt(buf)
+        with pytest.raises(ValueError, match="authTag must be 16 bytes"):
+            gcmdec2.final(authTag + b"\x00")
+
+        # Happy path with the configured length still verifies.
+        gcmdec3 = AesGcmStream(key, iv, tag_bytes=16)
+        plain = gcmdec3.decrypt(buf)
+        gcmdec3.final(authTag)
+        assert plain == t2b("hello world")
 
     def test_repeated_construction_destruction():
         import gc

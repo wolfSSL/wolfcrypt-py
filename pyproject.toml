@@ -23,7 +23,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    "cffi>=1.0.0",
+    "cffi>=1.0.0,<2",
 ]
 
 [project.urls]
