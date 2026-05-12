@@ -1,4 +1,4 @@
 -r prod.txt
-tox
-pytest
-types-cffi
+tox>=4,<5
+pytest>=8,<9
+types-cffi>=1.16,<2
