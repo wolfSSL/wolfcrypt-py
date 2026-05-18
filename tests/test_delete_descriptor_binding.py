@@ -105,10 +105,10 @@ def test_lib_fn_class_attr_is_staticmethod(cls, attr):
     """
     raw = inspect.getattr_static(cls, attr)
     assert isinstance(raw, staticmethod), (
-        "%s.%s must be wrapped in staticmethod(...) to prevent Python's "
+        f"{cls.__name__}.{attr} must be wrapped in staticmethod(...) to prevent Python's "
         "descriptor protocol from injecting `self` as an extra positional "
         "argument when the underlying callable is a plain Python function "
-        "(e.g. a test mock). Got %r." % (cls.__name__, attr, type(raw))
+        f"(e.g. a test mock). Got {type(raw)!r}."
     )
 
 
@@ -179,7 +179,7 @@ def test_random_delete_receives_only_native_object():
         assert kwargs == {}
         assert args == (native,), (
             "Random.__del__ must call _delete with only native_object, "
-            "but got args=%r" % (args,)
+            f"but got {args=!r}"
         )
     finally:
         Random._delete = original

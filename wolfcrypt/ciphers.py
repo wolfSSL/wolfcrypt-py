@@ -134,18 +134,15 @@ class _Cipher:
 
         if self.key_size:
             if self.key_size != len(key):
-                raise ValueError("key must be %d in length, not %d" %
-                                 (self.key_size, len(key)))
+                raise ValueError(f"key must be {self.key_size} in length, not {len(key)}")
         elif self._key_sizes:
             if len(key) not in self._key_sizes:
-                raise ValueError("key must be %s in length, not %d" %
-                                 (self._key_sizes, len(key)))
+                raise ValueError(f"key must be {self._key_sizes} in length, not {len(key)}")
         elif not key:  # pragma: no cover
             raise ValueError("key must not be 0 in length")
 
         if IV is not None and len(IV) != self.block_size:
-            raise ValueError("IV must be %d in length, not %d" %
-                             (self.block_size, len(IV)))
+            raise ValueError(f"IV must be {self.block_size} in length, not {len(IV)}")
 
         self._native_object = _ffi.new(self._native_type)
         self._enc = None
@@ -155,7 +152,7 @@ class _Cipher:
         if IV:
             self._IV = IV
         else:  # pragma: no cover
-            self._IV = _ffi.new("byte[%d]" % self.block_size)
+            self._IV = _ffi.new(f"byte[{self.block_size}]")
 
     @classmethod
     def new(cls, key, mode, IV=None, **kwargs):  # pylint: disable=W0613
@@ -187,8 +184,7 @@ class _Cipher:
                     "empty string not allowed")
 
         if len(string) % self.block_size and "ChaCha" not in self._native_type and self.mode != MODE_CTR:
-            raise ValueError(
-                "string must be a multiple of %d in length" % self.block_size)
+            raise ValueError(f"string must be a multiple of {self.block_size} in length")
 
         if self._enc is None:
             self._enc = _ffi.new(self._native_type)
@@ -197,7 +193,7 @@ class _Cipher:
                 self._enc = None
                 raise WolfCryptApiError("Invalid key error", ret)
 
-        result = _ffi.new("byte[%d]" % len(string))
+        result = _ffi.new(f"byte[{len(string)}]")
         ret = self._encrypt(result, string)
         if ret < 0:  # pragma: no cover
             raise WolfCryptApiError("Encryption error", ret)
@@ -220,8 +216,7 @@ class _Cipher:
             raise ValueError("empty string not allowed")
 
         if len(string) % self.block_size and "ChaCha" not in self._native_type and self.mode != MODE_CTR:
-            raise ValueError(
-                "string must be a multiple of %d in length" % self.block_size)
+            raise ValueError(f"string must be a multiple of {self.block_size} in length")
 
         if self._dec is None:
             self._dec = _ffi.new(self._native_type)
@@ -230,7 +225,7 @@ class _Cipher:
                 self._dec = None
                 raise WolfCryptApiError("Invalid key error", ret)
 
-        result = _ffi.new("byte[%d]" % len(string))
+        result = _ffi.new(f"byte[{len(string)}]")
         ret = self._decrypt(result, string)
         if ret < 0:  # pragma: no cover
             raise WolfCryptApiError("Decryption error", ret)
@@ -291,8 +286,7 @@ if _lib.AES_SIV_ENABLED:
         def __init__(self, key):
             self._key = t2b(key)
             if len(self._key) not in AesSiv._key_sizes:
-                raise ValueError("key must be %s in length, not %d" %
-                                 (AesSiv._key_sizes, len(self._key)))
+                raise ValueError(f"key must be {AesSiv._key_sizes} in length, not {len(self._key)}")
 
         def encrypt(self, associated_data, nonce, plaintext):
             """
@@ -312,8 +306,8 @@ if _lib.AES_SIV_ENABLED:
                 AesSiv._prepare_associated_data(associated_data))
             nonce = t2b(nonce)
             plaintext = t2b(plaintext)
-            siv = _ffi.new("byte[%d]" % AesSiv.block_size)
-            ciphertext = _ffi.new("byte[%d]" % len(plaintext))
+            siv = _ffi.new(f"byte[{AesSiv.block_size}]")
+            ciphertext = _ffi.new(f"byte[{len(plaintext)}]")
             ret = _lib.wc_AesSivEncrypt_ex(self._key, len(self._key),
                 associated_data, len(associated_data), nonce, len(nonce),
                 plaintext, len(plaintext), siv, ciphertext)
@@ -340,10 +334,9 @@ if _lib.AES_SIV_ENABLED:
             nonce = t2b(nonce)
             siv = t2b(siv)
             if len(siv) != AesSiv.block_size:
-                raise ValueError("SIV must be %s in length, not %d" %
-                                 (AesSiv.block_size, len(siv)))
+                raise ValueError(f"SIV must be {AesSiv.block_size} in length, not {len(siv)}")
             ciphertext = t2b(ciphertext)
-            plaintext = _ffi.new("byte[%d]" % len(ciphertext))
+            plaintext = _ffi.new(f"byte[{len(ciphertext)}]")
             ret = _lib.wc_AesSivDecrypt_ex(self._key, len(self._key),
                 associated_data, len(associated_data), nonce, len(nonce),
                 ciphertext, len(ciphertext), siv, plaintext)
@@ -378,7 +371,7 @@ if _lib.AES_SIV_ENABLED:
                 num_blocks = len(associated_data)
                 if num_blocks > 126:
                     raise WolfCryptError("AES-SIV does not support more than 126 blocks "
-                                         "of associated data, got: %d" % num_blocks)
+                                         f"of associated data, got: {num_blocks}")
                 # Make sure we have bytes.
                 associated_data = [t2b(block) for block in associated_data]
                 result = _ffi.new("AesSivAssoc[]", num_blocks)
@@ -416,8 +409,7 @@ if _lib.AESGCM_STREAM_ENABLED:
             self._tag_bytes = tag_bytes
             self._mode = None
             if len(key) not in self._key_sizes:
-                raise ValueError("key must be %s in length, not %d" %
-                                 (self._key_sizes, len(key)))
+                raise ValueError(f"key must be {self._key_sizes} in length, not {len(key)}")
             self._init_done = False
             self._native_object = _ffi.new(self._native_type)
             ret = _lib.wc_AesInit(self._native_object, _ffi.NULL, -2)
@@ -455,7 +447,7 @@ if _lib.AESGCM_STREAM_ENABLED:
                 aad = self._aad
             elif self._mode == _DECRYPTION:
                 raise WolfCryptError("Class instance already in use for decryption")
-            buf = _ffi.new("byte[%d]" % (len(data)))
+            buf = _ffi.new(f"byte[{len(data)}]")
             ret = _lib.wc_AesGcmEncryptUpdate(self._native_object, buf, data, len(data), aad, len(aad))
             if ret < 0:
                 raise WolfCryptApiError("Encryption error", ret)
@@ -472,7 +464,7 @@ if _lib.AESGCM_STREAM_ENABLED:
                 aad = self._aad
             elif self._mode == _ENCRYPTION:
                 raise WolfCryptError("Class instance already in use for encryption")
-            buf = _ffi.new("byte[%d]" % (len(data)))
+            buf = _ffi.new(f"byte[{len(data)}]")
             ret = _lib.wc_AesGcmDecryptUpdate(self._native_object, buf, data, len(data), aad, len(aad))
             if ret < 0:
                 raise WolfCryptApiError("Decryption error", ret)
@@ -487,7 +479,7 @@ if _lib.AESGCM_STREAM_ENABLED:
             if self._mode is None:
                 raise WolfCryptError("Final called with no encryption or decryption")
             elif self._mode == _ENCRYPTION:
-                authTag = _ffi.new("byte[%d]" % self._tag_bytes)
+                authTag = _ffi.new(f"byte[{self._tag_bytes}]")
                 ret = _lib.wc_AesGcmEncryptFinal(self._native_object, authTag, self._tag_bytes)
                 if ret < 0:
                     raise WolfCryptApiError("Encryption error", ret)
@@ -497,9 +489,7 @@ if _lib.AESGCM_STREAM_ENABLED:
                     raise WolfCryptError("authTag parameter required")
                 authTag = t2b(authTag)
                 if len(authTag) != self._tag_bytes:
-                    raise ValueError(
-                        "authTag must be %d bytes, got %d" %
-                        (self._tag_bytes, len(authTag)))
+                    raise ValueError(f"authTag must be {self._tag_bytes} bytes, got {len(authTag)}")
                 ret = _lib.wc_AesGcmDecryptFinal(
                     self._native_object, authTag, self._tag_bytes)
                 if ret < 0:
@@ -529,8 +519,7 @@ if _lib.CHACHA_ENABLED:
             if len(key) > 0:
                 self._key = t2b(key)
                 if len(self._key) not in self._key_sizes:
-                    raise ValueError("key must be %s in length, not %d" %
-                                     (self._key_sizes, len(self._key)))
+                    raise ValueError(f"key must be {self._key_sizes} in length, not {len(self._key)}")
                 self.key_size = len(self._key)
             self._IV_nonce = b""
             self._IV_counter = 0
@@ -576,8 +565,7 @@ if _lib.CHACHA_ENABLED:
         def set_iv(self, nonce, counter = 0):
             self._IV_nonce = t2b(nonce)
             if len(self._IV_nonce) != self._NONCE_SIZE:
-                raise ValueError("nonce must be %d bytes, got %d" %
-                                 (self._NONCE_SIZE, len(self._IV_nonce)))
+                raise ValueError(f"nonce must be {self._NONCE_SIZE} bytes, got {len(self._IV_nonce)}")
             self._IV_counter = counter
             ret = self._set_key(self._REKEY_BOTH)
             if ret < 0:
@@ -596,8 +584,7 @@ if _lib.CHACHA20_POLY1305_ENABLED:
         def __init__(self, key):
             self._key = t2b(key)
             if len(self._key) not in self._key_sizes:
-                raise ValueError("key must be %s in length, not %d" %
-                                 (self._key_sizes, len(self._key)))
+                raise ValueError(f"key must be {self._key_sizes} in length, not {len(self._key)}")
 
         def encrypt(self, aad, iv, plaintext):
             """
@@ -610,10 +597,10 @@ if _lib.CHACHA20_POLY1305_ENABLED:
             aad = t2b(aad)
             iv = t2b(iv)
             if len(iv) != 12:
-                raise ValueError("iv must be 12 bytes, got %d" % len(iv))
+                raise ValueError(f"iv must be 12 bytes, got {len(iv)}")
             plaintext = t2b(plaintext)
-            ciphertext = _ffi.new("byte[%d]" % len(plaintext))
-            authTag = _ffi.new("byte[%d]" % self._tag_bytes)
+            ciphertext = _ffi.new(f"byte[{len(plaintext)}]")
+            authTag = _ffi.new(f"byte[{self._tag_bytes}]")
             ret = _lib.wc_ChaCha20Poly1305_Encrypt(
                 _ffi.from_buffer(self._key),
                 _ffi.from_buffer(iv),
@@ -638,13 +625,12 @@ if _lib.CHACHA20_POLY1305_ENABLED:
             aad = t2b(aad)
             iv = t2b(iv)
             if len(iv) != 12:
-                raise ValueError("iv must be 12 bytes, got %d" % len(iv))
+                raise ValueError(f"iv must be 12 bytes, got {len(iv)}")
             authTag = t2b(authTag)
             if len(authTag) != self._tag_bytes:
-                raise ValueError("authTag must be %d bytes, got %d" %
-                                 (self._tag_bytes, len(authTag)))
+                raise ValueError(f"authTag must be {self._tag_bytes} bytes, got {len(authTag)}")
             ciphertext = t2b(ciphertext)
-            plaintext = _ffi.new("byte[%d]" % len(ciphertext))
+            plaintext = _ffi.new(f"byte[{len(ciphertext)}]")
             ret = _lib.wc_ChaCha20Poly1305_Decrypt(
                 _ffi.from_buffer(self._key),
                 _ffi.from_buffer(iv),
@@ -782,7 +768,7 @@ if _lib.RSA_ENABLED:
             """
 
             plaintext = t2b(plaintext)
-            ciphertext = _ffi.new("byte[%d]" % self.output_size)
+            ciphertext = _ffi.new(f"byte[{self.output_size}]")
 
             ret = _lib.wc_RsaPublicEncrypt(plaintext, len(plaintext),
                                            ciphertext, self.output_size,
@@ -799,7 +785,7 @@ if _lib.RSA_ENABLED:
                 raise WolfCryptError("Hash type not set. Cannot use OAEP padding without a hash type.")
             plaintext = t2b(plaintext)
             label = t2b(label)
-            ciphertext = _ffi.new("byte[%d]" % self.output_size)
+            ciphertext = _ffi.new(f"byte[{self.output_size}]")
             if self._mgf is None:
                 self._get_mgf()
             ret = _lib.wc_RsaPublicEncrypt_ex(plaintext, len(plaintext),
@@ -824,7 +810,7 @@ if _lib.RSA_ENABLED:
             Returns a string containing the plaintext.
             """
             signature = t2b(signature)
-            plaintext = _ffi.new("byte[%d]" % self.output_size)
+            plaintext = _ffi.new(f"byte[{self.output_size}]")
 
             ret = _lib.wc_RsaSSL_Verify(signature, len(signature),
                                         plaintext, self.output_size,
@@ -856,7 +842,7 @@ if _lib.RSA_ENABLED:
                 signature = t2b(signature)
                 if self._mgf is None:
                     self._get_mgf()
-                verify = _ffi.new("byte[%d]" % self.output_size)
+                verify = _ffi.new(f"byte[{self.output_size}]")
 
                 ret = _lib.wc_RsaPSS_Verify(signature, len(signature),
                                             verify, self.output_size,
@@ -947,8 +933,8 @@ if _lib.RSA_ENABLED:
 
                 Returns the encoded key.
                 """
-                priv = _ffi.new("byte[%d]" % (self.size * 4))
-                pub = _ffi.new("byte[%d]" % (self.size * 4))
+                priv = _ffi.new(f"byte[{self.size * 4}]")
+                pub = _ffi.new(f"byte[{self.size * 4}]")
 
 
                 ret = _lib.wc_RsaKeyToDer(self.native_object, priv, self.size)
@@ -973,7 +959,7 @@ if _lib.RSA_ENABLED:
             Returns a string containing the plaintext.
             """
             ciphertext = t2b(ciphertext)
-            plaintext = _ffi.new("byte[%d]" % self.output_size)
+            plaintext = _ffi.new(f"byte[{self.output_size}]")
 
             ret = _lib.wc_RsaPrivateDecrypt(ciphertext, len(ciphertext),
                                             plaintext, self.output_size,
@@ -997,7 +983,7 @@ if _lib.RSA_ENABLED:
                 raise WolfCryptError("Hash type not set. Cannot use OAEP padding without a hash type.")
             ciphertext = t2b(ciphertext)
             label = t2b(label)
-            plaintext = _ffi.new("byte[%d]" % self.output_size)
+            plaintext = _ffi.new(f"byte[{self.output_size}]")
             if self._mgf is None:
                 self._get_mgf()
             ret = _lib.wc_RsaPrivateDecrypt_ex(ciphertext, len(ciphertext),
@@ -1021,7 +1007,7 @@ if _lib.RSA_ENABLED:
             Returns a string containing the signature.
             """
             plaintext = t2b(plaintext)
-            signature = _ffi.new("byte[%d]" % self.output_size)
+            signature = _ffi.new(f"byte[{self.output_size}]")
 
             ret = _lib.wc_RsaSSL_Sign(plaintext, len(plaintext),
                                       signature, self.output_size,
@@ -1053,7 +1039,7 @@ if _lib.RSA_ENABLED:
                 plaintext = t2b(plaintext)
                 digest = hash_cls.new(plaintext).digest()
 
-                signature = _ffi.new("byte[%d]" % self.output_size)
+                signature = _ffi.new(f"byte[{self.output_size}]")
                 if self._mgf is None:
                     self._get_mgf()
 
@@ -1114,10 +1100,9 @@ if _lib.ECC_ENABLED:
             if ret < 0:
                 raise WolfCryptApiError("Key decode error", ret)
             if self.size <= 0:  # pragma: no cover
-                raise WolfCryptError("Key decode error (%d)" % self.size)
+                raise WolfCryptError(f"Key decode error ({self.size})")
             if self.max_signature_size <= 0:  # pragma: no cover
-                raise WolfCryptError(
-                    "Key decode error (%d)" % self.max_signature_size)
+                raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
         def decode_key_raw(self, qx, qy, curve_id=ECC_SECP256R1):
             """
@@ -1127,11 +1112,11 @@ if _lib.ECC_ENABLED:
             qy = t2b(qy)
             curve_size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
             if curve_size <= 0:
-                raise ValueError("Unknown ECC curve_id %d" % curve_id)
+                raise ValueError(f"Unknown ECC curve_id {curve_id}")
             if len(qx) != curve_size or len(qy) != curve_size:
                 raise ValueError(
-                    "qx and qy must each be %d bytes for curve_id %d, got "
-                    "qx=%d qy=%d" % (curve_size, curve_id, len(qx), len(qy)))
+                    f"qx and qy must each be {curve_size} bytes for curve_id {curve_id}, got "
+                    f"qx={len(qx)} qy={len(qy)}")
             ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy,
                     _ffi.NULL, curve_id)
             if ret != 0:
@@ -1143,7 +1128,7 @@ if _lib.ECC_ENABLED:
 
             Returns the encoded key.
             """
-            key = _ffi.new("byte[%d]" % (self.size * 4))
+            key = _ffi.new(f"byte[{self.size * 4}]")
 
             ret = _lib.wc_EccPublicKeyToDer(self.native_object, key, len(key),
                                             with_curve)
@@ -1158,8 +1143,8 @@ if _lib.ECC_ENABLED:
 
             Returns (Qx, Qy)
             """
-            Qx = _ffi.new("byte[%d]" % self.size)
-            Qy = _ffi.new("byte[%d]" % self.size)
+            Qx = _ffi.new(f"byte[{self.size}]")
+            Qy = _ffi.new(f"byte[{self.size}]")
             qx_size = _ffi.new("word32[1]")
             qy_size = _ffi.new("word32[1]")
             qx_size[0] = self.size
@@ -1187,7 +1172,7 @@ if _lib.ECC_ENABLED:
 
             Returns the exported key.
             """
-            x963 = _ffi.new("byte[%d]" % (self.size * 4))
+            x963 = _ffi.new(f"byte[{self.size * 4}]")
             x963_size = _ffi.new("word32[1]")
             x963_size[0] = self.size * 4
 
@@ -1302,8 +1287,7 @@ if _lib.ECC_ENABLED:
             if self.size <= 0:  # pragma: no cover
                 raise WolfCryptError(f"Key decode error {self.size}")
             if self.max_signature_size <= 0:  # pragma: no cover
-                raise WolfCryptError(
-                    "Key decode error (%d)" % self.max_signature_size)
+                raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
         def decode_key_raw(self, qx, qy, d, curve_id=ECC_SECP256R1):
             """
@@ -1315,13 +1299,12 @@ if _lib.ECC_ENABLED:
             d = t2b(d)
             curve_size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
             if curve_size <= 0:
-                raise ValueError("Unknown ECC curve_id %d" % curve_id)
+                raise ValueError(f"Unknown ECC curve_id {curve_id}")
             if (len(qx) != curve_size or len(qy) != curve_size
                     or len(d) != curve_size):
                 raise ValueError(
-                    "qx, qy and d must each be %d bytes for curve_id %d, got "
-                    "qx=%d qy=%d d=%d" % (curve_size, curve_id,
-                                          len(qx), len(qy), len(d)))
+                    f"qx, qy and d must each be {curve_size} bytes for curve_id {curve_id}, got "
+                    f"qx={len(qx)} qy={len(qy)} d={len(d)}")
             ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy, d,
                     curve_id)
             if ret != 0:
@@ -1333,7 +1316,7 @@ if _lib.ECC_ENABLED:
 
             Returns the encoded key.
             """
-            key = _ffi.new("byte[%d]" % (self.size * 4))
+            key = _ffi.new(f"byte[{self.size * 4}]")
 
             ret = _lib.wc_EccKeyToDer(self.native_object, key, len(key))
             if ret <= 0:  # pragma: no cover
@@ -1347,9 +1330,9 @@ if _lib.ECC_ENABLED:
 
             Returns (Qx, Qy, d)
             """
-            Qx = _ffi.new("byte[%d]" % self.size)
-            Qy = _ffi.new("byte[%d]" % self.size)
-            d = _ffi.new("byte[%d]" % self.size)
+            Qx = _ffi.new(f"byte[{self.size}]")
+            Qy = _ffi.new(f"byte[{self.size}]")
+            d = _ffi.new(f"byte[{self.size}]")
             qx_size = _ffi.new("word32[1]")
             qy_size = _ffi.new("word32[1]")
             d_size = _ffi.new("word32[1]")
@@ -1372,7 +1355,7 @@ if _lib.ECC_ENABLED:
 
             Returns the shared secret.
             """
-            shared_secret = _ffi.new("byte[%d]" % self.max_signature_size)
+            shared_secret = _ffi.new(f"byte[{self.max_signature_size}]")
             secret_size = _ffi.new("word32[1]")
             secret_size[0] = self.max_signature_size
 
@@ -1394,7 +1377,7 @@ if _lib.ECC_ENABLED:
             if rng is None:
                 rng = Random()
             plaintext = t2b(plaintext)
-            signature = _ffi.new("byte[%d]" % self.max_signature_size)
+            signature = _ffi.new(f"byte[{self.max_signature_size}]")
 
             signature_size = _ffi.new("word32[1]")
             signature_size[0] = self.max_signature_size
@@ -1422,8 +1405,8 @@ if _lib.ECC_ENABLED:
                 R = _ffi.new("mp_int[1]")
                 S = _ffi.new("mp_int[1]")
 
-                R_bin = _ffi.new("unsigned char[%d]" % self.size )
-                S_bin = _ffi.new("unsigned char[%d]" % self.size )
+                R_bin = _ffi.new(f"unsigned char[{self.size}]")
+                S_bin = _ffi.new(f"unsigned char[{self.size}]")
 
                 ret = _lib.mp_init(R)
                 if ret != 0:  # pragma: no cover
@@ -1502,10 +1485,9 @@ if _lib.ED25519_ENABLED:
             if ret < 0:
                 raise WolfCryptApiError("Key decode error", ret)
             if self.size <= 0:  # pragma: no cover
-                raise WolfCryptError("Key decode error (%d)" % self.size)
+                raise WolfCryptError(f"Key decode error ({self.size})")
             if self.max_signature_size <= 0:  # pragma: no cover
-                raise WolfCryptError(
-                    "Key decode error (%d)" % self.max_signature_size)
+                raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
         def encode_key(self):
             """
@@ -1513,7 +1495,7 @@ if _lib.ED25519_ENABLED:
 
             Returns the encoded key.
             """
-            key = _ffi.new("byte[%d]" % (self.size * 4))
+            key = _ffi.new(f"byte[{self.size * 4}]")
             size = _ffi.new("word32[1]")
 
             size[0] = _lib.wc_ed25519_pub_size(self.native_object)
@@ -1594,7 +1576,7 @@ if _lib.ED25519_ENABLED:
                         self.native_object)
                 if ret < 0:
                     raise WolfCryptApiError("Key decode error", ret)
-                pubkey = _ffi.new("byte[%d]" % (self.size * 4))
+                pubkey = _ffi.new(f"byte[{self.size * 4}]")
                 ret = _lib.wc_ed25519_make_public(self.native_object, pubkey,
                         self.size)
                 if ret < 0:
@@ -1605,10 +1587,9 @@ if _lib.ED25519_ENABLED:
                     raise WolfCryptApiError("Public key import error", ret)
 
             if self.size <= 0:  # pragma: no cover
-                raise WolfCryptError("Key decode error (%d)" % self.size)
+                raise WolfCryptError(f"Key decode error ({self.size})")
             if self.max_signature_size <= 0:  # pragma: no cover
-                raise WolfCryptError(
-                    "Key decode error (%d)" % self.max_signature_size)
+                raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
         def encode_key(self):
             """
@@ -1616,8 +1597,8 @@ if _lib.ED25519_ENABLED:
 
             Returns the encoded key.
             """
-            key = _ffi.new("byte[%d]" % (self.size * 4))
-            pubkey = _ffi.new("byte[%d]" % (self.size * 4))
+            key = _ffi.new(f"byte[{self.size * 4}]")
+            pubkey = _ffi.new(f"byte[{self.size * 4}]")
             priv_size = _ffi.new("word32[1]")
             pub_size = _ffi.new("word32[1]")
 
@@ -1642,7 +1623,7 @@ if _lib.ED25519_ENABLED:
             Returns the signature.
             """
             plaintext = t2b(plaintext)
-            signature = _ffi.new("byte[%d]" % self.max_signature_size)
+            signature = _ffi.new(f"byte[{self.max_signature_size}]")
 
             signature_size = _ffi.new("word32[1]")
             signature_size[0] = self.max_signature_size
@@ -1702,10 +1683,9 @@ if _lib.ED448_ENABLED:
             if ret < 0:
                 raise WolfCryptApiError("Key decode error", ret)
             if self.size <= 0:  # pragma: no cover
-                raise WolfCryptError("Key decode error (%d)" % self.size)
+                raise WolfCryptError(f"Key decode error ({self.size})")
             if self.max_signature_size <= 0:  # pragma: no cover
-                raise WolfCryptError(
-                    "Key decode error (%d)" % self.max_signature_size)
+                raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
         def encode_key(self):
             """
@@ -1713,7 +1693,7 @@ if _lib.ED448_ENABLED:
 
             Returns the encoded key.
             """
-            key = _ffi.new("byte[%d]" % (self.size * 4))
+            key = _ffi.new(f"byte[{self.size * 4}]")
             size = _ffi.new("word32[1]")
 
             size[0] = _lib.wc_ed448_pub_size(self.native_object)
@@ -1738,8 +1718,7 @@ if _lib.ED448_ENABLED:
                 ctx_buf = t2b(ctx)
                 ctx_buf_len = len(ctx_buf)
                 if ctx_buf_len > 255:
-                    raise ValueError("Ed448 ctx must be at most 255 bytes, got %d" %
-                                     ctx_buf_len)
+                    raise ValueError(f"Ed448 ctx must be at most 255 bytes, got {ctx_buf_len}")
 
             ret = _lib.wc_ed448_verify_msg(signature, len(signature),
                                           data, len(data), status,
@@ -1803,7 +1782,7 @@ if _lib.ED448_ENABLED:
                         self.native_object)
                 if ret < 0:
                     raise WolfCryptApiError("Key decode error", ret)
-                pubkey = _ffi.new("byte[%d]" % (self.size * 4))
+                pubkey = _ffi.new(f"byte[{self.size * 4}]")
                 ret = _lib.wc_ed448_make_public(self.native_object, pubkey,
                         self.size)
                 if ret < 0:
@@ -1814,10 +1793,9 @@ if _lib.ED448_ENABLED:
                     raise WolfCryptApiError("Public key import error", ret)
 
             if self.size <= 0:  # pragma: no cover
-                raise WolfCryptError("Key decode error (%d)" % self.size)
+                raise WolfCryptError(f"Key decode error ({self.size})")
             if self.max_signature_size <= 0:  # pragma: no cover
-                raise WolfCryptError(
-                    "Key decode error (%d)" % self.max_signature_size)
+                raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
         def encode_key(self):
             """
@@ -1825,8 +1803,8 @@ if _lib.ED448_ENABLED:
 
             Returns the encoded key.
             """
-            key = _ffi.new("byte[%d]" % (self.size * 4))
-            pubkey = _ffi.new("byte[%d]" % (self.size * 4))
+            key = _ffi.new(f"byte[{self.size * 4}]")
+            pubkey = _ffi.new(f"byte[{self.size * 4}]")
             priv_size = _ffi.new("word32[1]")
             pub_size = _ffi.new("word32[1]")
 
@@ -1851,7 +1829,7 @@ if _lib.ED448_ENABLED:
             Returns the signature.
             """
             plaintext = t2b(plaintext)
-            signature = _ffi.new("byte[%d]" % self.max_signature_size)
+            signature = _ffi.new(f"byte[{self.max_signature_size}]")
 
             signature_size = _ffi.new("word32[1]")
             signature_size[0] = self.max_signature_size
@@ -1861,8 +1839,7 @@ if _lib.ED448_ENABLED:
                 ctx_buf = t2b(ctx)
                 ctx_buf_len = len(ctx_buf)
                 if ctx_buf_len > 255:
-                    raise ValueError("Ed448 ctx must be at most 255 bytes, got %d" %
-                                     ctx_buf_len)
+                    raise ValueError(f"Ed448 ctx must be at most 255 bytes, got {ctx_buf_len}")
 
             ret = _lib.wc_ed448_sign_msg(plaintext, len(plaintext),
                                         signature, signature_size,
@@ -2254,9 +2231,7 @@ if _lib.ML_DSA_ENABLED:
                 raise WolfCryptApiError("wc_dilithium_export_public() error", ret)
 
             if in_size != out_size[0]:
-                raise WolfCryptError(
-                    "in_size=%d and out_size=%d don't match" % (in_size, out_size[0])
-                )
+                raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
 
             return _ffi.buffer(pub_key, out_size[0])[:]
 
@@ -2406,9 +2381,7 @@ if _lib.ML_DSA_ENABLED:
                 raise WolfCryptApiError("wc_dilithium_export_private() error", ret)
 
             if in_size != out_size[0]:
-                raise WolfCryptError(
-                    "in_size=%d and out_size=%d don't match" % (in_size, out_size[0])
-                )
+                raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
 
             return _ffi.buffer(priv_key, out_size[0])[:]
 
@@ -2480,9 +2453,7 @@ if _lib.ML_DSA_ENABLED:
                     raise WolfCryptApiError("wc_dilithium_sign_msg() error", ret)
             
             if in_size != out_size[0]:
-                raise WolfCryptError(
-                    "in_size=%d and out_size=%d don't match" % (in_size, out_size[0])
-                )
+                raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
 
             return _ffi.buffer(signature, out_size[0])[:]
 
@@ -2547,9 +2518,7 @@ if _lib.ML_DSA_ENABLED:
 
 
             if in_size != out_size[0]:
-                raise WolfCryptError(
-                    "in_size=%d and out_size=%d don't match" % (in_size, out_size[0])
-                )
+                raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
 
             return _ffi.buffer(signature, out_size[0])[:]
 

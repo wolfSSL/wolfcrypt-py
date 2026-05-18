@@ -35,13 +35,13 @@ mo = re.search(VSRE, verstrline, re.M)
 if mo:
     verstr = mo.group(1)
 else:
-    raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
+    raise RuntimeError(f"Unable to find version string in {VERSIONFILE}.")
 VSRE = r"^__wolfssl_version__ = ['\"]([^'\"]*)['\"]"
 mo = re.search(VSRE, verstrline, re.M)
 if mo:
     wolfverstr = mo.group(1)
 else:
-    raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
+    raise RuntimeError(f"Unable to find version string in {VERSIONFILE}.")
 
 
 # long_description

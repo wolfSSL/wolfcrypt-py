@@ -55,7 +55,7 @@ if _lib.ASN_ENABLED:
         if pem_length <= 0:
             raise WolfCryptApiError("Error getting required PEM buffer length.", pem_length)
 
-        pem = _ffi.new("byte[%d]" % pem_length)
+        pem = _ffi.new(f"byte[{pem_length}]")
         pem_length = _lib.wc_DerToPemEx(der, len(der), pem, pem_length,
                                         _ffi.NULL, pem_type)
         if pem_length <= 0:
@@ -80,7 +80,7 @@ if _lib.ASN_ENABLED:
         hash_obj.update(data)
         digest = hash_obj.digest()
 
-        plaintext_sig = _ffi.new("byte[%d]" % _lib.MAX_DER_DIGEST_SZ)
+        plaintext_sig = _ffi.new(f"byte[{_lib.MAX_DER_DIGEST_SZ}]")
         hash_oid = hash_oid_from_class(hash_cls)
         plaintext_len = _lib.wc_EncodeSignature(plaintext_sig, digest,
                                                 len(digest), hash_oid)
