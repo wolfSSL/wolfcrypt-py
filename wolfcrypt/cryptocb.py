@@ -31,55 +31,54 @@ from typing_extensions import Self
 
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
-
 from wolfcrypt.exceptions import WolfCryptError
-
-ALGO_TYPE_NAME: Final = defaultdict(
-    lambda: "unknown",
-    {
-        _lib.WC_ALGO_TYPE_NONE: "none",
-        _lib.WC_ALGO_TYPE_HASH: "hash",
-        _lib.WC_ALGO_TYPE_CIPHER: "cipher",
-        _lib.WC_ALGO_TYPE_PK: "pk",
-        _lib.WC_ALGO_TYPE_RNG: "rng",
-        _lib.WC_ALGO_TYPE_SEED: "seed",
-        _lib.WC_ALGO_TYPE_HMAC: "hmac",
-        _lib.WC_ALGO_TYPE_CMAC: "cmac",
-        _lib.WC_ALGO_TYPE_CERT: "cert",
-        _lib.WC_ALGO_TYPE_KDF: "kdf",
-        _lib.WC_ALGO_TYPE_COPY: "copy",
-        _lib.WC_ALGO_TYPE_FREE: "free",
-        _lib.WC_ALGO_TYPE_MAX: "max",
-    },
-)
-
-HASH_TYPE_NAME: Final = defaultdict(
-    lambda: "unknown",
-    {
-        _lib.WC_HASH_TYPE_SHA: "SHA1",
-        _lib.WC_HASH_TYPE_SHA256: "SHA256",
-        _lib.WC_HASH_TYPE_SHA384: "SHA384",
-        _lib.WC_HASH_TYPE_SHA512: "SHA512",
-        _lib.WC_HASH_TYPE_SHA3_256: "SHA3_256",
-        _lib.WC_HASH_TYPE_SHA3_384: "SHA3_384",
-        _lib.WC_HASH_TYPE_SHA3_512: "SHA3_512",
-    },
-)
-
-DIGEST_SIZE: Final = {
-    _lib.WC_HASH_TYPE_SHA: 20,
-    _lib.WC_HASH_TYPE_SHA256: 32,
-    _lib.WC_HASH_TYPE_SHA384: 48,
-    _lib.WC_HASH_TYPE_SHA512: 64,
-    _lib.WC_HASH_TYPE_SHA3_256: 32,
-    _lib.WC_HASH_TYPE_SHA3_384: 48,
-    _lib.WC_HASH_TYPE_SHA3_512: 64,
-}
 
 log = logging.getLogger(__name__)
 
-
 if _lib.CRYPTO_CB_ENABLED:
+
+    ALGO_TYPE_NAME: Final = defaultdict(
+        lambda: "unknown",
+        {
+            _lib.WC_ALGO_TYPE_NONE: "none",
+            _lib.WC_ALGO_TYPE_HASH: "hash",
+            _lib.WC_ALGO_TYPE_CIPHER: "cipher",
+            _lib.WC_ALGO_TYPE_PK: "pk",
+            _lib.WC_ALGO_TYPE_RNG: "rng",
+            _lib.WC_ALGO_TYPE_SEED: "seed",
+            _lib.WC_ALGO_TYPE_HMAC: "hmac",
+            _lib.WC_ALGO_TYPE_CMAC: "cmac",
+            _lib.WC_ALGO_TYPE_CERT: "cert",
+            _lib.WC_ALGO_TYPE_KDF: "kdf",
+            _lib.WC_ALGO_TYPE_COPY: "copy",
+            _lib.WC_ALGO_TYPE_FREE: "free",
+            _lib.WC_ALGO_TYPE_MAX: "max",
+        },
+    )
+
+    HASH_TYPE_NAME: Final = defaultdict(
+        lambda: "unknown",
+        {
+            _lib.WC_HASH_TYPE_SHA: "SHA1",
+            _lib.WC_HASH_TYPE_SHA256: "SHA256",
+            _lib.WC_HASH_TYPE_SHA384: "SHA384",
+            _lib.WC_HASH_TYPE_SHA512: "SHA512",
+            _lib.WC_HASH_TYPE_SHA3_256: "SHA3_256",
+            _lib.WC_HASH_TYPE_SHA3_384: "SHA3_384",
+            _lib.WC_HASH_TYPE_SHA3_512: "SHA3_512",
+        },
+    )
+
+    DIGEST_SIZE: Final = {
+        _lib.WC_HASH_TYPE_SHA: 20,
+        _lib.WC_HASH_TYPE_SHA256: 32,
+        _lib.WC_HASH_TYPE_SHA384: 48,
+        _lib.WC_HASH_TYPE_SHA512: 64,
+        _lib.WC_HASH_TYPE_SHA3_256: 32,
+        _lib.WC_HASH_TYPE_SHA3_384: 48,
+        _lib.WC_HASH_TYPE_SHA3_512: 64,
+    }
+
 
     class CryptoCallback:
         def __init__(self, device_id: int) -> None:
