@@ -46,7 +46,8 @@ top_level_py = os.path.basename(sys.argv[0])
 if top_level_py not in ["setup.py", "build_ffi.py"]:
     from wolfcrypt._ffi import ffi as _ffi
     from wolfcrypt._ffi import lib as _lib
-    from wolfcrypt.cryptocb import CryptoCallback
+    if _lib.CRYPTO_CB_ENABLED:
+        from wolfcrypt.cryptocb import CryptoCallback
     from wolfcrypt.exceptions import WolfCryptApiError
 
     ret = _lib.wolfCrypt_Init()
