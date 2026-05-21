@@ -28,8 +28,9 @@ from wolfcrypt.utils import t2b
 
 
 if _lib.HKDF_ENABLED:
+    from wolfcrypt.hashes import _Hmac  # ty: ignore[possibly-missing-import]
 
-    def HKDF(hash_cls, in_key, salt=None, info=None, out_len=None):
+    def HKDF(hash_cls: _Hmac, in_key: bytes | str, salt: bytes | str | None = None, info: bytes | str | None = None, out_len: int | None = None) -> bytes:
         """
         Perform HKDF Extract-and-Expand in one call (wraps wc_HKDF).
 
@@ -55,6 +56,7 @@ if _lib.HKDF_ENABLED:
 
         if out_len is None:
             out_len = hash_cls.digest_size
+            assert out_len is not None
 
         out = _ffi.new(f"byte[{out_len}]")
         ret = _lib.wc_HKDF(
@@ -73,7 +75,7 @@ if _lib.HKDF_ENABLED:
 
         return _ffi.buffer(out, out_len)[:]
 
-    def HKDF_Extract(hash_cls, salt, in_key):
+    def HKDF_Extract(hash_cls: _Hmac, salt: bytes | str | None, in_key: bytes | str) -> bytes:
         """
         HKDF-Extract: PRK = HMAC-Hash(salt, IKM)
         Wraps wc_HKDF_Extract.
@@ -100,7 +102,7 @@ if _lib.HKDF_ENABLED:
 
         return _ffi.buffer(out, out_len)[:]
 
-    def HKDF_Expand(hash_cls, prk, info, out_len):
+    def HKDF_Expand(hash_cls: _Hmac, prk: bytes | str, info: bytes | str | None, out_len: int) -> bytes:
         """
         HKDF-Expand: OKM = HKDF-Expand(PRK, info, L)
         Wraps wc_HKDF_Expand.

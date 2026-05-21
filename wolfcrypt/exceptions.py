@@ -18,6 +18,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
+from __future__ import annotations
+
+from typing import cast
 
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
@@ -56,6 +59,6 @@ def error_string(err_code: int) -> str:
     :return: error string
     """
     if _lib.ERROR_STRINGS_ENABLED:
-        return _ffi.string(_lib.wc_GetErrorString(err_code)).decode()
+        return cast(bytes, _ffi.string(_lib.wc_GetErrorString(err_code))).decode()
     else:
         return ""

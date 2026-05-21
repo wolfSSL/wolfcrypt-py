@@ -22,10 +22,13 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 from binascii import hexlify as b2h, unhexlify as h2b  # noqa: F401
 
+BytesOrStr: TypeAlias = bytes | bytearray | memoryview | str
 
-def t2b(string: bytes | bytearray | memoryview | str) -> bytes:
+def t2b(string: BytesOrStr) -> bytes:
     """
     Converts text to bytes.
 

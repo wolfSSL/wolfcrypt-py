@@ -20,19 +20,23 @@
 
 # pylint: disable=no-member,no-name-in-module, no-self-use
 
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+
+from _cffi_backend import FFI
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
-from wolfcrypt.utils import t2b, b2h
-
 from wolfcrypt.exceptions import WolfCryptApiError
+from wolfcrypt.utils import t2b, b2h, BytesOrStr
 
 
-class _Hash:
+class _Hash(ABC):
     """
     A **PEP 247: Cryptographic Hash Functions** compliant
     **Hash Function Interface**.
     """
-    def __init__(self, string=None):
+    def __init__(self, string: BytesOrStr | None = None) -> None:
         self._native_object = _ffi.new(self._native_type)
         self._shallow_copy = False
         ret = self._init()
@@ -42,17 +46,33 @@ class _Hash:
         if string:
             self.update(string)
 
-    @classmethod
-    def new(cls, string=None):
-        """
-        Creates a new hashing object and returns it. The optional
-        **string** parameter, if supplied, will be immediately
-        hashed into the object's starting state, as if
-        obj.update(string) was called.
-        """
-        return cls(string)
+    @abstractmethod
+    def _init(self) -> int: ...
 
-    def copy(self):
+    @abstractmethod
+    def _update(self, data: bytes) -> int: ...
+
+    @abstractmethod
+    def _final(self, obj: FFI.CData, ret: FFI.CData) -> int: ...
+
+    @property
+    @abstractmethod
+    def _native_size(self) -> int: ...
+
+    @property
+    @abstractmethod
+    def _native_type(self) -> str: ...
+
+    @property
+    @abstractmethod
+    def digest_size(self) -> int: ...
+
+    @classmethod
+    @abstractmethod
+    def new(cls, string:  BytesOrStr | None) -> _Hash: ...
+
+
+    def copy(self) -> _Hash:
         """
         Returns a separate copy of this hashing object. An update
         to this copy won't affect the original object.
@@ -86,7 +106,7 @@ class _Hash:
 
         return copy
 
-    def update(self, string):
+    def update(self, string: BytesOrStr) -> None:
         """
         Hashes **string** into the current state of the hashing
         object. update() can be called any number of times during
@@ -98,7 +118,7 @@ class _Hash:
         if ret < 0:  # pragma: no cover
             raise WolfCryptApiError("Hash update error", ret)
 
-    def digest(self):
+    def digest(self) -> bytes:
         """
         Returns the hash value of this hashing object as a string
         containing 8-bit data. The object is not altered in any
@@ -137,7 +157,7 @@ class _Hash:
 
         return _ffi.buffer(result, self.digest_size)[:]
 
-    def hexdigest(self):
+    def hexdigest(self) -> bytes:
         """
         Returns the hash value of this hashing object as a string
         containing hexadecimal digits. Lowercase letters are used
@@ -147,8 +167,20 @@ class _Hash:
         return b2h(self.digest())
 
 
+class _Sha(_Hash):
+    @classmethod
+    def new(cls, string: BytesOrStr | None = None) -> _Hash:
+        """
+        Creates a new hashing object and returns it. The optional
+        **string** parameter, if supplied, will be immediately
+        hashed into the object's starting state, as if
+        obj.update(string) was called.
+        """
+        return cls(string)
+
+
 if _lib.SHA_ENABLED:
-    class Sha(_Hash):
+    class Sha(_Sha):
         """
         **SHA-1** is a cryptographic hash function standardized by **NIST**.
 
@@ -160,22 +192,22 @@ if _lib.SHA_ENABLED:
         _delete = staticmethod(_lib.wc_ShaFree)
         _copy = staticmethod(_lib.wc_ShaCopy)
 
-        def __del__(self):
+        def __del__(self) -> None:
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
                 self._delete(self._native_object)
 
-        def _init(self):
+        def _init(self) -> int:
             return _lib.wc_InitSha(self._native_object)
 
-        def _update(self, data):
+        def _update(self, data: bytes) -> int:
             return _lib.wc_ShaUpdate(self._native_object, data, len(data))
 
-        def _final(self, obj, ret):
+        def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             return _lib.wc_ShaFinal(obj, ret)
 
 
 if _lib.SHA256_ENABLED:
-    class Sha256(_Hash):
+    class Sha256(_Sha):
         """
         **SHA-256** is a cryptographic hash function from the
         **SHA-2 family** and is standardized by **NIST**.
@@ -188,22 +220,22 @@ if _lib.SHA256_ENABLED:
         _delete = staticmethod(_lib.wc_Sha256Free)
         _copy = staticmethod(_lib.wc_Sha256Copy)
 
-        def __del__(self):
+        def __del__(self) -> None:
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
                 self._delete(self._native_object)
 
-        def _init(self):
+        def _init(self) -> int:
             return _lib.wc_InitSha256(self._native_object)
 
-        def _update(self, data):
+        def _update(self, data: bytes) -> int:
             return _lib.wc_Sha256Update(self._native_object, data, len(data))
 
-        def _final(self, obj, ret):
+        def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             return _lib.wc_Sha256Final(obj, ret)
 
 
 if _lib.SHA384_ENABLED:
-    class Sha384(_Hash):
+    class Sha384(_Sha):
         """
         **SHA-384** is a cryptographic hash function from the
         **SHA-2 family** and is standardized by **NIST**.
@@ -216,22 +248,22 @@ if _lib.SHA384_ENABLED:
         _delete = staticmethod(_lib.wc_Sha384Free)
         _copy = staticmethod(_lib.wc_Sha384Copy)
 
-        def __del__(self):
+        def __del__(self) -> None:
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
                 self._delete(self._native_object)
 
-        def _init(self):
+        def _init(self) -> int:
             return _lib.wc_InitSha384(self._native_object)
 
-        def _update(self, data):
+        def _update(self, data: bytes) -> int:
             return _lib.wc_Sha384Update(self._native_object, data, len(data))
 
-        def _final(self, obj, ret):
+        def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             return _lib.wc_Sha384Final(obj, ret)
 
 
 if _lib.SHA512_ENABLED:
-    class Sha512(_Hash):
+    class Sha512(_Sha):
         """
         **SHA-512** is a cryptographic hash function from the
         **SHA-2 family** and is standardized by **NIST**.
@@ -244,21 +276,21 @@ if _lib.SHA512_ENABLED:
         _delete = staticmethod(_lib.wc_Sha512Free)
         _copy = staticmethod(_lib.wc_Sha512Copy)
 
-        def __del__(self):
+        def __del__(self) -> None:
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
                 self._delete(self._native_object)
 
-        def _init(self):
+        def _init(self) -> int:
             return _lib.wc_InitSha512(self._native_object)
 
-        def _update(self, data):
+        def _update(self, data: bytes) -> int:
             return _lib.wc_Sha512Update(self._native_object, data, len(data))
 
-        def _final(self, obj, ret):
+        def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             return _lib.wc_Sha512Final(obj, ret)
 
 if _lib.SHA3_ENABLED:
-    class Sha3(_Hash):
+    class Sha3(_Sha):
         """
         **SHA3 ** is a cryptographic hash function family
         standardized by **NIST**.
@@ -267,6 +299,7 @@ if _lib.SHA3_ENABLED:
 
         Using SHA3-384 by default, unless a different digest size is passed through __init__.
         """
+        digest_size = None
         _native_type = "wc_Sha3 *"
         _native_size = _ffi.sizeof("wc_Sha3")
         SHA3_224_DIGEST_SIZE = 28
@@ -288,16 +321,19 @@ if _lib.SHA3_ENABLED:
             64: _lib.wc_Sha3_512_Copy,
         }
 
-        def __del__(self):
+        def __del__(self) -> None:
             # Unlike the SHA-1/2 classes, Sha3's _delete is set per-instance
             # from a size->function dict and is None for invalid sizes, so
             # we need the extra truthiness check.
-            if (hasattr(self, '_native_object')
-                    and not getattr(self, '_shallow_copy', False)
-                    and getattr(self, '_delete', None)):
+            if (
+                hasattr(self, '_native_object')
+                and not getattr(self, '_shallow_copy', False)
+                and getattr(self, '_delete', None)
+                and self._delete is not None
+            ):
                 self._delete(self._native_object)
 
-        def __init__(self, string=None, size=SHA3_384_DIGEST_SIZE):  # pylint: disable=W0231
+        def __init__(self, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE) -> None:  # pylint: disable=W0231
             self._native_object = _ffi.new(self._native_type)
             self._shallow_copy = False
             self.digest_size = size
@@ -310,10 +346,10 @@ if _lib.SHA3_ENABLED:
                 self.update(string)
 
         @classmethod
-        def new(cls, string=None, size=SHA3_384_DIGEST_SIZE):
+        def new(cls, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE) -> Sha3:
             return cls(string, size)
 
-        def copy(self):
+        def copy(self) -> Sha3:
             # Bypass __init__ to avoid calling _init() on a state that _copy
             # immediately overwrites (which would leak internal resources in
             # async/HW-accelerated builds). Mark as shallow up front so
@@ -337,12 +373,7 @@ if _lib.SHA3_ENABLED:
                 # Keep _shallow_copy = True: memmove shares state with self.
             return c
 
-        def _init(self):
-            if (self.digest_size != Sha3.SHA3_224_DIGEST_SIZE and
-                    self.digest_size != Sha3.SHA3_256_DIGEST_SIZE and
-                    self.digest_size != Sha3.SHA3_384_DIGEST_SIZE and
-                    self.digest_size != Sha3.SHA3_512_DIGEST_SIZE):
-                return -1
+        def _init(self) -> int:
             if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
                 return _lib.wc_InitSha3_224(self._native_object, _ffi.NULL, 0)
             if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
@@ -351,7 +382,9 @@ if _lib.SHA3_ENABLED:
                 return _lib.wc_InitSha3_384(self._native_object, _ffi.NULL, 0)
             if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
                 return _lib.wc_InitSha3_512(self._native_object, _ffi.NULL, 0)
-        def _update(self, data):
+            return -1
+
+        def _update(self, data: bytes) -> int:
             if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
                 return _lib.wc_Sha3_224_Update(self._native_object, data, len(data))
             if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
@@ -360,7 +393,9 @@ if _lib.SHA3_ENABLED:
                 return _lib.wc_Sha3_384_Update(self._native_object, data, len(data))
             if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
                 return _lib.wc_Sha3_512_Update(self._native_object, data, len(data))
-        def _final(self, obj, ret):
+            return -1
+
+        def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
                 return _lib.wc_Sha3_224_Final(obj, ret)
             if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
@@ -369,6 +404,7 @@ if _lib.SHA3_ENABLED:
                 return _lib.wc_Sha3_384_Final(obj, ret)
             if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
                 return _lib.wc_Sha3_512_Final(obj, ret)
+            return -1
 
 # Hmac types
 
@@ -408,24 +444,27 @@ if _lib.HMAC_ENABLED:
                 "wc_HmacCopy and byte-copying the state would alias the "
                 "original's internal C resources")
 
-        def __del__(self):
+        def __del__(self) -> None:
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
                 self._delete(self._native_object)
 
-        def __init__(self, key, string=None):  # pylint: disable=W0231
+        def __init__(self, key: BytesOrStr, string: BytesOrStr | None = None) -> None:  # pylint: disable=W0231
             key = t2b(key)
 
             self._native_object = _ffi.new(self._native_type)
             self._shallow_copy = False
-            ret = self._init(self._type, key)
+            ret = self._hmac_init(self._type, key)
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("Hmac init error", ret)
 
             if string:
                 self.update(string)
 
+        def _init(self) -> int:
+            return -1
+
         @classmethod
-        def new(cls, key, string=None):  # pylint: disable=W0221
+        def new(cls, key: BytesOrStr, string: BytesOrStr | None = None) -> _Hash:  # pylint: disable=W0221 # ty: ignore[invalid-method-override]
             """
             Creates a new hashing object and returns it. **key** is
             a required parameter containing a string giving the key
@@ -435,7 +474,12 @@ if _lib.HMAC_ENABLED:
             """
             return cls(key, string)
 
-        def _init(self, hmac, key):
+
+        @property
+        @abstractmethod
+        def _type(self) -> int: ...
+
+        def _hmac_init(self, hmac: int, key: bytes) -> int:
             ret = _lib.wc_HmacInit(self._native_object, _ffi.NULL, -2)
             if ret < 0:
                 raise WolfCryptApiError("wc_HmacInit error", ret)
@@ -449,10 +493,10 @@ if _lib.HMAC_ENABLED:
                     raise WolfCryptApiError("wc_HmacSetKey error", ret)
             return ret
 
-        def _update(self, data):
+        def _update(self, data: bytes) -> int:
             return _lib.wc_HmacUpdate(self._native_object, data, len(data))
 
-        def _final(self, obj, ret):
+        def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             return _lib.wc_HmacFinal(obj, ret)
 
 
@@ -465,7 +509,7 @@ if _lib.HMAC_ENABLED:
             It produces a [ **512-bit | 64 bytes** ] message digest.
             """
             _type = _TYPE_SHA
-            digest_size = Sha.digest_size
+            digest_size = Sha.digest_size  # ty: ignore[possibly-unresolved-reference]
 
 
     if _lib.SHA256_ENABLED:
@@ -477,7 +521,7 @@ if _lib.HMAC_ENABLED:
             It produces a [ **512-bit | 64 bytes** ] message digest.
             """
             _type = _TYPE_SHA256
-            digest_size = Sha256.digest_size
+            digest_size = Sha256.digest_size  # ty: ignore[possibly-unresolved-reference]
 
 
     if _lib.SHA384_ENABLED:
@@ -489,7 +533,7 @@ if _lib.HMAC_ENABLED:
             It produces a [ **512-bit | 64 bytes** ] message digest.
             """
             _type = _TYPE_SHA384
-            digest_size = Sha384.digest_size
+            digest_size = Sha384.digest_size  # ty: ignore[possibly-unresolved-reference]
 
 
     if _lib.SHA512_ENABLED:
@@ -501,9 +545,9 @@ if _lib.HMAC_ENABLED:
             It produces a [ **512-bit | 64 bytes** ] message digest.
             """
             _type = _TYPE_SHA512
-            digest_size = Sha512.digest_size
+            digest_size = Sha512.digest_size  # ty: ignore[possibly-unresolved-reference]
 
-def hash_type_to_cls(hash_type):
+def hash_type_to_cls(hash_type: int) -> type[_Hash] | None:
     if _lib.SHA_ENABLED and hash_type == _lib.WC_HASH_TYPE_SHA:
         hash_cls = Sha
     elif _lib.SHA256_ENABLED and hash_type == _lib.WC_HASH_TYPE_SHA256:

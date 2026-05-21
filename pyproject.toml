@@ -97,7 +97,7 @@ indent-width = 4
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "B", "UP", "C4", "DTZ", "EXE", "FA", "INT", "ISC", "ICN", "LOG", "G", "RSE", "SLOT", "TID", "TC", "FLY", "PERF", "W", "FURB"]
+select = ["E", "F", "B", "UP", "ANN", "C4", "DTZ", "EXE", "FA", "INT", "ISC", "ICN", "LOG", "G", "RSE", "SLOT", "TID", "TC", "FLY", "PERF", "W", "FURB"]
 ignore = ["E501"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
@@ -106,6 +106,11 @@ unfixable = []
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"wolfcrypt/ciphers.py" = ["ANN"]
+"scripts/*.py" = ["ANN"]
+"tests/*.py" = ["ANN"]
 
 [tool.ruff.format]
 # Like Black, use double quotes for strings.
@@ -133,3 +138,13 @@ docstring-code-format = false
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
 docstring-code-line-length = "dynamic"
+
+[tool.ty.environment]
+python-version = "3.10"
+root = ["."]
+
+[tool.ty.src]
+exclude = ["./lib", "./wolfcrypt/ciphers.py", "./tests"]
+
+[tool.ty.rules]
+all = "warn"
