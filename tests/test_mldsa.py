@@ -202,7 +202,7 @@ if _lib.ML_DSA_ENABLED:
 
         # test that the seed type is checked (should be bytes-like, not string)
         with pytest.raises(TypeError):
-            _ = mldsa_priv.sign_with_seed(message, "")
+            _ = mldsa_priv.sign_with_seed(message, " " * ML_DSA_SIGNATURE_SEED_LENGTH)
 
     def test_sign_with_seed_and_context(mldsa_type, rng):
         signature_seed = rng.bytes(ML_DSA_SIGNATURE_SEED_LENGTH)

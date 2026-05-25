@@ -34,11 +34,10 @@ class Random:
     """
 
     def __init__(self, nonce: __builtins__.bytes = b"", device_id: int = -2) -> None:
-        self.native_object: _lib.RNG | None = _ffi.new("WC_RNG *")
+        self.native_object: _lib.RNG = _ffi.new("WC_RNG *")
 
         ret = _lib.wc_InitRngNonce_ex(self.native_object, nonce, len(nonce), _ffi.NULL, device_id)
         if ret < 0:  # pragma: no cover
-            self.native_object = None
             raise WolfCryptApiError("RNG init error", ret)
 
     # making sure _lib.wc_FreeRng outlives WC_RNG instances
@@ -58,7 +57,6 @@ class Random:
         """
         result = _ffi.new("byte[1]")
 
-        assert self.native_object is not None
         ret = _lib.wc_RNG_GenerateByte(self.native_object, result)
         if ret < 0:  # pragma: no cover
             raise WolfCryptApiError("RNG generate byte error", ret)
@@ -71,7 +69,6 @@ class Random:
         """
         result = _ffi.new(f"byte[{length}]")
 
-        assert self.native_object is not None
         ret = _lib.wc_RNG_GenerateBlock(self.native_object, result, length)
         if ret < 0:  # pragma: no cover
             raise WolfCryptApiError("RNG generate block error", ret)
