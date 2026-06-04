@@ -2264,6 +2264,8 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_verify_ctx_msg() error", ret)
+            elif not _lib.ML_DSA_NO_CTX:
+                raise WolfCryptError("support verifying without context is disabled")
             else:
                 ret = _lib.wc_dilithium_verify_msg(
                     _ffi.from_buffer(sig_bytestype),
@@ -2279,7 +2281,7 @@ if _lib.ML_DSA_ENABLED:
             return res[0] == 1
 
     class MlDsaPrivate(_MlDsaBase):
-        
+
         @classmethod
         def make_key(cls, mldsa_type, rng=None):
             """
@@ -2440,6 +2442,8 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_ctx_msg() error", ret)
+            elif not _lib.ML_DSA_NO_CTX:
+                raise WolfCryptError("support for signing without context is disabled")
             else:
                 ret = _lib.wc_dilithium_sign_msg(
                     _ffi.from_buffer(msg_bytestype),
@@ -2451,7 +2455,7 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_msg() error", ret)
-            
+
             if in_size != out_size[0]:
                 raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
 
@@ -2504,6 +2508,8 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_ctx_msg_with_seed() error", ret)
+            elif not _lib.ML_DSA_NO_CTX:
+                raise WolfCryptError("support for signing without context is disabled")
             else:
                 ret = _lib.wc_dilithium_sign_msg_with_seed(
                     _ffi.from_buffer(msg_bytestype),

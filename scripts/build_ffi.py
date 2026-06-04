@@ -376,6 +376,7 @@ def get_features(local_wolfssl, features):
     features["RSA_PSS"] = 1 if '#define WC_RSA_PSS' in defines else 0
     features["CHACHA20_POLY1305"] = 1 if ('#define HAVE_CHACHA' in defines and '#define HAVE_POLY1305' in defines) else 0
     features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
+    features["ML_DSA_NO_CTX"] = 1 if '#define WOLFSSL_DILITHIUM_NO_CTX' in defines else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
 
@@ -496,6 +497,7 @@ def build_ffi(local_wolfssl, features):
         int CHACHA20_POLY1305_ENABLED = {features["CHACHA20_POLY1305"]};
         int ML_KEM_ENABLED = {features["ML_KEM"]};
         int ML_DSA_ENABLED = {features["ML_DSA"]};
+        int ML_DSA_NO_CTX = {features["ML_DSA_NO_CTX"]};
         int HKDF_ENABLED = {features["HKDF"]};
     """
 
@@ -536,6 +538,7 @@ def build_ffi(local_wolfssl, features):
         extern int CHACHA20_POLY1305_ENABLED;
         extern int ML_KEM_ENABLED;
         extern int ML_DSA_ENABLED;
+        extern int ML_DSA_NO_CTX;
         extern int HKDF_ENABLED;
 
         typedef unsigned char byte;
@@ -1323,17 +1326,20 @@ def build_ffi(local_wolfssl, features):
         int wc_dilithium_import_private(const byte* priv, word32 privSz, dilithium_key* key);
         int wc_dilithium_export_public(dilithium_key* key, byte* out, word32* outLen);
         int wc_dilithium_import_public(const byte* in, word32 inLen, dilithium_key* key);
-        int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
         int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
-        int wc_dilithium_sign_msg_with_seed(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
         int wc_dilithium_sign_ctx_msg_with_seed(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
-        int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
         int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx, word32 ctxLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
         typedef dilithium_key MlDsaKey;
         int wc_MlDsaKey_GetPrivLen(MlDsaKey* key, int* len);
         int wc_MlDsaKey_GetPubLen(MlDsaKey* key, int* len);
         int wc_MlDsaKey_GetSigLen(MlDsaKey* key, int* len);
         """
+        if features["ML_DSA_NO_CTX"]:
+            cdef += """
+            int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
+            int wc_dilithium_sign_msg_with_seed(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
+            int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
+            """
 
     ffibuilder.cdef(cdef)
 
