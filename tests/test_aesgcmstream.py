@@ -25,7 +25,7 @@ from wolfcrypt._ffi import lib as _lib
 if _lib.AESGCM_STREAM_ENABLED:
     import pytest
     from wolfcrypt.utils import t2b
-    from wolfcrypt.exceptions import WolfCryptError
+    from wolfcrypt.exceptions import WolfCryptError, WolfCryptApiError
     from binascii import hexlify as b2h
     from wolfcrypt.ciphers import AesGcmStream
 
@@ -141,7 +141,14 @@ if _lib.AESGCM_STREAM_ENABLED:
         for good in (4, 8, 12, 13, 14, 15, 16):
             gcm = AesGcmStream(key, iv, tag_bytes=good)
             gcm.encrypt("hello world")
-            tag = gcm.final()
+            try:
+                tag = gcm.final()
+            except WolfCryptApiError as exception:
+                if "(-173)" in str(exception) and good < 12:
+                    # Probably this authentication tag size is not supported,
+                    # the minimum is 12 by default. Ignore.
+                    continue
+                raise
             assert len(tag) == good
 
     def test_decrypt_rejects_wrong_tag_length():
