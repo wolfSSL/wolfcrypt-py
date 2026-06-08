@@ -20,15 +20,16 @@
 
 # pylint: disable=redefined-outer-name
 
-from collections import namedtuple
-import random
-import pytest
-from wolfcrypt._ffi import lib as _lib
-from wolfcrypt.ciphers import MODE_CTR, MODE_ECB, MODE_CBC, WolfCryptError
-from wolfcrypt.random import Random
-from wolfcrypt.utils import t2b, h2b
-from wolfcrypt.random import Random
 import os
+import random
+from collections import namedtuple
+
+import pytest
+
+from wolfcrypt._ffi import lib as _lib
+from wolfcrypt.ciphers import MODE_CBC, MODE_CTR, MODE_ECB, WolfCryptError
+from wolfcrypt.random import Random
+from wolfcrypt.utils import h2b, t2b
 
 certs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "certs")
 
@@ -45,7 +46,7 @@ if _lib.CHACHA_ENABLED:
     from wolfcrypt.ciphers import ChaCha
 
 if _lib.RSA_ENABLED:
-    from wolfcrypt.ciphers import RsaPrivate, RsaPublic, HASH_TYPE_SHA256, HASH_TYPE_SHA
+    from wolfcrypt.ciphers import HASH_TYPE_SHA, HASH_TYPE_SHA256, RsaPrivate, RsaPublic
 
 if _lib.ECC_ENABLED:
     from wolfcrypt.ciphers import EccPrivate, EccPublic
