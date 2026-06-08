@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # wolfcrypt documentation build configuration file, created by
 # sphinx-quickstart on Fri Apr 29 16:47:53 2016.
