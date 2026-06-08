@@ -1093,7 +1093,7 @@ if _lib.CHACHA_ENABLED:
 
         chacha = ChaCha(key)
         chacha.set_iv(nonce_a)
-        ct_a1 = chacha.encrypt(plaintext)
+        _ct_a1 = chacha.encrypt(plaintext)
         # Allocate the decryption context too.
         chacha.decrypt(b"\x00" * 16)
         # Changing IV must reset both contexts: subsequent encrypt/decrypt
