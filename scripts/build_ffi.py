@@ -321,7 +321,7 @@ def get_features(local_wolfssl, features):
                 "fips.h")
 
     if fips_file and os.path.exists(fips_file):
-        with open(fips_file, "r") as f:
+        with open(fips_file) as f:
             contents = f.read()
             if not contents.isspace():
                 fips = True
@@ -347,7 +347,7 @@ def get_features(local_wolfssl, features):
 
     defines = []
     for file in defines_files:
-        with open(file, 'r') as f:
+        with open(file) as f:
             defines += f.read().splitlines()
 
     features["MPAPI"] = 1 if '#define WOLFSSL_PUBLIC_MP' in defines else 0

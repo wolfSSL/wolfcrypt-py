@@ -28,7 +28,7 @@ from setuptools import setup, find_packages
 os.chdir(os.path.dirname(sys.argv[0]) or ".")
 
 VERSIONFILE = "wolfcrypt/_version.py"
-verstrline = open(VERSIONFILE, "rt").read()
+verstrline = open(VERSIONFILE).read()
 VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
 mo = re.search(VSRE, verstrline, re.M)
 if mo:
