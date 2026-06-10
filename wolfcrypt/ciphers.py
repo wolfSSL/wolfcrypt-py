@@ -25,14 +25,17 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from enum import IntEnum
 
+from typing_extensions import override
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
-from wolfcrypt.utils import BytesOrStr, t2b
-from wolfcrypt.random import Random
-from wolfcrypt.asn import pem_to_der
-from wolfcrypt.hashes import hash_type_to_cls
-
 from wolfcrypt.exceptions import WolfCryptError, WolfCryptApiError
+from wolfcrypt.hashes import hash_type_to_cls
+from wolfcrypt.random import Random
+from wolfcrypt.utils import BytesOrStr, t2b
+
+if _lib.ASN_ENABLED:
+    from wolfcrypt.asn import pem_to_der  # ty: ignore[possibly-missing-import]
+
 
 # key direction flags
 _ENCRYPTION = 0
@@ -111,7 +114,6 @@ if _lib.RSA_ENABLED:
     HASH_TYPE_SHA3_512 = _lib.WC_HASH_TYPE_SHA3_512
     HASH_TYPE_BLAKE2B = _lib.WC_HASH_TYPE_BLAKE2B
     HASH_TYPE_BLAKE2S = _lib.WC_HASH_TYPE_BLAKE2S
-
 
 
 class _Cipher(ABC):
@@ -272,6 +274,7 @@ if _lib.AES_ENABLED:
         _key_sizes = [16, 24, 32]
         _native_type = "Aes *"
 
+        @override
         def _set_key(self, direction: int) -> int:
             if direction == _ENCRYPTION:
                 assert self._enc is not None
@@ -284,6 +287,7 @@ if _lib.AES_ENABLED:
             return _lib.wc_AesSetKey(
                 self._dec, self._key, len(self._key), self._IV, _DECRYPTION)
 
+        @override
         def _encrypt(self, destination: _ffi.CData, source: bytes) -> int:
             assert self._enc is not None
             if self.mode == MODE_CBC:
@@ -295,6 +299,7 @@ if _lib.AES_ENABLED:
             else:
                 raise ValueError("Invalid mode associated to cipher")
 
+        @override
         def _decrypt(self, destination: _ffi.CData, source: bytes) -> int:
             assert self._dec is not None
             if self.mode == MODE_CBC:
@@ -397,7 +402,7 @@ if _lib.AES_SIV_ENABLED:
                 associated_data_bytes = t2b(associated_data)
                 result = _ffi.new("AesSivAssoc[1]")
                 result[0].assoc = _ffi.from_buffer(associated_data_bytes)
-                result[0].assocSz = len(associated_data)
+                result[0].assocSz = len(associated_data_bytes)
             else:
                 # It is assumed that a list is provided.
                 num_blocks = len(associated_data)
@@ -541,7 +546,7 @@ if _lib.CHACHA_ENABLED:
         _IV_nonce = b""
         _IV_counter = 0
 
-        def __init__(self, key: BytesOrStr="", _size: int= 32) -> None:  # pylint: disable=unused-argument
+        def __init__(self, key: BytesOrStr = "", size: int = 32) -> None:  # pylint: disable=unused-argument
             # size is kept for backwards compatibility; key length is now
             # derived from the actual key and validated against _key_sizes.
             self._native_object = _ffi.new(self._native_type)
@@ -560,6 +565,7 @@ if _lib.CHACHA_ENABLED:
         # collide with _ENCRYPTION (0) or _DECRYPTION (1).
         _REKEY_BOTH = -1
 
+        @override
         def _set_key(self, direction: int) -> int:
             if self._key is None:
                 return -1
@@ -586,11 +592,12 @@ if _lib.CHACHA_ENABLED:
                     return ret
             return 0
 
+        @override
         def _encrypt(self, destination: _ffi.CData, source: bytes) -> int:
             assert self._enc is not None
             return _lib.wc_Chacha_Process(self._enc, destination,
                                          source, len(source))
-
+        @override
         def _decrypt(self, destination: _ffi.CData, source: bytes) -> int:
             assert self._dec is not None
             return _lib.wc_Chacha_Process(self._dec,
@@ -702,6 +709,7 @@ if _lib.DES3_ENABLED:
                 raise ValueError("Des3 only supports MODE_CBC")
             super().__init__(key, mode, IV)
 
+        @override
         def _set_key(self, direction: int) -> int:
             if direction == _ENCRYPTION:
                 assert self._enc is not None
@@ -710,10 +718,12 @@ if _lib.DES3_ENABLED:
             assert self._dec is not None
             return _lib.wc_Des3_SetKey(self._dec, self._key, self._IV, _DECRYPTION)
 
+        @override
         def _encrypt(self, destination: _ffi.CData, source: bytes) -> int:
             assert self._enc is not None
             return _lib.wc_Des3_CbcEncrypt(self._enc, destination, source, len(source))
 
+        @override
         def _decrypt(self, destination: _ffi.CData, source: bytes) -> int:
             assert self._dec is not None
             return _lib.wc_Des3_CbcDecrypt(self._dec, destination, source, len(source))
@@ -771,15 +781,13 @@ if _lib.RSA_ENABLED:
         def __init__(self, key: BytesOrStr, hash_type: int | None = None, rng: Random | None = None) -> None:
             super().__init__(rng)
 
-            if key is not None:
-                key = t2b(key)
+            key = t2b(key)
             self._hash_type = hash_type
 
             idx = _ffi.new("word32*")
             idx[0] = 0
 
-            ret = _lib.wc_RsaPublicKeyDecode(key, idx,
-                    self.native_object, len(key))
+            ret = _lib.wc_RsaPublicKeyDecode(key, idx, self.native_object, len(key))
             if ret < 0:
                 raise WolfCryptApiError("Invalid key error", ret)
 
@@ -957,6 +965,7 @@ if _lib.RSA_ENABLED:
                     raise WolfCryptApiError("Invalid key size error", self.output_size)
 
         if _lib.ASN_ENABLED:
+            @override
             @classmethod
             def from_pem(cls, file: bytes, hash_type: int | None = None, rng: Random | None = None) -> RsaPrivate:
                 der = pem_to_der(file, _lib.PRIVATEKEY_TYPE)
@@ -1310,6 +1319,7 @@ if _lib.ECC_ENABLED:
 
             return ecc
 
+        @override
         def decode_key(self, key: BytesOrStr) -> None:
             """
             Decodes an ECC private key from an ASN sequence.
@@ -1328,6 +1338,7 @@ if _lib.ECC_ENABLED:
             if self.max_signature_size <= 0:  # pragma: no cover
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
+        @override
         def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, d: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
             """
             Decodes an ECC private key from its raw elements: public (Qx,Qy)
@@ -1349,6 +1360,7 @@ if _lib.ECC_ENABLED:
             if ret != 0:
                 raise WolfCryptApiError("Key decode error", ret)
 
+        @override
         def encode_key(self) -> bytes:
             """
             Encodes the ECC private key in an ASN sequence.
@@ -1363,6 +1375,7 @@ if _lib.ECC_ENABLED:
 
             return _ffi.buffer(key, ret)[:]
 
+        @override
         def encode_key_raw(self) -> tuple[bytes, bytes, bytes]:
             """
             Encodes the ECC private key in its three raw elements
@@ -1596,6 +1609,7 @@ if _lib.ED25519_ENABLED:
 
             return ed25519
 
+        @override
         def decode_key(self, key: BytesOrStr, pub: bytes | None = None) -> None:
             """
             Decodes an ED25519 private + pub key
@@ -1632,6 +1646,7 @@ if _lib.ED25519_ENABLED:
             if self.max_signature_size <= 0:  # pragma: no cover
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
+        @override
         def encode_key(self) -> tuple[bytes, bytes]:
             """
             Encodes the ED25519 private key.
@@ -1803,6 +1818,7 @@ if _lib.ED448_ENABLED:
 
             return ed448
 
+        @override
         def decode_key(self, key: BytesOrStr, pub: bytes | None = None) -> None:
             """
             Decodes an ED448 private + pub key
@@ -1839,6 +1855,7 @@ if _lib.ED448_ENABLED:
             if self.max_signature_size <= 0:  # pragma: no cover
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
+        @override
         def encode_key(self) -> tuple[bytes, bytes]:
             """
             Encodes the ED448 private key.
@@ -2006,7 +2023,7 @@ if _lib.ML_KEM_ENABLED:
             pub_key_bytestype = t2b(pub_key)
             ret = _lib.wc_KyberKey_DecodePublicKey(
                 self.native_object,
-                _ffi.from_buffer(pub_key_bytestype),
+                pub_key_bytestype,
                 len(pub_key_bytestype),
             )
 
@@ -2348,23 +2365,22 @@ if _lib.ML_DSA_ENABLED:
             return mldsa_priv
 
         @classmethod
-        def make_key_from_seed(cls, mldsa_type: MlDsaType, seed: bytes) -> MlDsaPrivate:
+        def make_key_from_seed(cls, mldsa_type: MlDsaType, seed: bytes | list[int] | tuple[int]) -> MlDsaPrivate:
             """
             Deterministically generate the key from a seed.
 
             :param mldsa_type: ML-DSA type
             :type mldsa_type: MlDsaType
             :param seed: the (32 byte) seed from which to deterministically create the key
-            :type seed: bytes
+            :type seed: bytes or list/tuple of int
             """
             mldsa_priv = cls(mldsa_type)
-            seed_bytes = t2b(seed)
-            if len(seed_bytes) != cls.ML_DSA_KEYGEN_SEED_LENGTH:
+            if len(seed) != cls.ML_DSA_KEYGEN_SEED_LENGTH:
                 raise ValueError(
                     f"Seed for generating ML-DSA key must be {cls.ML_DSA_KEYGEN_SEED_LENGTH} bytes"
                 )
 
-            ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object, seed_bytes)
+            ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object, seed)
 
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("wc_dilithium_make_key_from_seed() error", ret)
@@ -2493,12 +2509,12 @@ if _lib.ML_DSA_ENABLED:
 
             return _ffi.buffer(signature, out_size[0])[:]
 
-        def sign_with_seed(self, message: BytesOrStr, seed: bytes, ctx: BytesOrStr | None = None) -> bytes:
+        def sign_with_seed(self, message: BytesOrStr, seed: bytes | list[int] | tuple[int], ctx: BytesOrStr | None = None) -> bytes:
             """
             :param message: message to be signed
             :type message: bytes or str
             :param seed: 32-byte seed for deterministic signature generation.
-            :type seed: bytes
+            :type seed: bytes or list/tuple of int (value in the range 0-255)
             :param ctx: context (optional, maximum 255 bytes)
             :type ctx: None for no context, str or bytes otherwise
             :return: signature
@@ -2512,8 +2528,7 @@ if _lib.ML_DSA_ENABLED:
 
             if len(seed) != ML_DSA_SIGNATURE_SEED_LENGTH:
                 raise ValueError(
-                    f"Seed for generating a signature must be {ML_DSA_SIGNATURE_SEED_LENGTH}"
-                    "bytes."
+                    f"Seed for generating a signature must be {ML_DSA_SIGNATURE_SEED_LENGTH} bytes."
                 )
 
             if ctx is not None:
