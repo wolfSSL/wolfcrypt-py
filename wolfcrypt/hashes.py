@@ -25,6 +25,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from _cffi_backend import FFI
+from typing_extensions import override
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.exceptions import WolfCryptApiError
@@ -69,8 +70,7 @@ class _Hash(ABC):
 
     @classmethod
     @abstractmethod
-    def new(cls, string:  BytesOrStr | None) -> _Hash: ...
-
+    def new(cls, string: BytesOrStr | None) -> _Hash: ...
 
     def copy(self) -> _Hash:
         """
@@ -168,6 +168,7 @@ class _Hash(ABC):
 
 
 class _Sha(_Hash):
+    @override
     @classmethod
     def new(cls, string: BytesOrStr | None = None) -> _Hash:
         """
@@ -196,12 +197,15 @@ if _lib.SHA_ENABLED:
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
                 self._delete(self._native_object)
 
+        @override
         def _init(self) -> int:
             return _lib.wc_InitSha(self._native_object)
 
+        @override
         def _update(self, data: bytes) -> int:
             return _lib.wc_ShaUpdate(self._native_object, data, len(data))
 
+        @override
         def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             return _lib.wc_ShaFinal(obj, ret)
 
@@ -224,12 +228,15 @@ if _lib.SHA256_ENABLED:
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
                 self._delete(self._native_object)
 
+        @override
         def _init(self) -> int:
             return _lib.wc_InitSha256(self._native_object)
 
+        @override
         def _update(self, data: bytes) -> int:
             return _lib.wc_Sha256Update(self._native_object, data, len(data))
 
+        @override
         def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             return _lib.wc_Sha256Final(obj, ret)
 
@@ -252,12 +259,15 @@ if _lib.SHA384_ENABLED:
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
                 self._delete(self._native_object)
 
+        @override
         def _init(self) -> int:
             return _lib.wc_InitSha384(self._native_object)
 
+        @override
         def _update(self, data: bytes) -> int:
             return _lib.wc_Sha384Update(self._native_object, data, len(data))
 
+        @override
         def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             return _lib.wc_Sha384Final(obj, ret)
 
@@ -280,12 +290,15 @@ if _lib.SHA512_ENABLED:
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
                 self._delete(self._native_object)
 
+        @override
         def _init(self) -> int:
             return _lib.wc_InitSha512(self._native_object)
 
+        @override
         def _update(self, data: bytes) -> int:
             return _lib.wc_Sha512Update(self._native_object, data, len(data))
 
+        @override
         def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             return _lib.wc_Sha512Final(obj, ret)
 
@@ -345,10 +358,12 @@ if _lib.SHA3_ENABLED:
             if string:
                 self.update(string)
 
+        @override
         @classmethod
         def new(cls, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE) -> Sha3:
             return cls(string, size)
 
+        @override
         def copy(self) -> Sha3:
             # Bypass __init__ to avoid calling _init() on a state that _copy
             # immediately overwrites (which would leak internal resources in
@@ -373,6 +388,7 @@ if _lib.SHA3_ENABLED:
                 # Keep _shallow_copy = True: memmove shares state with self.
             return c
 
+        @override
         def _init(self) -> int:
             if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
                 return _lib.wc_InitSha3_224(self._native_object, _ffi.NULL, 0)
@@ -384,6 +400,7 @@ if _lib.SHA3_ENABLED:
                 return _lib.wc_InitSha3_512(self._native_object, _ffi.NULL, 0)
             return -1
 
+        @override
         def _update(self, data: bytes) -> int:
             if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
                 return _lib.wc_Sha3_224_Update(self._native_object, data, len(data))
@@ -395,6 +412,7 @@ if _lib.SHA3_ENABLED:
                 return _lib.wc_Sha3_512_Update(self._native_object, data, len(data))
             return -1
 
+        @override
         def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
                 return _lib.wc_Sha3_224_Final(obj, ret)
@@ -460,9 +478,11 @@ if _lib.HMAC_ENABLED:
             if string:
                 self.update(string)
 
+        @override
         def _init(self) -> int:
             return -1
 
+        @override
         @classmethod
         def new(cls, key: BytesOrStr, string: BytesOrStr | None = None) -> _Hash:  # pylint: disable=W0221 # ty: ignore[invalid-method-override]
             """
@@ -493,9 +513,11 @@ if _lib.HMAC_ENABLED:
                     raise WolfCryptApiError("wc_HmacSetKey error", ret)
             return ret
 
+        @override
         def _update(self, data: bytes) -> int:
             return _lib.wc_HmacUpdate(self._native_object, data, len(data))
 
+        @override
         def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             return _lib.wc_HmacFinal(obj, ret)
 

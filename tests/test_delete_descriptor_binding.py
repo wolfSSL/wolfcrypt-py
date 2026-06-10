@@ -173,7 +173,6 @@ def test_random_delete_receives_only_native_object():
         r = Random()
         native = r.native_object
         r.__del__()
-        r.native_object = None  # prevent real cleanup on the way out
         assert received, "recorder was never called"
         args, kwargs = received[-1]
         assert kwargs == {}
