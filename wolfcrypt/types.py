@@ -1,4 +1,4 @@
-# __init__.pyi
+# types.py
 #
 # Copyright (C) 2026 wolfSSL Inc.
 #
@@ -18,9 +18,18 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
-import _cffi_backend
-import wolfcrypt._ffi.lib as lib
+from abc import abstractmethod
+from typing import Protocol
 
-ffi: _cffi_backend.FFI
+from .utils import BytesOrStr
 
-__all__ = ["ffi", "lib"]
+
+class SupportsRsaSign(Protocol):
+    @abstractmethod
+    def sign(self, plaintext: BytesOrStr) -> bytes:
+        raise NotImplementedError
+
+class SupportsRsaVerify(Protocol):
+    @abstractmethod
+    def verify(self, signature: BytesOrStr) -> bytes:
+        raise NotImplementedError

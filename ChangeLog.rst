@@ -2,6 +2,7 @@ wolfCrypt-py Release next (TBD, 2026)
 
 * Drop support for end-of-life Python versions (<= 3.9)
 * Add extra nonce parameter to Random generator
+* The RsaPublic key parameter is now mandatory as it is always needed by an internal function call.
 
 
 wolfCrypt-py Release 5.8.4 (Jan 7, 2026)

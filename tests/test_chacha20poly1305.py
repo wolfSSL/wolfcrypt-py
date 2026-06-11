@@ -28,7 +28,7 @@ if _lib.CHACHA20_POLY1305_ENABLED:
     from wolfcrypt.utils import t2b
     from wolfcrypt.exceptions import WolfCryptError
     from binascii import unhexlify as h2b
-    from wolfcrypt.ciphers import ChaCha20Poly1305
+    from wolfcrypt.ciphers import ChaCha20Poly1305   # ty: ignore[possibly-missing-import]
 
     def test_encrypt_decrypt():
         key = h2b("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f")

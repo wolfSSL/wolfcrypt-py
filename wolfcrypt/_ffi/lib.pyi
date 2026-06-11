@@ -1,3 +1,22 @@
+# lib.pyi
+#
+# Copyright (C) 2026 wolfSSL Inc.
+#
+# This file is part of wolfSSL. (formerly known as CyaSSL)
+#
+# wolfSSL is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# wolfSSL is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
 from _cffi_backend import FFI
 from typing import TypeAlias
@@ -33,6 +52,224 @@ SHA256_ENABLED: int
 SHA384_ENABLED: int
 SHA512_ENABLED: int
 WC_RNG_SEED_CB_ENABLED: int
+
+# Error codes
+WC_FAILURE: int
+MAX_CODE_E: int
+WC_FIRST_E: int
+WC_SPAN1_FIRST_E: int
+MP_MEM: int
+MP_VAL: int
+MP_WOULDBLOCK: int
+MP_NOT_INF: int
+OPEN_RAN_E: int
+READ_RAN_E: int
+WINCRYPT_E: int
+CRYPTGEN_E: int
+RAN_BLOCK_E: int
+BAD_MUTEX_E: int
+WC_TIMEOUT_E: int
+WC_PENDING_E: int
+WC_NO_PENDING_E: int
+MP_INIT_E: int
+MP_READ_E: int
+MP_EXPTMOD_E: int
+MP_TO_E: int
+MP_SUB_E: int
+MP_ADD_E: int
+MP_MUL_E: int
+MP_MULMOD_E: int
+MP_MOD_E: int
+MP_INVMOD_E: int
+MP_CMP_E: int
+MP_ZERO_E: int
+AES_EAX_AUTH_E: int
+KEY_EXHAUSTED_E: int
+MEMORY_E: int
+VAR_STATE_CHANGE_E: int
+FIPS_DEGRADED_E: int
+FIPS_CODE_SZ_E: int
+FIPS_DATA_SZ_E: int
+RSA_WRONG_TYPE_E: int
+RSA_BUFFER_E: int
+BUFFER_E: int
+ALGO_ID_E: int
+PUBLIC_KEY_E: int
+DATE_E: int
+SUBJECT_E: int
+ISSUER_E: int
+CA_TRUE_E: int
+EXTENSIONS_E: int
+ASN_PARSE_E: int
+ASN_VERSION_E: int
+ASN_GETINT_E: int
+ASN_RSA_KEY_E: int
+ASN_OBJECT_ID_E: int
+ASN_TAG_NULL_E: int
+ASN_EXPECT_0_E: int
+ASN_BITSTR_E: int
+ASN_UNKNOWN_OID_E: int
+ASN_DATE_SZ_E: int
+ASN_BEFORE_DATE_E: int
+ASN_AFTER_DATE_E: int
+ASN_SIG_OID_E: int
+ASN_TIME_E: int
+ASN_INPUT_E: int
+ASN_SIG_CONFIRM_E: int
+ASN_SIG_HASH_E: int
+ASN_SIG_KEY_E: int
+ASN_DH_KEY_E: int
+KDF_SRTP_KAT_FIPS_E: int
+ASN_CRIT_EXT_E: int
+ASN_ALT_NAME_E: int
+ASN_NO_PEM_HEADER: int
+ED25519_KAT_FIPS_E: int
+ED448_KAT_FIPS_E: int
+PBKDF2_KAT_FIPS_E: int
+WC_KEY_MISMATCH_E: int
+ECC_BAD_ARG_E: int
+ASN_ECC_KEY_E: int
+ECC_CURVE_OID_E: int
+BAD_FUNC_ARG: int
+NOT_COMPILED_IN: int
+UNICODE_SIZE_E: int
+NO_PASSWORD: int
+ALT_NAME_E: int
+BAD_OCSP_RESPONDER: int
+CRL_CERT_DATE_ERR: int
+AES_GCM_AUTH_E: int
+AES_CCM_AUTH_E: int
+ASYNC_INIT_E: int
+COMPRESS_INIT_E: int
+COMPRESS_E: int
+DECOMPRESS_INIT_E: int
+DECOMPRESS_E: int
+BAD_ALIGN_E: int
+ASN_NO_SIGNER_E: int
+ASN_CRL_CONFIRM_E: int
+ASN_CRL_NO_SIGNER_E: int
+ASN_OCSP_CONFIRM_E: int
+BAD_STATE_E: int
+BAD_PADDING_E: int
+REQ_ATTRIBUTE_E: int
+PKCS7_OID_E: int
+PKCS7_RECIP_E: int
+FIPS_NOT_ALLOWED_E: int
+ASN_NAME_INVALID_E: int
+RNG_FAILURE_E: int
+HMAC_MIN_KEYLEN_E: int
+RSA_PAD_E: int
+LENGTH_ONLY_E: int
+IN_CORE_FIPS_E: int
+AES_KAT_FIPS_E: int
+DES3_KAT_FIPS_E: int
+HMAC_KAT_FIPS_E: int
+RSA_KAT_FIPS_E: int
+DRBG_KAT_FIPS_E: int
+DRBG_CONT_FIPS_E: int
+AESGCM_KAT_FIPS_E: int
+THREAD_STORE_KEY_E: int
+THREAD_STORE_SET_E: int
+MAC_CMP_FAILED_E: int
+IS_POINT_E: int
+ECC_INF_E: int
+ECC_PRIV_KEY_E: int
+ECC_OUT_OF_RANGE_E: int
+SRP_CALL_ORDER_E: int
+SRP_VERIFY_E: int
+SRP_BAD_KEY_E: int
+ASN_NO_SKID: int
+ASN_NO_AKID: int
+ASN_NO_KEYUSAGE: int
+SKID_E: int
+AKID_E: int
+KEYUSAGE_E: int
+CERTPOLICIES_E: int
+WC_INIT_E: int
+SIG_VERIFY_E: int
+BAD_COND_E: int
+SIG_TYPE_E: int
+HASH_TYPE_E: int
+FIPS_INVALID_VER_E: int
+WC_KEY_SIZE_E: int
+ASN_COUNTRY_SIZE_E: int
+MISSING_RNG_E: int
+ASN_PATHLEN_SIZE_E: int
+ASN_PATHLEN_INV_E: int
+BAD_KEYWRAP_ALG_E: int
+BAD_KEYWRAP_IV_E: int
+WC_CLEANUP_E: int
+ECC_CDH_KAT_FIPS_E: int
+DH_CHECK_PUB_E: int
+BAD_PATH_ERROR: int
+ASYNC_OP_E: int
+ECC_PRIVATEONLY_E: int
+EXTKEYUSAGE_E: int
+WC_HW_E: int
+WC_HW_WAIT_E: int
+PSS_SALTLEN_E: int
+PRIME_GEN_E: int
+BER_INDEF_E: int
+RSA_OUT_OF_RANGE_E: int
+RSAPSS_PAT_FIPS_E: int
+ECDSA_PAT_FIPS_E: int
+DH_KAT_FIPS_E: int
+AESCCM_KAT_FIPS_E: int
+SHA3_KAT_FIPS_E: int
+ECDHE_KAT_FIPS_E: int
+AES_GCM_OVERFLOW_E: int
+AES_CCM_OVERFLOW_E: int
+RSA_KEY_PAIR_E: int
+DH_CHECK_PRIV_E: int
+WC_AFALG_SOCK_E: int
+WC_DEVCRYPTO_E: int
+ZLIB_INIT_ERROR: int
+ZLIB_COMPRESS_ERROR: int
+ZLIB_DECOMPRESS_ERROR: int
+PKCS7_NO_SIGNER_E: int
+WC_PKCS7_WANT_READ_E: int
+CRYPTOCB_UNAVAILABLE: int
+PKCS7_SIGNEEDS_CHECK: int
+PSS_SALTLEN_RECOVER_E: int
+CHACHA_POLY_OVERFLOW: int
+ASN_SELF_SIGNED_E: int
+SAKKE_VERIFY_FAIL_E: int
+MISSING_IV: int
+MISSING_KEY: int
+BAD_LENGTH_E: int
+ECDSA_KAT_FIPS_E: int
+RSA_PAT_FIPS_E: int
+KDF_TLS12_KAT_FIPS_E: int
+KDF_TLS13_KAT_FIPS_E: int
+KDF_SSH_KAT_FIPS_E: int
+DHE_PCT_E: int
+ECC_PCT_E: int
+FIPS_PRIVATE_KEY_LOCKED_E: int
+PROTOCOLCB_UNAVAILABLE: int
+AES_SIV_AUTH_E: int
+NO_VALID_DEVID: int
+IO_FAILED_E: int
+SYSLIB_FAILED_E: int
+USE_HW_PSK: int
+ENTROPY_RT_E: int
+ENTROPY_APT_E: int
+ASN_DEPTH_E: int
+ASN_LEN_E: int
+SM4_GCM_AUTH_E: int
+SM4_CCM_AUTH_E: int
+WC_SPAN1_LAST_E: int
+WC_SPAN1_MIN_CODE_E: int
+WC_SPAN2_FIRST_E: int
+DEADLOCK_AVERTED_E: int
+ASCON_AUTH_E: int
+WC_ACCEL_INHIBIT_E: int
+BAD_INDEX_E: int
+INTERRUPTED_E: int
+WC_SPAN2_LAST_E: int
+WC_LAST_E: int
+WC_SPAN2_MIN_CODE_E: int
+MIN_CODE_E: int
+# end of the error codes
 
 FIPS_VERSION: int
 

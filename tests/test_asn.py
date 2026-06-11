@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
 # pylint: disable=redefined-outer-name
+# ty: ignore[possibly-missing-import]
 
 from collections import namedtuple
 import pytest
@@ -90,8 +91,8 @@ def signature_vectors():
                           "51a4edaf9f1199f93e448482f27c43a53e0bc65b04e9848128e3"
                           "60314e864190e6bb9812bfbf4b40994f2c1d4ca7aad9"),
             hash_cls=Sha256,
-            pub_key=RsaPublic.from_pem(pub_key_pem),
-            priv_key=RsaPrivate.from_pem(priv_key_pem)
+            pub_key=RsaPublic.from_pem(pub_key_pem),   # ty: ignore[possibly-missing-attribute]
+            priv_key=RsaPrivate.from_pem(priv_key_pem)   # ty: ignore[possibly-missing-attribute]
         ))
 
     return vectors

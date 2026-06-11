@@ -28,6 +28,7 @@ from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.exceptions import WolfCryptError, WolfCryptApiError
 from wolfcrypt.hashes import _Hash
+from .types import SupportsRsaSign, SupportsRsaVerify
 
 if _lib.SHA_ENABLED:
     from wolfcrypt.hashes import Sha  # ty: ignore[possibly-missing-import]
@@ -78,7 +79,7 @@ if _lib.ASN_ENABLED:
         else:
             raise WolfCryptError(f"Unknown hash class {hash_cls.__name__}")
 
-    def make_signature(data: bytes, hash_cls: type[_Hash], key = None) -> bytes:
+    def make_signature(data: bytes, hash_cls: type[_Hash], key: SupportsRsaSign | None = None) -> bytes:
         hash_obj = hash_cls()
         hash_obj.update(data)
         digest = hash_obj.digest()
@@ -96,7 +97,7 @@ if _lib.ASN_ENABLED:
         else:
             return plaintext_sig
 
-    def check_signature(signature: bytes, data: bytes, hash_cls: type[_Hash], pub_key) -> bool:
+    def check_signature(signature: bytes, data: bytes, hash_cls: type[_Hash], pub_key: SupportsRsaVerify) -> bool:
         computed_signature = make_signature(data, hash_cls)
         decrypted_signature = pub_key.verify(signature)
         return _hmac.compare_digest(computed_signature, decrypted_signature)
