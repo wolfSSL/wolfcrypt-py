@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
 # pylint: disable=redefined-outer-name
+# ty: ignore[possibly-missing-import]
 
 from collections import namedtuple
 import pytest
@@ -116,26 +117,26 @@ def vectors():
 
 hash_params = []
 if _lib.SHA_ENABLED:
-    hash_params.append(Sha)
+    hash_params.append(Sha)   # ty: ignore[possibly-unresolved-reference]
 if _lib.SHA256_ENABLED:
-    hash_params.append(Sha256)
+    hash_params.append(Sha256)   # ty: ignore[possibly-unresolved-reference]
 if _lib.SHA384_ENABLED:
-    hash_params.append(Sha384)
+    hash_params.append(Sha384)   # ty: ignore[possibly-unresolved-reference]
 if _lib.SHA512_ENABLED:
-    hash_params.append(Sha512)
+    hash_params.append(Sha512)   # ty: ignore[possibly-unresolved-reference]
 if _lib.SHA3_ENABLED:
-    hash_params.append(Sha3)
+    hash_params.append(Sha3)   # ty: ignore[possibly-unresolved-reference]
 
 hmac_params = []
 if _lib.HMAC_ENABLED:
     if _lib.SHA_ENABLED:
-        hmac_params.append(HmacSha)
+        hmac_params.append(HmacSha)   # ty: ignore[possibly-unresolved-reference]
     if _lib.SHA256_ENABLED:
-        hmac_params.append(HmacSha256)
+        hmac_params.append(HmacSha256)   # ty: ignore[possibly-unresolved-reference]
     if _lib.SHA384_ENABLED:
-        hmac_params.append(HmacSha384)
+        hmac_params.append(HmacSha384)   # ty: ignore[possibly-unresolved-reference]
     if _lib.SHA512_ENABLED:
-        hmac_params.append(HmacSha512)
+        hmac_params.append(HmacSha512)   # ty: ignore[possibly-unresolved-reference]
 
 @pytest.fixture(params=(hash_params + hmac_params))
 def hash_cls(request):

@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from enum import IntEnum
 
 from typing_extensions import override
@@ -32,6 +33,7 @@ from wolfcrypt.exceptions import WolfCryptError, WolfCryptApiError
 from wolfcrypt.hashes import hash_type_to_cls
 from wolfcrypt.random import Random
 from wolfcrypt.utils import BytesOrStr, t2b
+from .types import SupportsRsaSign, SupportsRsaVerify
 
 if _lib.ASN_ENABLED:
     from wolfcrypt.asn import pem_to_der  # ty: ignore[possibly-missing-import]
@@ -185,7 +187,7 @@ class _Cipher(ABC):
     def _decrypt(self, destination: _ffi.CData, source: bytes) -> int: ...
 
     @classmethod
-    def new(cls, key: BytesOrStr, mode: int, IV: BytesOrStr | None = None) -> _Cipher:  # pylint: disable=W0613
+    def new(cls, key: BytesOrStr, mode: int, IV: BytesOrStr | None = None, **kwargs: int) -> _Cipher:  # pylint: disable=W0613
         """
         Returns a ciphering object, using the secret key contained in
         the string **key**, and using the feedback mode **mode**, which
@@ -326,7 +328,7 @@ if _lib.AES_SIV_ENABLED:
             if len(self._key) not in AesSiv._key_sizes:
                 raise ValueError(f"key must be {AesSiv._key_sizes} in length, not {len(self._key)}")
 
-        def encrypt(self, associated_data: BytesOrStr | list[BytesOrStr], nonce: BytesOrStr, plaintext: BytesOrStr) -> tuple[bytes, bytes]:
+        def encrypt(self, associated_data: BytesOrStr | Sequence[bytes] | Sequence[bytearray] | Sequence[str] | Sequence[memoryview], nonce: BytesOrStr, plaintext: BytesOrStr) -> tuple[bytes, bytes]:
             """
             Encrypt plaintext data using the nonce provided. The associated
             data is not encrypted but is included in the authentication tag.
@@ -353,7 +355,7 @@ if _lib.AES_SIV_ENABLED:
                 raise WolfCryptApiError("AES-SIV encryption error", ret)
             return _ffi.buffer(siv)[:], _ffi.buffer(ciphertext)[:]
 
-        def decrypt(self, associated_data: BytesOrStr | list[BytesOrStr], nonce: BytesOrStr, siv: BytesOrStr, ciphertext: BytesOrStr) -> bytes:
+        def decrypt(self, associated_data: BytesOrStr | Sequence[bytes] | Sequence[bytearray] | Sequence[str] | Sequence[memoryview], nonce: BytesOrStr, siv: BytesOrStr, ciphertext: BytesOrStr) -> bytes:
             """
             Decrypt the ciphertext using the nonce and SIV provided.
             The integrity of the associated data is checked.
@@ -383,7 +385,7 @@ if _lib.AES_SIV_ENABLED:
             return _ffi.buffer(plaintext)[:]
 
         @staticmethod
-        def _prepare_associated_data(associated_data: BytesOrStr | list[BytesOrStr]) -> tuple[_ffi.CData, bytes | list[bytes]]:
+        def _prepare_associated_data(associated_data: BytesOrStr | Sequence[bytes] | Sequence[bytearray] | Sequence[str] | Sequence[memoryview]) -> tuple[_ffi.CData, bytes | list[bytes]]:
             """
             Prepare associated data for sending to C library.
 
@@ -801,7 +803,7 @@ if _lib.RSA_ENABLED:
 
 
 
-    class RsaPublic(_Rsa):
+    class RsaPublic(_Rsa, SupportsRsaVerify):
         def __init__(self, key: BytesOrStr, hash_type: int | None = None, rng: Random | None = None) -> None:
             super().__init__(rng)
 
@@ -870,6 +872,7 @@ if _lib.RSA_ENABLED:
 
             return _ffi.buffer(ciphertext)[:]
 
+        @override
         def verify(self, signature: BytesOrStr) -> bytes:
             """
             Verifies **signature**, using the public key data in the
@@ -933,7 +936,7 @@ if _lib.RSA_ENABLED:
                 return ret == 0
 
 
-    class RsaPrivate(RsaPublic):
+    class RsaPrivate(RsaPublic, SupportsRsaSign):
         if _lib.KEYGEN_ENABLED:
             @classmethod
             def make_key(cls, size: int, rng: Random | None = None, hash_type: int | None = None) -> RsaPrivate:
@@ -1067,6 +1070,7 @@ if _lib.RSA_ENABLED:
 
             return _ffi.buffer(plaintext, ret)[:]
 
+        @override
         def sign(self, plaintext: BytesOrStr) -> bytes:
             """
             Signs **plaintext**, using the private key data in the object.
@@ -1424,7 +1428,7 @@ if _lib.ECC_ENABLED:
             return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy,
                     qy_size[0])[:], _ffi.buffer(d, d_size[0])[:]
 
-        def shared_secret(self, peer: EccPrivate) -> bytes:
+        def shared_secret(self, peer: EccPublic) -> bytes:
             """
             Generates a new secret key using the private key data in the object
             and the peer's public key.
@@ -2561,6 +2565,9 @@ if _lib.ML_DSA_ENABLED:
             signature = _ffi.new(f"byte[{in_size}]")
             out_size = _ffi.new("word32 *")
             out_size[0] = in_size
+
+            if not isinstance(seed, (list, tuple, bytes)):
+                raise TypeError("seed must be bytes or list/tuple")
 
             if len(seed) != ML_DSA_SIGNATURE_SEED_LENGTH:
                 raise ValueError(

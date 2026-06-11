@@ -24,6 +24,7 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
     "cffi>=1.17",
+    "typing-extensions",
 ]
 
 [project.urls]
@@ -143,7 +144,7 @@ python-version = "3.10"
 root = ["."]
 
 [tool.ty.src]
-exclude = ["./lib", "./tests"]
+exclude = ["./lib"]
 
 [tool.ty.rules]
 all = "warn"

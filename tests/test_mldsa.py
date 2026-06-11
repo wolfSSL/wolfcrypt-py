@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
 # pylint: disable=redefined-outer-name
+# ty: ignore[possibly-missing-import]
 
 from wolfcrypt._ffi import lib as _lib
 
@@ -202,7 +203,7 @@ if _lib.ML_DSA_ENABLED:
 
         # test that the seed type is checked (should be bytes-like, not string)
         with pytest.raises(TypeError):
-            _ = mldsa_priv.sign_with_seed(message, " " * ML_DSA_SIGNATURE_SEED_LENGTH)
+            _ = mldsa_priv.sign_with_seed(message, "")  # ty: ignore[invalid-argument-type]
 
     def test_sign_with_seed_and_context(mldsa_type, rng):
         signature_seed = rng.bytes(ML_DSA_SIGNATURE_SEED_LENGTH)

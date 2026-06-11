@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
 # pylint: disable=redefined-outer-name
+# ty: ignore[possibly-missing-import]
 
 import os
 import random
@@ -60,10 +61,8 @@ if _lib.ED448_ENABLED:
 
 @pytest.fixture
 def vectors():
-    TestVector = namedtuple("TestVector", """key iv plaintext ciphertext
-                ciphertext_ctr raw_key
-                pkcs8_key pem""")
-    TestVector.__new__.__defaults__ = (None,) * len(TestVector._fields)
+    fields = ("key", "iv", "plaintext", "ciphertext", "ciphertext_ctr", "raw_key", "pkcs8_key", "pem")
+    TestVector = namedtuple("TestVector", fields, defaults=(None,) * len(fields))
 
     # test vector dictionary
     vectorArray = {}
@@ -75,19 +74,19 @@ def vectors():
             plaintext=t2b("now is the time "),
             ciphertext=h2b("959492575f4281532ccc9d4677a233cb"),
             ciphertext_ctr = h2b('287528ddf484b1055debbe751eb52b8a')
-        )
+        )  # ty: ignore[missing-argument]
     if _lib.CHACHA_ENABLED:
         vectorArray[ChaCha]=TestVector(
             key="0123456789abcdef01234567890abcdef",
             iv="1234567890abcdef",
-        )
+        )  # ty: ignore[missing-argument]
     if _lib.DES3_ENABLED:
         vectorArray[Des3]=TestVector(
             key=h2b("0123456789abcdeffedeba987654321089abcdef01234567"),
             iv=h2b("1234567890abcdef"),
             plaintext=t2b("Now is the time for all "),
             ciphertext=h2b("43a0297ed184f80e8964843212d508981894157487127db0")
-        )
+        )  # ty: ignore[missing-argument]
     if _lib.RSA_ENABLED:
         vectorArray[RsaPublic]=TestVector(
             key=h2b(
@@ -98,7 +97,7 @@ def vectors():
                 "0E22E96BA426BA4CE8C1FD4A6F2B1FEF8AAEF69062E5641EEB2B3C67C8DC"
                 "2700F6916865A90203010001"),
             pem=os.path.join(certs_dir, "server-keyPub.pem")
-        )
+        )  # ty: ignore[missing-argument]
         vectorArray[RsaPrivate]=TestVector(
             key=h2b(
                 "3082025C02010002818100BC730EA849F374A2A9EF18A5DA559921F9C8EC"
@@ -164,7 +163,7 @@ def vectors():
                 "1666d37c742b15b4a2febf086b1a5d3f"
                 "9012b105863129dbd9e2"),
             pem=os.path.join(certs_dir, "server-key.pem")
-        )
+        )  # ty: ignore[missing-argument]
 
     if _lib.ECC_ENABLED:
         vectorArray[EccPublic]=TestVector(
@@ -178,7 +177,7 @@ def vectors():
                 "55bff40f44509a3dce9bb7f0c54df5707bd4ec248e1980ec5a4ca22403622c9b"
                 "daefa2351243847616c6569506cc01a9bdf6751a42f7bda9b236225fc75d7fb4"
             )
-        )
+        )  # ty: ignore[missing-argument]
         vectorArray[EccPrivate]=TestVector(
             key=h2b(
                 "30770201010420F8CF926BBD1E28F1A8ABA1234F3274188850AD7EC7EC92"
@@ -192,7 +191,7 @@ def vectors():
                 "daefa2351243847616c6569506cc01a9bdf6751a42f7bda9b236225fc75d7fb4"
                 "f8cf926bbd1e28f1a8aba1234f3274188850ad7ec7ec92f88f974daf568965c7"
             )
-        )
+        )  # ty: ignore[missing-argument]
 
     if _lib.ED25519_ENABLED:
         vectorArray[Ed25519Private]=TestVector(
@@ -200,33 +199,33 @@ def vectors():
                  "47CD22B276161AA18BA1E0D13DBE84FE4840E4395D784F555A92E8CF739B"
                  "F86B"
             )
-        )
+        )  # ty: ignore[missing-argument]
         vectorArray[Ed25519Public]=TestVector(
             key=h2b(
                 "8498C65F4841145F9C51E8BFF4504B5527E0D5753964B7CB3C707A2B9747"
                 "FC96"
             )
-        )
+        )  # ty: ignore[missing-argument]
     if _lib.ED448_ENABLED:
         vectorArray[Ed448Private]=TestVector(
             key=h2b("c2b29804e9a893c9e275cac1f8a3033f3d4b78b79eb427ed359fdeb8"
                     "82d657c129c7930936b181971b795167ad18cabeeb52b59b94f115ad"
                     "59"
             )
-        )
+        )  # ty: ignore[missing-argument]
         vectorArray[Ed448Public]=TestVector(
             key=h2b("89fb2b5a5ab67dd317794cc5f1700cace295b043f3ad73a66299e10a"
                     "d3fc0a28289ddd1c641598a354113867a42e82ad844b4d858d92e4e7"
                     "80"
             )
-        )
+        )  # ty: ignore[missing-argument]
     return vectorArray
 
 algo_params = []
 if _lib.AES_ENABLED:
-    algo_params.append(Aes)
+    algo_params.append(Aes)   # ty: ignore[possibly-unresolved-reference]
 if _lib.DES3_ENABLED:
-    algo_params.append(Des3)
+    algo_params.append(Des3)   # ty: ignore[possibly-unresolved-reference]
 
 @pytest.fixture(params=algo_params)
 def cipher_cls(request):
@@ -320,7 +319,7 @@ if _lib.CHACHA_ENABLED:
         return r
 
     @pytest.fixture
-    def test_chacha_enc_dec(chacha_obj):
+    def test_chacha_enc_dec(chacha_obj, vectors):
         plaintext = t2b("Everyone gets Friday off.")
         cyt = chacha_obj.encrypt(plaintext)
         chacha_obj.set_iv(vectors[ChaCha].iv)
@@ -372,25 +371,25 @@ if _lib.RSA_ENABLED:
     def rsa_private_pem(vectors):
         with open(vectors[RsaPrivate].pem, "rb") as f:
             pem = f.read()
-        return RsaPrivate.from_pem(pem)
+        return RsaPrivate.from_pem(pem)   # ty: ignore[possibly-missing-attribute]
 
     @pytest.fixture
     def rsa_public_pem(vectors):
         with open(vectors[RsaPublic].pem, "rb") as f:
             pem = f.read()
-        return RsaPublic.from_pem(pem)
+        return RsaPublic.from_pem(pem)   # ty: ignore[possibly-missing-attribute]
 
     @pytest.fixture
     def rsa_private_pem_rng(vectors, rng):
         with open(vectors[RsaPrivate].pem, "rb") as f:
             pem = f.read()
-        return RsaPrivate.from_pem(pem, rng=rng)
+        return RsaPrivate.from_pem(pem, rng=rng)   # ty: ignore[possibly-missing-attribute]
 
     @pytest.fixture
     def rsa_public_pem_rng(vectors, rng):
         with open(vectors[RsaPublic].pem, "rb") as f:
             pem = f.read()
-        return RsaPublic.from_pem(pem, rng=rng)
+        return RsaPublic.from_pem(pem, rng=rng)   # ty: ignore[possibly-missing-attribute]
 
     def test_new_rsa_raises(vectors):
         with pytest.raises(WolfCryptError):
@@ -401,7 +400,7 @@ if _lib.RSA_ENABLED:
 
         if _lib.KEYGEN_ENABLED:
             with pytest.raises(WolfCryptError):           # invalid key size
-                RsaPrivate.make_key(16384)
+                RsaPrivate.make_key(16384)   # ty: ignore[possibly-missing-attribute]
 
 
     def test_rsa_encrypt_decrypt(rsa_private, rsa_public):
