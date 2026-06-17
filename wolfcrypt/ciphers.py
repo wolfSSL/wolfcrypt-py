@@ -2404,9 +2404,13 @@ if _lib.ML_DSA_ENABLED:
             :param mldsa_type: ML-DSA type
             :type mldsa_type: MlDsaType
             :param seed: the (32 byte) seed from which to deterministically create the key
-            :type seed: bytes or list/tuple of int
+            :type seed: bytes or list/tuple of int (value in the range 0-255)
             """
             mldsa_priv = cls(mldsa_type)
+
+            if not isinstance(seed, (list, tuple, bytes)):
+                raise TypeError("seed must be bytes or list/tuple")
+
             if len(seed) != cls.ML_DSA_KEYGEN_SEED_LENGTH:
                 raise ValueError(
                     f"Seed for generating ML-DSA key must be {cls.ML_DSA_KEYGEN_SEED_LENGTH} bytes"

@@ -20,6 +20,8 @@
 
 # pylint: disable=no-member,no-name-in-module
 
+from __future__ import annotations
+
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 
@@ -28,7 +30,8 @@ from wolfcrypt.utils import t2b
 
 
 if _lib.HKDF_ENABLED:
-    from wolfcrypt.hashes import _Hmac  # ty: ignore[possibly-missing-import]
+    if _lib.HMAC_ENABLED:
+        from wolfcrypt.hashes import _Hmac  # ty: ignore[possibly-missing-import]
 
     def HKDF(hash_cls: type[_Hmac], in_key: bytes | str, salt: bytes | str | None = None, info: bytes | str | None = None, out_len: int | None = None) -> bytes:
         """
