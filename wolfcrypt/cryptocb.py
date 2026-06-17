@@ -101,12 +101,12 @@ if _lib.CRYPTO_CB_ENABLED:
             self._unregister()
 
         def callback(self, device_id: int, info: _ffi.CData) -> int:
-            log.debug(f"{device_id=} algo = {ALGO_TYPE_NAME[info.algo_type]}")
+            log.debug("device_id=%d algo_type = %s", device_id, ALGO_TYPE_NAME[info.algo_type])
             try:
                 if info.algo_type == _lib.WC_ALGO_TYPE_HASH:
                     if info.hash.type not in DIGEST_SIZE:
                         return _lib.CRYPTOCB_UNAVAILABLE
-                    log.debug("hash = %s", HASH_TYPE_NAME[info.hash.type])
+                    log.debug("hash_type = %s", HASH_TYPE_NAME[info.hash.type])
                     if info.hash.digest == _ffi.NULL:
                         self.hash_update_callback(
                             device_id,
