@@ -28,6 +28,7 @@ wolfCrypt-py Release 5.9.2 (Jul 1, 2026)
 * Address many small issues found by Fenrir
 * Add reseed support to random number generator
 * The RsaPublic key parameter is now mandatory as it is always needed by an internal function call.
+* Add typing annotations
 
 
 wolfCrypt-py Release 5.8.4 (Jan 7, 2026)

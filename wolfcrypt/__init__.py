@@ -17,9 +17,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
-from typing import cast
-
-from _cffi_backend import Lib
 
 from wolfcrypt._version import __version__, __wolfssl_version__
 
@@ -53,7 +50,7 @@ if top_level_py not in ["setup.py", "build_ffi.py"]:
 
     if hasattr(_lib, 'WC_RNG_SEED_CB_ENABLED'):
         if _lib.WC_RNG_SEED_CB_ENABLED:
-            ret = _lib.wc_SetSeed_Cb(_ffi.addressof(cast(Lib, _lib), "wc_GenerateSeed"))
+            ret = _lib.wc_SetSeed_Cb(_ffi.addressof(_lib, "wc_GenerateSeed"))  # ty:ignore[no-matching-overload]
             if ret < 0:
                 raise WolfCryptApiError("wc_SetSeed_Cb failed", ret)
     if _lib.FIPS_ENABLED and _lib.FIPS_VERSION >= 5:
