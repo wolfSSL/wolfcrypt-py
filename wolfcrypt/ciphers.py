@@ -2369,19 +2369,18 @@ if _lib.ML_DSA_ENABLED:
             return mldsa_priv
 
         @classmethod
-        def make_key_from_seed(cls, mldsa_type: MlDsaType, seed: bytes | list[int] | tuple[int]) -> MlDsaPrivate:
+        def make_key_from_seed(cls, mldsa_type: MlDsaType, seed: bytes) -> MlDsaPrivate:
             """
             Deterministically generate the key from a seed.
 
             :param mldsa_type: ML-DSA type
             :type mldsa_type: MlDsaType
             :param seed: the (32 byte) seed from which to deterministically create the key
-            :type seed: bytes or list/tuple of int (value in the range 0-255)
+            :type seed: bytes
             """
             mldsa_priv = cls(mldsa_type)
 
-            if not isinstance(seed, (list, tuple, bytes)):
-                raise TypeError("seed must be bytes or list/tuple")
+            seed = bytes(seed)
 
             if len(seed) != cls.ML_DSA_KEYGEN_SEED_LENGTH:
                 raise ValueError(
@@ -2517,12 +2516,12 @@ if _lib.ML_DSA_ENABLED:
 
             return _ffi.buffer(signature, out_size[0])[:]
 
-        def sign_with_seed(self, message: BytesOrStr, seed: bytes | list[int] | tuple[int], ctx: BytesOrStr | None = None) -> bytes:
+        def sign_with_seed(self, message: BytesOrStr, seed: bytes, ctx: BytesOrStr | None = None) -> bytes:
             """
             :param message: message to be signed
             :type message: bytes or str
             :param seed: 32-byte seed for deterministic signature generation.
-            :type seed: bytes or list/tuple of int (value in the range 0-255)
+            :type seed: bytes
             :param ctx: context (optional, maximum 255 bytes)
             :type ctx: None for no context, str or bytes otherwise
             :return: signature
@@ -2534,8 +2533,7 @@ if _lib.ML_DSA_ENABLED:
             out_size = _ffi.new("word32 *")
             out_size[0] = in_size
 
-            if not isinstance(seed, (list, tuple, bytes)):
-                raise TypeError("seed must be bytes or list/tuple")
+            seed = bytes(seed)
 
             if len(seed) != ML_DSA_SIGNATURE_SEED_LENGTH:
                 raise ValueError(
