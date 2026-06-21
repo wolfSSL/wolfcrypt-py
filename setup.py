@@ -30,13 +30,13 @@ os.chdir(os.path.dirname(sys.argv[0]) or ".")
 VERSIONFILE = "wolfcrypt/_version.py"
 verstrline = open(VERSIONFILE).read()
 VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
-mo = re.search(VSRE, verstrline, re.M)
+mo = re.search(VSRE, verstrline, re.MULTILINE)
 if mo:
     verstr = mo.group(1)
 else:
     raise RuntimeError(f"Unable to find version string in {VERSIONFILE}.")
 VSRE = r"^__wolfssl_version__ = ['\"]([^'\"]*)['\"]"
-mo = re.search(VSRE, verstrline, re.M)
+mo = re.search(VSRE, verstrline, re.MULTILINE)
 if mo:
     wolfverstr = mo.group(1)
 else:
