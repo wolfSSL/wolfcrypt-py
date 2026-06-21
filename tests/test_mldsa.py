@@ -133,7 +133,7 @@ if _lib.ML_DSA_ENABLED:
         # Verify with wrong message
         wrong_message = b"This is a wrong message for ML-DSA signature"
         assert not mldsa_pub.verify(signature, wrong_message)
-        
+
         # Verify a signature generated without a context but where a context
         # is provided during verify
         ctx = b"This is a test context for ML-DSA signature"
