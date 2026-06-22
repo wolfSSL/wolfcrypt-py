@@ -2279,7 +2279,7 @@ if _lib.ML_DSA_ENABLED:
             return res[0] == 1
 
     class MlDsaPrivate(_MlDsaBase):
-        
+
         @classmethod
         def make_key(cls, mldsa_type, rng=None):
             """
@@ -2451,7 +2451,7 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_msg() error", ret)
-            
+
             if in_size != out_size[0]:
                 raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
 
