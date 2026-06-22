@@ -24,7 +24,7 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
     "cffi>=1.17",
-    "typing-extensions",
+    "typing-extensions>=4.4.0",
 ]
 
 [project.urls]

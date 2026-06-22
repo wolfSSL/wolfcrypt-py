@@ -33,7 +33,7 @@ from wolfcrypt.exceptions import WolfCryptError, WolfCryptApiError
 from wolfcrypt.hashes import hash_type_to_cls
 from wolfcrypt.random import Random
 from wolfcrypt.utils import BytesOrStr, t2b
-from .types import SupportsRsaSign, SupportsRsaVerify
+from .wc_types import SupportsRsaSign, SupportsRsaVerify
 
 if _lib.ASN_ENABLED:
     from wolfcrypt.asn import pem_to_der  # ty: ignore[possibly-missing-import]
@@ -2408,12 +2408,15 @@ if _lib.ML_DSA_ENABLED:
             """
             mldsa_priv = cls(mldsa_type)
 
+            try:
+                memoryview(seed)
+            except TypeError as exception:
+                raise TypeError("seed must support the buffer protocol, such as `bytes` or `bytearray`") from exception
+
             seed = bytes(seed)
 
             if len(seed) != cls.ML_DSA_KEYGEN_SEED_LENGTH:
-                raise ValueError(
-                    f"Seed for generating ML-DSA key must be {cls.ML_DSA_KEYGEN_SEED_LENGTH} bytes"
-                )
+                raise ValueError(f"Seed for generating ML-DSA key must be {cls.ML_DSA_KEYGEN_SEED_LENGTH} bytes")
 
             ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object, seed)
 
@@ -2569,12 +2572,15 @@ if _lib.ML_DSA_ENABLED:
             out_size = _ffi.new("word32 *")
             out_size[0] = in_size
 
+            try:
+                memoryview(seed)
+            except TypeError as exception:
+                raise TypeError("seed must support the buffer protocol, such as `bytes` or `bytearray`") from exception
+
             seed = bytes(seed)
 
             if len(seed) != ML_DSA_SIGNATURE_SEED_LENGTH:
-                raise ValueError(
-                    f"Seed for generating a signature must be {ML_DSA_SIGNATURE_SEED_LENGTH} bytes."
-                )
+                raise ValueError(f"Seed for generating a signature must be {ML_DSA_SIGNATURE_SEED_LENGTH} bytes.")
 
             if ctx is not None:
                 ctx_bytestype = t2b(ctx)
