@@ -96,9 +96,6 @@ indent-width = 4
 target-version = "py310"
 
 [tool.ruff.lint]
-# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes by default.
-# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
-# McCabe complexity (`C901`) by default.
 select = ["E", "F", "B", "UP", "C4", "DTZ", "EXE", "FA", "INT", "ISC", "ICN", "LOG", "G", "RSE", "SLOT", "TID", "TC", "FLY", "PERF", "W", "FURB"]
 ignore = ["E501"]
 
