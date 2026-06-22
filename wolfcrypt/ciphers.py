@@ -20,16 +20,24 @@
 
 # pylint: disable=no-member,no-name-in-module
 
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from enum import IntEnum
 
+from typing_extensions import override
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
-from wolfcrypt.utils import t2b
-from wolfcrypt.random import Random
-from wolfcrypt.asn import pem_to_der
-from wolfcrypt.hashes import hash_type_to_cls
-
 from wolfcrypt.exceptions import WolfCryptError, WolfCryptApiError
+from wolfcrypt.hashes import hash_type_to_cls
+from wolfcrypt.random import Random
+from wolfcrypt.utils import BytesOrStr, t2b
+from .wc_types import SupportsRsaSign, SupportsRsaVerify
+
+if _lib.ASN_ENABLED:
+    from wolfcrypt.asn import pem_to_der  # ty: ignore[possibly-missing-import]
+
 
 # key direction flags
 _ENCRYPTION = 0
@@ -110,13 +118,12 @@ if _lib.RSA_ENABLED:
     HASH_TYPE_BLAKE2S = _lib.WC_HASH_TYPE_BLAKE2S
 
 
-
-class _Cipher:
+class _Cipher(ABC):
     """
     A **PEP 272: Block Encryption Algorithms** compliant
     **Symmetric Key Cipher**.
     """
-    def __init__(self, key, mode, IV=None):
+    def __init__(self, key: BytesOrStr, mode: int, IV: BytesOrStr | None = None) -> None:
         if mode not in _FEEDBACK_MODES:
             raise ValueError("this mode is not supported")
 
@@ -152,10 +159,35 @@ class _Cipher:
         if IV:
             self._IV = IV
         else:  # pragma: no cover
-            self._IV = _ffi.new(f"byte[{self.block_size}]")
+            self._IV = bytes(self.block_size)
+
+    @property
+    @abstractmethod
+    def _native_type(self) -> str: ...
+
+    @property
+    @abstractmethod
+    def block_size(self) -> int: ...
+
+    @property
+    @abstractmethod
+    def key_size(self) -> int: ...
+
+    @property
+    @abstractmethod
+    def _key_sizes(self) -> list[int]: ...
+
+    @abstractmethod
+    def _set_key(self, direction: int) -> int: ...
+
+    @abstractmethod
+    def _encrypt(self, destination: _ffi.CData, source: bytes) -> int: ...
+
+    @abstractmethod
+    def _decrypt(self, destination: _ffi.CData, source: bytes) -> int: ...
 
     @classmethod
-    def new(cls, key, mode, IV=None, **kwargs):  # pylint: disable=W0613
+    def new(cls, key: BytesOrStr, mode: int, IV: BytesOrStr | None = None, **kwargs: int) -> _Cipher:  # pylint: disable=W0613
         """
         Returns a ciphering object, using the secret key contained in
         the string **key**, and using the feedback mode **mode**, which
@@ -168,7 +200,7 @@ class _Cipher:
         """
         return cls(key, mode, IV)
 
-    def encrypt(self, string):
+    def encrypt(self, string: BytesOrStr) -> bytes:
         """
         Encrypts a non-empty string, using the key-dependent data in
         the object, and with the appropriate feedback mode.
@@ -200,7 +232,7 @@ class _Cipher:
 
         return _ffi.buffer(result)[:]
 
-    def decrypt(self, string):
+    def decrypt(self, string: BytesOrStr) -> bytes:
         """
         Decrypts **string**, using the key-dependent data in the
         object and with the appropriate feedback mode.
@@ -244,17 +276,22 @@ if _lib.AES_ENABLED:
         _key_sizes = [16, 24, 32]
         _native_type = "Aes *"
 
-        def _set_key(self, direction):
+        @override
+        def _set_key(self, direction: int) -> int:
             if direction == _ENCRYPTION:
+                assert self._enc is not None
                 return _lib.wc_AesSetKey(
                     self._enc, self._key, len(self._key), self._IV, _ENCRYPTION)
+            assert self._dec is not None
             if self.mode == MODE_CTR:
                 return _lib.wc_AesSetKey(
                     self._dec, self._key, len(self._key), self._IV, _ENCRYPTION)
             return _lib.wc_AesSetKey(
                 self._dec, self._key, len(self._key), self._IV, _DECRYPTION)
 
-        def _encrypt(self, destination, source):
+        @override
+        def _encrypt(self, destination: _ffi.CData, source: bytes) -> int:
+            assert self._enc is not None
             if self.mode == MODE_CBC:
                 return _lib.wc_AesCbcEncrypt(self._enc, destination,
                         source, len(source))
@@ -264,7 +301,9 @@ if _lib.AES_ENABLED:
             else:
                 raise ValueError("Invalid mode associated to cipher")
 
-        def _decrypt(self, destination, source):
+        @override
+        def _decrypt(self, destination: _ffi.CData, source: bytes) -> int:
+            assert self._dec is not None
             if self.mode == MODE_CBC:
                 return _lib.wc_AesCbcDecrypt(self._dec, destination,
                         source, len(source))
@@ -283,12 +322,12 @@ if _lib.AES_SIV_ENABLED:
         _key_sizes = [32, 48, 64]
         block_size = 16
 
-        def __init__(self, key):
+        def __init__(self, key: BytesOrStr) -> None:
             self._key = t2b(key)
             if len(self._key) not in AesSiv._key_sizes:
                 raise ValueError(f"key must be {AesSiv._key_sizes} in length, not {len(self._key)}")
 
-        def encrypt(self, associated_data, nonce, plaintext):
+        def encrypt(self, associated_data: BytesOrStr | Sequence[bytes] | Sequence[bytearray] | Sequence[str] | Sequence[memoryview], nonce: BytesOrStr, plaintext: BytesOrStr) -> tuple[bytes, bytes]:
             """
             Encrypt plaintext data using the nonce provided. The associated
             data is not encrypted but is included in the authentication tag.
@@ -302,20 +341,20 @@ if _lib.AES_SIV_ENABLED:
             # Prepare the associated data blocks. Make sure to hold on to the
             # returned references until the C function has been called in order
             # to prevent garbage collection of them until the function is done.
-            associated_data, _refs = (
+            prep_associated_data, _refs = (
                 AesSiv._prepare_associated_data(associated_data))
             nonce = t2b(nonce)
             plaintext = t2b(plaintext)
             siv = _ffi.new(f"byte[{AesSiv.block_size}]")
             ciphertext = _ffi.new(f"byte[{len(plaintext)}]")
             ret = _lib.wc_AesSivEncrypt_ex(self._key, len(self._key),
-                associated_data, len(associated_data), nonce, len(nonce),
+                prep_associated_data, len(prep_associated_data), nonce, len(nonce),
                 plaintext, len(plaintext), siv, ciphertext)
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("AES-SIV encryption error", ret)
             return _ffi.buffer(siv)[:], _ffi.buffer(ciphertext)[:]
 
-        def decrypt(self, associated_data, nonce, siv, ciphertext):
+        def decrypt(self, associated_data: BytesOrStr | Sequence[bytes] | Sequence[bytearray] | Sequence[str] | Sequence[memoryview], nonce: BytesOrStr, siv: BytesOrStr, ciphertext: BytesOrStr) -> bytes:
             """
             Decrypt the ciphertext using the nonce and SIV provided.
             The integrity of the associated data is checked.
@@ -329,7 +368,7 @@ if _lib.AES_SIV_ENABLED:
             # Prepare the associated data blocks. Make sure to hold on to the
             # returned references until the C function has been called in order
             # to prevent garbage collection of them until the function is done.
-            associated_data, _refs = (
+            prep_associated_data, _refs = (
                 AesSiv._prepare_associated_data(associated_data))
             nonce = t2b(nonce)
             siv = t2b(siv)
@@ -338,14 +377,14 @@ if _lib.AES_SIV_ENABLED:
             ciphertext = t2b(ciphertext)
             plaintext = _ffi.new(f"byte[{len(ciphertext)}]")
             ret = _lib.wc_AesSivDecrypt_ex(self._key, len(self._key),
-                associated_data, len(associated_data), nonce, len(nonce),
+                prep_associated_data, len(prep_associated_data), nonce, len(nonce),
                 ciphertext, len(ciphertext), siv, plaintext)
             if ret < 0:
                 raise WolfCryptApiError("AES-SIV decryption error", ret)
             return _ffi.buffer(plaintext)[:]
 
         @staticmethod
-        def _prepare_associated_data(associated_data):
+        def _prepare_associated_data(associated_data: BytesOrStr | Sequence[bytes] | Sequence[bytearray] | Sequence[str] | Sequence[memoryview]) -> tuple[_ffi.CData, bytes | list[bytes]]:
             """
             Prepare associated data for sending to C library.
 
@@ -362,10 +401,10 @@ if _lib.AES_SIV_ENABLED:
             if isinstance(associated_data, (str, bytes, bytearray, memoryview)):
                 # A single block is provided.
                 # Make sure we have bytes.
-                associated_data = t2b(associated_data)
+                associated_data_bytes = t2b(associated_data)
                 result = _ffi.new("AesSivAssoc[1]")
-                result[0].assoc = _ffi.from_buffer(associated_data)
-                result[0].assocSz = len(associated_data)
+                result[0].assoc = _ffi.from_buffer(associated_data_bytes)
+                result[0].assocSz = len(associated_data_bytes)
             else:
                 # It is assumed that a list is provided.
                 num_blocks = len(associated_data)
@@ -373,14 +412,14 @@ if _lib.AES_SIV_ENABLED:
                     raise WolfCryptError("AES-SIV does not support more than 126 blocks "
                                          f"of associated data, got: {num_blocks}")
                 # Make sure we have bytes.
-                associated_data = [t2b(block) for block in associated_data]
+                associated_data_bytes = [t2b(block) for block in associated_data]
                 result = _ffi.new("AesSivAssoc[]", num_blocks)
-                for index, block in enumerate(associated_data):
+                for index, block in enumerate(associated_data_bytes):
                     result[index].assoc = _ffi.from_buffer(block)
                     result[index].assocSz = len(block)
             # Return the converted associated data blocks so the caller can
             # hold on to them until the function has been called.
-            return result, associated_data
+            return result, associated_data_bytes
 
 
 if _lib.AESGCM_STREAM_ENABLED:
@@ -394,7 +433,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         # making sure _lib.wc_AesFree outlives Aes instances
         _delete = staticmethod(_lib.wc_AesFree)
 
-        def __init__(self, key, IV, tag_bytes=16):
+        def __init__(self, key: BytesOrStr, IV: BytesOrStr, tag_bytes: int = 16) -> None:
             """
             tag_bytes is the number of bytes to use for the authentication tag during encryption
             """
@@ -420,12 +459,12 @@ if _lib.AESGCM_STREAM_ENABLED:
             if ret < 0:
                 raise WolfCryptApiError("Init error", ret)
 
-        def __del__(self):
+        def __del__(self) -> None:
             if getattr(self, '_init_done', False):
                 self._delete(self._native_object)
                 self._init_done = False
 
-        def set_aad(self, data):
+        def set_aad(self, data: BytesOrStr) -> None:
             """
             Set the additional authentication data for the stream
             """
@@ -433,10 +472,10 @@ if _lib.AESGCM_STREAM_ENABLED:
                 raise WolfCryptError("AAD can only be set before encrypt() or decrypt() is called")
             self._aad = t2b(data)
 
-        def get_aad(self):
+        def get_aad(self) -> bytes:
             return self._aad
 
-        def encrypt(self, data):
+        def encrypt(self, data: BytesOrStr) -> bytes:
             """
             Add more data to the encryption stream
             """
@@ -453,7 +492,7 @@ if _lib.AESGCM_STREAM_ENABLED:
                 raise WolfCryptApiError("Encryption error", ret)
             return bytes(buf)
 
-        def decrypt(self, data):
+        def decrypt(self, data: BytesOrStr) -> bytes:
             """
             Add more data to the decryption stream
             """
@@ -470,7 +509,7 @@ if _lib.AESGCM_STREAM_ENABLED:
                 raise WolfCryptApiError("Decryption error", ret)
             return bytes(buf)
 
-        def final(self, authTag=None):
+        def final(self, authTag: BytesOrStr | None = None) -> bytes | None:
             """
             When encrypting, finalize the stream and return an authentication tag for the stream.
             When decrypting, verify the authentication tag for the stream.
@@ -479,11 +518,11 @@ if _lib.AESGCM_STREAM_ENABLED:
             if self._mode is None:
                 raise WolfCryptError("Final called with no encryption or decryption")
             elif self._mode == _ENCRYPTION:
-                authTag = _ffi.new(f"byte[{self._tag_bytes}]")
-                ret = _lib.wc_AesGcmEncryptFinal(self._native_object, authTag, self._tag_bytes)
+                authTag_out = _ffi.new(f"byte[{self._tag_bytes}]")
+                ret = _lib.wc_AesGcmEncryptFinal(self._native_object, authTag_out, self._tag_bytes)
                 if ret < 0:
                     raise WolfCryptApiError("Encryption error", ret)
-                return _ffi.buffer(authTag)[:]
+                return _ffi.buffer(authTag_out)[:]
             else:
                 if authTag is None:
                     raise WolfCryptError("authTag parameter required")
@@ -509,7 +548,7 @@ if _lib.CHACHA_ENABLED:
         _IV_nonce = b""
         _IV_counter = 0
 
-        def __init__(self, key="", size=32):  # pylint: disable=unused-argument
+        def __init__(self, key: BytesOrStr = "", size: int = 32) -> None:  # pylint: disable=unused-argument
             # size is kept for backwards compatibility; key length is now
             # derived from the actual key and validated against _key_sizes.
             self._native_object = _ffi.new(self._native_type)
@@ -528,7 +567,8 @@ if _lib.CHACHA_ENABLED:
         # collide with _ENCRYPTION (0) or _DECRYPTION (1).
         _REKEY_BOTH = -1
 
-        def _set_key(self, direction):
+        @override
+        def _set_key(self, direction: int) -> int:
             if self._key is None:
                 return -1
             # _REKEY_BOTH re-keys whichever contexts are already allocated,
@@ -539,12 +579,14 @@ if _lib.CHACHA_ENABLED:
             do_enc = self._enc and direction in (self._REKEY_BOTH, _ENCRYPTION)
             do_dec = self._dec and direction in (self._REKEY_BOTH, _DECRYPTION)
             if do_enc:
+                assert self._enc is not None
                 ret = _lib.wc_Chacha_SetKey(self._enc, self._key, len(self._key))
                 if ret == 0:
                     ret = _lib.wc_Chacha_SetIV(self._enc, self._IV_nonce, self._IV_counter)
                 if ret != 0:
                     return ret
             if do_dec:
+                assert self._dec is not None
                 ret = _lib.wc_Chacha_SetKey(self._dec, self._key, len(self._key))
                 if ret == 0:
                     ret = _lib.wc_Chacha_SetIV(self._dec, self._IV_nonce, self._IV_counter)
@@ -552,17 +594,20 @@ if _lib.CHACHA_ENABLED:
                     return ret
             return 0
 
-        def _encrypt(self, destination, source):
+        @override
+        def _encrypt(self, destination: _ffi.CData, source: bytes) -> int:
+            assert self._enc is not None
             return _lib.wc_Chacha_Process(self._enc, destination,
                                          source, len(source))
-
-        def _decrypt(self, destination, source):
+        @override
+        def _decrypt(self, destination: _ffi.CData, source: bytes) -> int:
+            assert self._dec is not None
             return _lib.wc_Chacha_Process(self._dec,
                                           destination, source, len(source))
 
         _NONCE_SIZE = 12
 
-        def set_iv(self, nonce, counter = 0):
+        def set_iv(self, nonce: BytesOrStr, counter: int = 0) -> None:
             self._IV_nonce = t2b(nonce)
             if len(self._IV_nonce) != self._NONCE_SIZE:
                 raise ValueError(f"nonce must be {self._NONCE_SIZE} bytes, got {len(self._IV_nonce)}")
@@ -581,12 +626,12 @@ if _lib.CHACHA20_POLY1305_ENABLED:
         _key_sizes = [32]
         _tag_bytes = 16
 
-        def __init__(self, key):
+        def __init__(self, key: BytesOrStr) -> None:
             self._key = t2b(key)
             if len(self._key) not in self._key_sizes:
                 raise ValueError(f"key must be {self._key_sizes} in length, not {len(self._key)}")
 
-        def encrypt(self, aad, iv, plaintext):
+        def encrypt(self, aad: BytesOrStr, iv: BytesOrStr, plaintext: BytesOrStr) -> tuple[bytes, bytes]:
             """
             Encrypt plaintext data using the IV/nonce provided. The
             associated data (aad) is not encrypted but is included in the
@@ -602,11 +647,11 @@ if _lib.CHACHA20_POLY1305_ENABLED:
             ciphertext = _ffi.new(f"byte[{len(plaintext)}]")
             authTag = _ffi.new(f"byte[{self._tag_bytes}]")
             ret = _lib.wc_ChaCha20Poly1305_Encrypt(
-                _ffi.from_buffer(self._key),
-                _ffi.from_buffer(iv),
-                _ffi.from_buffer(aad),
+                self._key,
+                iv,
+                aad,
                 len(aad),
-                _ffi.from_buffer(plaintext),
+                plaintext,
                 len(plaintext),
                 ciphertext,
                 authTag
@@ -615,7 +660,7 @@ if _lib.CHACHA20_POLY1305_ENABLED:
                 raise WolfCryptApiError("Encryption error", ret)
             return bytes(ciphertext), bytes(authTag)
 
-        def decrypt(self, aad, iv, authTag, ciphertext):
+        def decrypt(self, aad: BytesOrStr, iv: BytesOrStr, authTag: BytesOrStr, ciphertext: BytesOrStr) -> bytes:
             """
             Decrypt the ciphertext using the IV/nonce and authentication tag
             provided. The integrity of the associated data (aad) is checked.
@@ -632,13 +677,13 @@ if _lib.CHACHA20_POLY1305_ENABLED:
             ciphertext = t2b(ciphertext)
             plaintext = _ffi.new(f"byte[{len(ciphertext)}]")
             ret = _lib.wc_ChaCha20Poly1305_Decrypt(
-                _ffi.from_buffer(self._key),
-                _ffi.from_buffer(iv),
-                _ffi.from_buffer(aad),
+                self._key,
+                iv,
+                aad,
                 len(aad),
-                _ffi.from_buffer(ciphertext),
+                ciphertext,
                 len(ciphertext),
-                _ffi.from_buffer(authTag),
+                authTag,
                 plaintext
             )
             if ret < 0:
@@ -655,9 +700,10 @@ if _lib.DES3_ENABLED:
         """
         block_size = 8
         key_size = 24
+        _key_sizes = [24]
         _native_type = "Des3 *"
 
-        def __init__(self, key, mode, IV=None):
+        def __init__(self, key: BytesOrStr, mode: int, IV: BytesOrStr | None = None) -> None:
             # Intentionally stricter than _Cipher.__init__, which accepts both
             # CBC and CTR. wolfCrypt has no 3DES-CTR implementation, so reject
             # MODE_CTR here with a clearer error before delegating.
@@ -665,30 +711,33 @@ if _lib.DES3_ENABLED:
                 raise ValueError("Des3 only supports MODE_CBC")
             super().__init__(key, mode, IV)
 
-        def _set_key(self, direction):
+        @override
+        def _set_key(self, direction: int) -> int:
             if direction == _ENCRYPTION:
-                return _lib.wc_Des3_SetKey(self._enc, self._key,
-                                           self._IV, _ENCRYPTION)
+                assert self._enc is not None
+                return _lib.wc_Des3_SetKey(self._enc, self._key, self._IV, _ENCRYPTION)
 
-            return _lib.wc_Des3_SetKey(self._dec, self._key,
-                                       self._IV, _DECRYPTION)
+            assert self._dec is not None
+            return _lib.wc_Des3_SetKey(self._dec, self._key, self._IV, _DECRYPTION)
 
-        def _encrypt(self, destination, source):
-            return _lib.wc_Des3_CbcEncrypt(self._enc, destination,
-                                           source, len(source))
+        @override
+        def _encrypt(self, destination: _ffi.CData, source: bytes) -> int:
+            assert self._enc is not None
+            return _lib.wc_Des3_CbcEncrypt(self._enc, destination, source, len(source))
 
-        def _decrypt(self, destination, source):
-            return _lib.wc_Des3_CbcDecrypt(self._dec, destination,
-                                           source, len(source))
+        @override
+        def _decrypt(self, destination: _ffi.CData, source: bytes) -> int:
+            assert self._dec is not None
+            return _lib.wc_Des3_CbcDecrypt(self._dec, destination, source, len(source))
 
 
 if _lib.RSA_ENABLED:
     class _Rsa:  # pylint: disable=too-few-public-methods
         RSA_MIN_PAD_SIZE = 11
-        _mgf = None
+        _mgf: int | None = None
         _hash_type = None
 
-        def __init__(self, rng=None):
+        def __init__(self, rng: Random | None = None) -> None:
             if rng is None:
                 rng = Random()
 
@@ -707,14 +756,14 @@ if _lib.RSA_ENABLED:
         # making sure _lib.wc_FreeRsaKey outlives RsaKey instances
         _delete = staticmethod(_lib.wc_FreeRsaKey)
 
-        def __del__(self):
+        def __del__(self) -> None:
             if self.native_object:
                 self._delete(self.native_object)
 
-        def set_mgf(self, mgf):
+        def set_mgf(self, mgf: int) -> None:
             self._mgf = mgf
 
-        def _get_mgf(self):
+        def _get_mgf(self) -> None:
             if self._hash_type == _lib.WC_HASH_TYPE_SHA:
                 self._mgf = _lib.WC_MGF1SHA1
             elif self._hash_type == _lib.WC_HASH_TYPE_SHA224:
@@ -730,19 +779,17 @@ if _lib.RSA_ENABLED:
 
 
 
-    class RsaPublic(_Rsa):
-        def __init__(self, key=None, hash_type=None, rng=None):
+    class RsaPublic(_Rsa, SupportsRsaVerify):
+        def __init__(self, key: BytesOrStr, hash_type: int | None = None, rng: Random | None = None) -> None:
             super().__init__(rng)
 
-            if key is not None:
-                key = t2b(key)
+            key = t2b(key)
             self._hash_type = hash_type
 
             idx = _ffi.new("word32*")
             idx[0] = 0
 
-            ret = _lib.wc_RsaPublicKeyDecode(key, idx,
-                    self.native_object, len(key))
+            ret = _lib.wc_RsaPublicKeyDecode(key, idx, self.native_object, len(key))
             if ret < 0:
                 raise WolfCryptApiError("Invalid key error", ret)
 
@@ -753,11 +800,11 @@ if _lib.RSA_ENABLED:
 
         if _lib.ASN_ENABLED:
             @classmethod
-            def from_pem(cls, file, hash_type=None, rng=None):
+            def from_pem(cls, file: bytes, hash_type: int | None = None, rng: Random | None = None) -> RsaPublic:
                 der = pem_to_der(file, _lib.PUBLICKEY_TYPE)
                 return cls(key=der, hash_type=hash_type, rng=rng)
 
-        def encrypt(self, plaintext):
+        def encrypt(self, plaintext: BytesOrStr) -> bytes:
             """
             Encrypts **plaintext**, using the public key data in the
             object. The plaintext's length must not be greater than:
@@ -780,7 +827,7 @@ if _lib.RSA_ENABLED:
 
             return _ffi.buffer(ciphertext)[:]
 
-        def encrypt_oaep(self, plaintext, label=""):
+        def encrypt_oaep(self, plaintext: BytesOrStr, label: BytesOrStr = "") -> bytes:
             if not self._hash_type:
                 raise WolfCryptError("Hash type not set. Cannot use OAEP padding without a hash type.")
             plaintext = t2b(plaintext)
@@ -788,6 +835,7 @@ if _lib.RSA_ENABLED:
             ciphertext = _ffi.new(f"byte[{self.output_size}]")
             if self._mgf is None:
                 self._get_mgf()
+                assert self._mgf is not None
             ret = _lib.wc_RsaPublicEncrypt_ex(plaintext, len(plaintext),
                                               ciphertext, self.output_size,
                                               self.native_object,
@@ -800,7 +848,8 @@ if _lib.RSA_ENABLED:
 
             return _ffi.buffer(ciphertext)[:]
 
-        def verify(self, signature):
+        @override
+        def verify(self, signature: BytesOrStr) -> bytes:
             """
             Verifies **signature**, using the public key data in the
             object. The signature's length must be equal to:
@@ -822,7 +871,7 @@ if _lib.RSA_ENABLED:
             return _ffi.buffer(plaintext, ret)[:]
 
         if _lib.RSA_PSS_ENABLED:
-            def verify_pss(self, plaintext, signature):
+            def verify_pss(self, plaintext: BytesOrStr, signature: BytesOrStr) -> bool:
                 """
                 Verifies **signature**, using the public key data in the
                 object. The signature's length must be equal to:
@@ -842,6 +891,7 @@ if _lib.RSA_ENABLED:
                 signature = t2b(signature)
                 if self._mgf is None:
                     self._get_mgf()
+                    assert self._mgf is not None
                 verify = _ffi.new(f"byte[{self.output_size}]")
 
                 ret = _lib.wc_RsaPSS_Verify(signature, len(signature),
@@ -862,16 +912,16 @@ if _lib.RSA_ENABLED:
                 return ret == 0
 
 
-    class RsaPrivate(RsaPublic):
+    class RsaPrivate(RsaPublic, SupportsRsaSign):
         if _lib.KEYGEN_ENABLED:
             @classmethod
-            def make_key(cls, size, rng=None, hash_type=None):
+            def make_key(cls, size: int, rng: Random | None = None, hash_type: int | None = None) -> RsaPrivate:
                 """
                 Generates a new key pair of desired length **size**.
                 """
                 if rng is None:
                     rng = Random()
-                rsa = cls(hash_type=hash_type)
+                rsa = cls(hash_type=hash_type, rng=rng)
 
                 ret = _lib.wc_MakeRsaKey(rsa.native_object, size, 65537,
                         rng.native_object)
@@ -883,12 +933,9 @@ if _lib.RSA_ENABLED:
                 if rsa.output_size < 0:  # pragma: no cover
                     raise WolfCryptApiError("Invalid key size error", rsa.output_size)
 
-                # Retain RNG reference defensively.
-                rsa._rng = rng
-
                 return rsa
 
-        def __init__(self, key=None, hash_type=None, rng=None):  # pylint: disable=super-init-not-called
+        def __init__(self, key: BytesOrStr | None = None, hash_type: int | None = None, rng: Random | None = None) -> None:  # pylint: disable=super-init-not-called
 
             _Rsa.__init__(self, rng)  # pylint: disable=non-parent-init-called
             self._hash_type = hash_type
@@ -921,13 +968,14 @@ if _lib.RSA_ENABLED:
                     raise WolfCryptApiError("Invalid key size error", self.output_size)
 
         if _lib.ASN_ENABLED:
+            @override
             @classmethod
-            def from_pem(cls, file, hash_type=None, rng=None):
+            def from_pem(cls, file: bytes, hash_type: int | None = None, rng: Random | None = None) -> RsaPrivate:
                 der = pem_to_der(file, _lib.PRIVATEKEY_TYPE)
                 return cls(key=der, hash_type=hash_type, rng=rng)
 
         if _lib.KEYGEN_ENABLED:
-            def encode_key(self):
+            def encode_key(self) -> tuple[bytes, bytes]:
                 """
                 Encodes the RSA private and public keys in an ASN sequence.
 
@@ -949,7 +997,7 @@ if _lib.RSA_ENABLED:
                 return _ffi.buffer(priv, privlen)[:], _ffi.buffer(pub,
                         publen)[:]
 
-        def decrypt(self, ciphertext):
+        def decrypt(self, ciphertext: BytesOrStr) -> bytes:
             """
             Decrypts **ciphertext**, using the private key data in the
             object. The ciphertext's length must be equal to:
@@ -970,7 +1018,7 @@ if _lib.RSA_ENABLED:
 
             return _ffi.buffer(plaintext, ret)[:]
 
-        def decrypt_oaep(self, ciphertext, label=""):
+        def decrypt_oaep(self, ciphertext: BytesOrStr, label: BytesOrStr = "") -> bytes:
             """
             Decrypts **ciphertext**, using the private key data in the
             object. The ciphertext's length must be equal to:
@@ -986,6 +1034,7 @@ if _lib.RSA_ENABLED:
             plaintext = _ffi.new(f"byte[{self.output_size}]")
             if self._mgf is None:
                 self._get_mgf()
+                assert self._mgf is not None
             ret = _lib.wc_RsaPrivateDecrypt_ex(ciphertext, len(ciphertext),
                                                plaintext, self.output_size,
                                                self.native_object,
@@ -997,7 +1046,8 @@ if _lib.RSA_ENABLED:
 
             return _ffi.buffer(plaintext, ret)[:]
 
-        def sign(self, plaintext):
+        @override
+        def sign(self, plaintext: BytesOrStr) -> bytes:
             """
             Signs **plaintext**, using the private key data in the object.
             The plaintext's length must not be greater than:
@@ -1020,7 +1070,7 @@ if _lib.RSA_ENABLED:
             return _ffi.buffer(signature, self.output_size)[:]
 
         if _lib.RSA_PSS_ENABLED:
-            def sign_pss(self, plaintext):
+            def sign_pss(self, plaintext: BytesOrStr) -> bytes:
                 """
                 Signs **plaintext**, using the private key data in the object.
                 The plaintext's length must not be greater than:
@@ -1042,6 +1092,7 @@ if _lib.RSA_ENABLED:
                 signature = _ffi.new(f"byte[{self.output_size}]")
                 if self._mgf is None:
                     self._get_mgf()
+                    assert self._mgf is not None
 
                 ret = _lib.wc_RsaPSS_Sign(digest, len(digest),
                                           signature, self.output_size,
@@ -1057,7 +1108,7 @@ if _lib.RSA_ENABLED:
 
 if _lib.ECC_ENABLED:
     class _Ecc:  # pylint: disable=too-few-public-methods
-        def __init__(self):
+        def __init__(self) -> None:
             self.native_object = _ffi.new("ecc_key *")
             ret = _lib.wc_ecc_init(self.native_object)
             if ret < 0:  # pragma: no cover
@@ -1066,27 +1117,27 @@ if _lib.ECC_ENABLED:
         # making sure _lib.wc_ecc_free outlives ecc_key instances
         _delete = staticmethod(_lib.wc_ecc_free)
 
-        def __del__(self):
+        def __del__(self) -> None:
             if self.native_object:
                 self._delete(self.native_object)
 
         @property
-        def size(self):
+        def size(self) -> int:
             return _lib.wc_ecc_size(self.native_object)
 
         @property
-        def max_signature_size(self):
+        def max_signature_size(self) -> int:
             return _lib.wc_ecc_sig_size(self.native_object)
 
 
     class EccPublic(_Ecc):
-        def __init__(self, key=None):
+        def __init__(self, key: BytesOrStr | None = None) -> None:
             _Ecc.__init__(self)
 
             if key:
                 self.decode_key(key)
 
-        def decode_key(self, key):
+        def decode_key(self, key: BytesOrStr) -> None:
             """
             Decodes an ECC public key from an ASN sequence.
             """
@@ -1104,7 +1155,7 @@ if _lib.ECC_ENABLED:
             if self.max_signature_size <= 0:  # pragma: no cover
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
-        def decode_key_raw(self, qx, qy, curve_id=ECC_SECP256R1):
+        def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
             """
             Decodes an ECC public key from its raw elements: (Qx,Qy)
             """
@@ -1122,7 +1173,7 @@ if _lib.ECC_ENABLED:
             if ret != 0:
                 raise WolfCryptApiError("Key decode error", ret)
 
-        def encode_key(self, with_curve=True):
+        def encode_key(self, with_curve: bool = True) -> bytes:
             """
             Encodes the ECC public key in an ASN sequence.
 
@@ -1137,7 +1188,7 @@ if _lib.ECC_ENABLED:
 
             return _ffi.buffer(key, ret)[:]
 
-        def encode_key_raw(self):
+        def encode_key_raw(self) -> tuple[bytes, bytes]:
             """
             Encodes the ECC public key in its two raw elements
 
@@ -1158,7 +1209,7 @@ if _lib.ECC_ENABLED:
             return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy,
                     qy_size[0])[:]
 
-        def import_x963(self, x963):
+        def import_x963(self, x963: bytes) -> None:
             """
             Imports an ECC public key in ANSI X9.63 format.
             """
@@ -1166,7 +1217,7 @@ if _lib.ECC_ENABLED:
             if ret != 0:
                 raise WolfCryptApiError("x963 import error", ret)
 
-        def export_x963(self):
+        def export_x963(self) -> bytes:
             """
             Exports the public key data of the object in ANSI X9.63 format.
 
@@ -1182,7 +1233,7 @@ if _lib.ECC_ENABLED:
 
             return _ffi.buffer(x963, x963_size[0])[:]
 
-        def verify(self, signature, data):
+        def verify(self, signature: bytes, data: BytesOrStr) -> bool:
             """
             Verifies **signature**, using the public key data in the object.
 
@@ -1201,7 +1252,7 @@ if _lib.ECC_ENABLED:
             return status[0] == 1
 
         if _lib.MPAPI_ENABLED:
-            def verify_raw(self, R, S, data):
+            def verify_raw(self, R: bytes, S: bytes, data: BytesOrStr) -> bool:
                 """
                 Verifies signature from its raw elements **R** and **S**, using
                 the public key data in the object.
@@ -1245,18 +1296,19 @@ if _lib.ECC_ENABLED:
 
     class EccPrivate(EccPublic):
 
-        def __init__(self, key=None, rng=None):
+        def __init__(self, key: BytesOrStr | None = None, rng: Random | None = None) -> None:
             super().__init__(key)
             self._rng = rng
 
         @classmethod
-        def make_key(cls, size, rng=None):
+        def make_key(cls, size: int, rng: Random | None = None) -> EccPrivate:
             """
             Generates a new key pair of desired length **size**.
             """
             if rng is None:
                 rng = Random()
             ecc = cls(rng=rng)
+            assert ecc._rng is not None
 
             ret = _lib.wc_ecc_make_key(ecc._rng.native_object, size,
                     ecc.native_object)
@@ -1271,7 +1323,8 @@ if _lib.ECC_ENABLED:
 
             return ecc
 
-        def decode_key(self, key):
+        @override
+        def decode_key(self, key: BytesOrStr) -> None:
             """
             Decodes an ECC private key from an ASN sequence.
             """
@@ -1289,7 +1342,8 @@ if _lib.ECC_ENABLED:
             if self.max_signature_size <= 0:  # pragma: no cover
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
-        def decode_key_raw(self, qx, qy, d, curve_id=ECC_SECP256R1):
+        @override
+        def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, d: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
             """
             Decodes an ECC private key from its raw elements: public (Qx,Qy)
             and private(d)
@@ -1310,7 +1364,8 @@ if _lib.ECC_ENABLED:
             if ret != 0:
                 raise WolfCryptApiError("Key decode error", ret)
 
-        def encode_key(self):
+        @override
+        def encode_key(self) -> bytes:
             """
             Encodes the ECC private key in an ASN sequence.
 
@@ -1324,7 +1379,8 @@ if _lib.ECC_ENABLED:
 
             return _ffi.buffer(key, ret)[:]
 
-        def encode_key_raw(self):
+        @override
+        def encode_key_raw(self) -> tuple[bytes, bytes, bytes]:
             """
             Encodes the ECC private key in its three raw elements
 
@@ -1348,7 +1404,7 @@ if _lib.ECC_ENABLED:
             return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy,
                     qy_size[0])[:], _ffi.buffer(d, d_size[0])[:]
 
-        def shared_secret(self, peer):
+        def shared_secret(self, peer: EccPublic) -> bytes:
             """
             Generates a new secret key using the private key data in the object
             and the peer's public key.
@@ -1368,7 +1424,7 @@ if _lib.ECC_ENABLED:
 
             return _ffi.buffer(shared_secret, secret_size[0])[:]
 
-        def sign(self, plaintext, rng=None):
+        def sign(self, plaintext: BytesOrStr, rng: Random | None = None) -> bytes:
             """
             Signs **plaintext**, using the private key data in the object.
 
@@ -1393,7 +1449,7 @@ if _lib.ECC_ENABLED:
             return _ffi.buffer(signature, signature_size[0])[:]
 
         if _lib.MPAPI_ENABLED:
-            def sign_raw(self, plaintext, rng=None):
+            def sign_raw(self, plaintext: BytesOrStr, rng: Random | None = None) -> tuple[bytes, bytes]:
                 """
                 Signs **plaintext**, using the private key data in the object.
 
@@ -1441,7 +1497,7 @@ if _lib.ECC_ENABLED:
 
 if _lib.ED25519_ENABLED:
     class _Ed25519:  # pylint: disable=too-few-public-methods
-        def __init__(self):
+        def __init__(self) -> None:
             self.native_object = _ffi.new("ed25519_key *")
             ret = _lib.wc_ed25519_init(self.native_object)
             if ret < 0:  # pragma: no cover
@@ -1450,27 +1506,27 @@ if _lib.ED25519_ENABLED:
         # making sure _lib.wc_ed25519_free outlives ed25519_key instances
         _delete = staticmethod(_lib.wc_ed25519_free)
 
-        def __del__(self):
+        def __del__(self) -> None:
             if self.native_object:
                 self._delete(self.native_object)
 
         @property
-        def size(self):
+        def size(self) -> int:
             return _lib.wc_ed25519_size(self.native_object)
 
         @property
-        def max_signature_size(self):
+        def max_signature_size(self) -> int:
             return _lib.wc_ed25519_sig_size(self.native_object)
 
 
     class Ed25519Public(_Ed25519):
-        def __init__(self, key=None):
+        def __init__(self, key: BytesOrStr | None = None) -> None:
             _Ed25519.__init__(self)
 
             if key:
                 self.decode_key(key)
 
-        def decode_key(self, key):
+        def decode_key(self, key: BytesOrStr) -> None:
             """
             Decodes an ED25519 public key
             """
@@ -1489,7 +1545,7 @@ if _lib.ED25519_ENABLED:
             if self.max_signature_size <= 0:  # pragma: no cover
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
-        def encode_key(self):
+        def encode_key(self) -> bytes:
             """
             Encodes the ED25519 public key
 
@@ -1506,7 +1562,7 @@ if _lib.ED25519_ENABLED:
 
             return _ffi.buffer(key, size[0])[:]
 
-        def verify(self, signature, data):
+        def verify(self, signature: bytes, data: BytesOrStr) -> bool:
             """
             Verifies **signature**, using the public key data in the object.
 
@@ -1527,8 +1583,10 @@ if _lib.ED25519_ENABLED:
 
 
     class Ed25519Private(Ed25519Public):
-        def __init__(self, key=None, pub=None):
+        def __init__(self, key: BytesOrStr | None = None, pub: bytes | None = None) -> None:
             _Ed25519.__init__(self)
+
+            self._rng = None
 
             if key and not pub:
                 self.decode_key(key)
@@ -1536,7 +1594,7 @@ if _lib.ED25519_ENABLED:
                 self.decode_key(key,pub)
 
         @classmethod
-        def make_key(cls, size, rng=None):
+        def make_key(cls, size: int, rng: Random | None = None) -> Ed25519Private:
             """
             Generates a new key pair of desired length **size**.
             """
@@ -1555,7 +1613,8 @@ if _lib.ED25519_ENABLED:
 
             return ed25519
 
-        def decode_key(self, key, pub = None):
+        @override
+        def decode_key(self, key: BytesOrStr, pub: bytes | None = None) -> None:
             """
             Decodes an ED25519 private + pub key
             """
@@ -1591,7 +1650,8 @@ if _lib.ED25519_ENABLED:
             if self.max_signature_size <= 0:  # pragma: no cover
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
-        def encode_key(self):
+        @override
+        def encode_key(self) -> tuple[bytes, bytes]:
             """
             Encodes the ED25519 private key.
 
@@ -1616,7 +1676,7 @@ if _lib.ED25519_ENABLED:
 
             return _ffi.buffer(key, priv_size[0])[:], _ffi.buffer(pubkey, pub_size[0])[:]
 
-        def sign(self, plaintext):
+        def sign(self, plaintext: BytesOrStr) -> bytes:
             """
             Signs **plaintext**, using the private key data in the object.
 
@@ -1639,7 +1699,7 @@ if _lib.ED25519_ENABLED:
 
 if _lib.ED448_ENABLED:
     class _Ed448:  # pylint: disable=too-few-public-methods
-        def __init__(self):
+        def __init__(self) -> None:
             self.native_object = _ffi.new("ed448_key *")
             ret = _lib.wc_ed448_init(self.native_object)
             if ret < 0:  # pragma: no cover
@@ -1648,27 +1708,27 @@ if _lib.ED448_ENABLED:
         # making sure _lib.wc_ed448_free outlives ed448_key instances
         _delete = staticmethod(_lib.wc_ed448_free)
 
-        def __del__(self):
+        def __del__(self) -> None:
             if self.native_object:
                 self._delete(self.native_object)
 
         @property
-        def size(self):
+        def size(self) -> int:
             return _lib.wc_ed448_size(self.native_object)
 
         @property
-        def max_signature_size(self):
+        def max_signature_size(self) -> int:
             return _lib.wc_ed448_sig_size(self.native_object)
 
 
     class Ed448Public(_Ed448):
-        def __init__(self, key=None):
+        def __init__(self, key: BytesOrStr | None = None) -> None:
             _Ed448.__init__(self)
 
             if key:
                 self.decode_key(key)
 
-        def decode_key(self, key):
+        def decode_key(self, key: BytesOrStr) -> None:
             """
             Decodes an ED448 public key
             """
@@ -1687,7 +1747,7 @@ if _lib.ED448_ENABLED:
             if self.max_signature_size <= 0:  # pragma: no cover
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
-        def encode_key(self):
+        def encode_key(self) -> bytes:
             """
             Encodes the ED448 public key
 
@@ -1704,7 +1764,7 @@ if _lib.ED448_ENABLED:
 
             return _ffi.buffer(key, size[0])[:]
 
-        def verify(self, signature, data, ctx=None):
+        def verify(self, signature: bytes, data: BytesOrStr, ctx: BytesOrStr | None = None) -> bool:
             """
             Verifies **signature**, using the public key data in the object.
 
@@ -1733,16 +1793,17 @@ if _lib.ED448_ENABLED:
 
 
     class Ed448Private(Ed448Public):
-        def __init__(self, key=None, pub=None):
+        def __init__(self, key: BytesOrStr | None = None, pub: bytes | None = None) -> None:
             _Ed448.__init__(self)
+            self._rng = None
 
             if key and not pub:
                 self.decode_key(key)
             if key and pub:
-                self.decode_key(key,pub)
+                self.decode_key(key, pub)
 
         @classmethod
-        def make_key(cls, size, rng=None):
+        def make_key(cls, size: int, rng: Random | None = None) -> Ed448Private:
             """
             Generates a new key pair of desired length **size**.
             """
@@ -1761,7 +1822,8 @@ if _lib.ED448_ENABLED:
 
             return ed448
 
-        def decode_key(self, key, pub = None):
+        @override
+        def decode_key(self, key: BytesOrStr, pub: bytes | None = None) -> None:
             """
             Decodes an ED448 private + pub key
             """
@@ -1797,7 +1859,8 @@ if _lib.ED448_ENABLED:
             if self.max_signature_size <= 0:  # pragma: no cover
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
-        def encode_key(self):
+        @override
+        def encode_key(self) -> tuple[bytes, bytes]:
             """
             Encodes the ED448 private key.
 
@@ -1822,7 +1885,7 @@ if _lib.ED448_ENABLED:
 
             return _ffi.buffer(key, priv_size[0])[:], _ffi.buffer(pubkey, pub_size[0])[:]
 
-        def sign(self, plaintext, ctx=None):
+        def sign(self, plaintext: BytesOrStr, ctx : BytesOrStr | None = None) -> bytes:
             """
             Signs **plaintext**, using the private key data in the object.
 
@@ -1873,7 +1936,7 @@ if _lib.ML_KEM_ENABLED:
     class _MlKemBase:
         INVALID_DEVID = _lib.INVALID_DEVID
 
-        def __init__(self, mlkem_type):
+        def __init__(self, mlkem_type: MlKemType) -> None:
             self.init_done = False
             self.native_object = _ffi.new("KyberKey *")
             ret = _lib.wc_KyberKey_Init(
@@ -1884,13 +1947,14 @@ if _lib.ML_KEM_ENABLED:
                 raise WolfCryptApiError("wc_KyberKey_Init() error", ret)
 
             self.init_done = True
+            self._rng = None
 
-        def __del__(self):
+        def __del__(self) -> None:
             if self.init_done:
                 _lib.wc_KyberKey_Free(self.native_object)
 
         @property
-        def ct_size(self):
+        def ct_size(self) -> int:
             """
             :return: cipher text size in bytes
             :rtype: int
@@ -1904,7 +1968,7 @@ if _lib.ML_KEM_ENABLED:
             return len[0]
 
         @property
-        def ss_size(self):
+        def ss_size(self) -> int:
             """
             :return: shared secret size in bytes
             :rtype: int
@@ -1918,7 +1982,7 @@ if _lib.ML_KEM_ENABLED:
             return len[0]
 
         @property
-        def _pub_key_size(self):
+        def _pub_key_size(self) -> int:
             len = _ffi.new("word32 *")
             ret = _lib.wc_KyberKey_PublicKeySize(self.native_object, len)
 
@@ -1927,7 +1991,7 @@ if _lib.ML_KEM_ENABLED:
 
             return len[0]
 
-        def _encode_pub_key(self):
+        def _encode_pub_key(self) -> bytes:
             pub_key_size = self._pub_key_size
             pub_key = _ffi.new(f"unsigned char[{pub_key_size}]")
             ret = _lib.wc_KyberKey_EncodePublicKey(
@@ -1941,21 +2005,21 @@ if _lib.ML_KEM_ENABLED:
 
     class MlKemPublic(_MlKemBase):
         @property
-        def key_size(self):
+        def key_size(self) -> int:
             """
             :return: public key size in bytes
             :rtype: int
             """
             return self._pub_key_size
 
-        def encode_key(self):
+        def encode_key(self) -> bytes:
             """
             :return: exported public key
             :rtype: bytes
             """
             return self._encode_pub_key()
 
-        def decode_key(self, pub_key):
+        def decode_key(self, pub_key: BytesOrStr) -> None:
             """
             :param pub_key: public key to be imported
             :type pub_key: bytes or str
@@ -1963,14 +2027,14 @@ if _lib.ML_KEM_ENABLED:
             pub_key_bytestype = t2b(pub_key)
             ret = _lib.wc_KyberKey_DecodePublicKey(
                 self.native_object,
-                _ffi.from_buffer(pub_key_bytestype),
+                pub_key_bytestype,
                 len(pub_key_bytestype),
             )
 
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("wc_KyberKey_DecodePublicKey() error", ret)
 
-        def encapsulate(self, rng=None):
+        def encapsulate(self, rng: Random | None = None) -> tuple[bytes, bytes]:
             """
             :param rng: random number generator for an encupsulation
             :type rng: Random
@@ -1992,7 +2056,7 @@ if _lib.ML_KEM_ENABLED:
 
             return _ffi.buffer(ss, ss_size)[:], _ffi.buffer(ct, ct_size)[:]
 
-        def encapsulate_with_random(self, rand):
+        def encapsulate_with_random(self, rand: bytes) -> tuple[bytes, bytes]:
             """
             :param rand: random number for an encapsulation
             :type rand: bytes
@@ -2004,7 +2068,7 @@ if _lib.ML_KEM_ENABLED:
             ct = _ffi.new(f"unsigned char[{ct_size}]")
             ss = _ffi.new(f"unsigned char[{ss_size}]")
             ret = _lib.wc_KyberKey_EncapsulateWithRandom(
-                self.native_object, ct, ss, _ffi.from_buffer(rand), len(rand)
+                self.native_object, ct, ss, rand, len(rand)
             )
 
             if ret < 0:  # pragma: no cover
@@ -2014,7 +2078,7 @@ if _lib.ML_KEM_ENABLED:
 
     class MlKemPrivate(_MlKemBase):
         @classmethod
-        def make_key(cls, mlkem_type, rng=None):
+        def make_key(cls, mlkem_type: MlKemType, rng: Random | None = None) -> MlKemPrivate:
             """
             :param mlkem_type: ML-KEM type
             :type mlkem_type: MlKemType
@@ -2037,7 +2101,7 @@ if _lib.ML_KEM_ENABLED:
             return mlkem_priv
 
         @classmethod
-        def make_key_with_random(cls, mlkem_type, rand):
+        def make_key_with_random(cls, mlkem_type: MlKemType, rand: bytes) -> MlKemPrivate:
             """
             :param mlkem_type: ML-KEM type
             :type mlkem_type: MlKemType
@@ -2047,9 +2111,7 @@ if _lib.ML_KEM_ENABLED:
             :rtype: MlKemPrivate
             """
             mlkem_priv = cls(mlkem_type)
-            ret = _lib.wc_KyberKey_MakeKeyWithRandom(
-                mlkem_priv.native_object, _ffi.from_buffer(rand), len(rand)
-            )
+            ret = _lib.wc_KyberKey_MakeKeyWithRandom(mlkem_priv.native_object, rand, len(rand))
 
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("wc_KyberKey_MakeKeyWithRandom() error", ret)
@@ -2057,7 +2119,7 @@ if _lib.ML_KEM_ENABLED:
             return mlkem_priv
 
         @property
-        def pub_key_size(self):
+        def pub_key_size(self) -> int:
             """
             :return: public key size in bytes
             :rtype: int
@@ -2065,7 +2127,7 @@ if _lib.ML_KEM_ENABLED:
             return self._pub_key_size
 
         @property
-        def priv_key_size(self):
+        def priv_key_size(self) -> int:
             """
             :return: private key size in bytes
             :rtype: int
@@ -2078,14 +2140,14 @@ if _lib.ML_KEM_ENABLED:
 
             return len[0]
 
-        def encode_pub_key(self):
+        def encode_pub_key(self) -> bytes:
             """
             :return: exported public key
             :rtype: bytes
             """
             return self._encode_pub_key()
 
-        def encode_priv_key(self):
+        def encode_priv_key(self) -> bytes:
             """
             :return: exported private key
             :rtype: bytes
@@ -2101,7 +2163,7 @@ if _lib.ML_KEM_ENABLED:
 
             return _ffi.buffer(priv_key, priv_key_size)[:]
 
-        def decode_key(self, priv_key: tuple[bytes, str]):
+        def decode_key(self, priv_key: BytesOrStr) -> None:
             """
             :param priv_key: private key to be imported
             :type priv_key: bytes or str
@@ -2109,14 +2171,14 @@ if _lib.ML_KEM_ENABLED:
             priv_key_bytestype = t2b(priv_key)
             ret = _lib.wc_KyberKey_DecodePrivateKey(
                 self.native_object,
-                _ffi.from_buffer(priv_key_bytestype),
+                priv_key_bytestype,
                 len(priv_key_bytestype),
             )
 
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("wc_KyberKey_DecodePrivateKey() error", ret)
 
-        def decapsulate(self, ct):
+        def decapsulate(self, ct: BytesOrStr) -> bytes:
             """
             :param ct: cipher text
             :type ct: bytes or str
@@ -2129,7 +2191,7 @@ if _lib.ML_KEM_ENABLED:
             ret = _lib.wc_KyberKey_Decapsulate(
                 self.native_object,
                 ss,
-                _ffi.from_buffer(ct_bytestype),
+                ct_bytestype,
                 len(ct_bytestype),
             )
 
@@ -2164,7 +2226,7 @@ if _lib.ML_DSA_ENABLED:
         INVALID_DEVID = _lib.INVALID_DEVID
         ML_DSA_KEYGEN_SEED_LENGTH = _lib.DILITHIUM_SEED_SZ
 
-        def __init__(self, mldsa_type):
+        def __init__(self, mldsa_type: MlDsaType) -> None:
             self._init_done = False
             self.native_object = _ffi.new("dilithium_key *")
             ret = _lib.wc_dilithium_init_ex(
@@ -2174,6 +2236,7 @@ if _lib.ML_DSA_ENABLED:
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("wc_dilithium_init_ex() error", ret)
 
+            self._rng = None
             self._init_done = True
 
             ret = _lib.wc_dilithium_set_level(self.native_object, mldsa_type)
@@ -2181,12 +2244,12 @@ if _lib.ML_DSA_ENABLED:
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("wc_dilithium_set_level() error", ret)
 
-        def __del__(self):
+        def __del__(self) -> None:
             if self._init_done:
                 _lib.wc_dilithium_free(self.native_object)
 
         @property
-        def _pub_key_size(self):
+        def _pub_key_size(self) -> int:
             size = _ffi.new("int *")
             ret = _lib.wc_MlDsaKey_GetPubLen(self.native_object, size)
 
@@ -2196,7 +2259,7 @@ if _lib.ML_DSA_ENABLED:
             return size[0]
 
         @property
-        def sig_size(self):
+        def sig_size(self) -> int:
             """
             :return: signature size in bytes
             :rtype: int
@@ -2209,10 +2272,10 @@ if _lib.ML_DSA_ENABLED:
 
             return size[0]
 
-        def _decode_pub_key(self, pub_key):
+        def _decode_pub_key(self, pub_key: BytesOrStr) -> None:
             pub_key_bytestype = t2b(pub_key)
             ret = _lib.wc_dilithium_import_public(
-                _ffi.from_buffer(pub_key_bytestype),
+                pub_key_bytestype,
                 len(pub_key_bytestype),
                 self.native_object,
             )
@@ -2220,7 +2283,7 @@ if _lib.ML_DSA_ENABLED:
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("wc_dilithium_import_public() error", ret)
 
-        def _encode_pub_key(self):
+        def _encode_pub_key(self) -> bytes:
             in_size = self._pub_key_size
             pub_key = _ffi.new(f"byte[{in_size}]")
             out_size = _ffi.new("word32 *")
@@ -2235,7 +2298,7 @@ if _lib.ML_DSA_ENABLED:
 
             return _ffi.buffer(pub_key, out_size[0])[:]
 
-        def verify(self, signature, message, ctx=None):
+        def verify(self, signature: BytesOrStr, message: BytesOrStr, ctx: BytesOrStr | None = None) -> bool:
             """
             :param signature: signature to be verified
             :type signature: bytes or str
@@ -2253,11 +2316,11 @@ if _lib.ML_DSA_ENABLED:
             if ctx is not None:
                 ctx_bytestype = t2b(ctx)
                 ret = _lib.wc_dilithium_verify_ctx_msg(
-                    _ffi.from_buffer(sig_bytestype),
+                    sig_bytestype,
                     len(sig_bytestype),
-                    _ffi.from_buffer(ctx_bytestype),
+                    ctx_bytestype,
                     len(ctx_bytestype),
-                    _ffi.from_buffer(msg_bytestype),
+                    msg_bytestype,
                     len(msg_bytestype),
                     res,
                     self.native_object,
@@ -2266,9 +2329,9 @@ if _lib.ML_DSA_ENABLED:
                     raise WolfCryptApiError("wc_dilithium_verify_ctx_msg() error", ret)
             else:
                 ret = _lib.wc_dilithium_verify_msg(
-                    _ffi.from_buffer(sig_bytestype),
+                    sig_bytestype,
                     len(sig_bytestype),
-                    _ffi.from_buffer(msg_bytestype),
+                    msg_bytestype,
                     len(msg_bytestype),
                     res,
                     self.native_object,
@@ -2281,7 +2344,7 @@ if _lib.ML_DSA_ENABLED:
     class MlDsaPrivate(_MlDsaBase):
         
         @classmethod
-        def make_key(cls, mldsa_type, rng=None):
+        def make_key(cls, mldsa_type: MlDsaType, rng: Random | None = None) -> MlDsaPrivate:
             """
             :param mldsa_type: ML-DSA type
             :type mldsa_type: MlDsaType
@@ -2306,7 +2369,7 @@ if _lib.ML_DSA_ENABLED:
             return mldsa_priv
 
         @classmethod
-        def make_key_from_seed(cls, mldsa_type, seed):
+        def make_key_from_seed(cls, mldsa_type: MlDsaType, seed: bytes) -> MlDsaPrivate:
             """
             Deterministically generate the key from a seed.
 
@@ -2316,19 +2379,18 @@ if _lib.ML_DSA_ENABLED:
             :type seed: bytes
             """
             mldsa_priv = cls(mldsa_type)
-            try:
-                seed_view = memoryview(seed)
-            except TypeError as exception:
-                raise TypeError(
-                    "seed must support the buffer protocol, such as `bytes` or `bytearray`"
-                ) from exception
-            if len(seed_view) != cls.ML_DSA_KEYGEN_SEED_LENGTH:
-                raise ValueError(
-                    f"Seed for generating ML-DSA key must be {cls.ML_DSA_KEYGEN_SEED_LENGTH} bytes"
-                )
 
-            ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object,
-                    _ffi.from_buffer(seed_view))
+            try:
+                memoryview(seed)
+            except TypeError as exception:
+                raise TypeError("seed must support the buffer protocol, such as `bytes` or `bytearray`") from exception
+
+            seed = bytes(seed)
+
+            if len(seed) != cls.ML_DSA_KEYGEN_SEED_LENGTH:
+                raise ValueError(f"Seed for generating ML-DSA key must be {cls.ML_DSA_KEYGEN_SEED_LENGTH} bytes")
+
+            ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object, seed)
 
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("wc_dilithium_make_key_from_seed() error", ret)
@@ -2336,7 +2398,7 @@ if _lib.ML_DSA_ENABLED:
             return mldsa_priv
 
         @property
-        def pub_key_size(self):
+        def pub_key_size(self) -> int:
             """
             :return: public key size in bytes
             :rtype: int
@@ -2344,7 +2406,7 @@ if _lib.ML_DSA_ENABLED:
             return self._pub_key_size
 
         @property
-        def priv_key_size(self):
+        def priv_key_size(self) -> int:
             """
             :return: private key size in bytes
             :rtype: int
@@ -2357,14 +2419,14 @@ if _lib.ML_DSA_ENABLED:
 
             return size[0] - self.pub_key_size
 
-        def encode_pub_key(self):
+        def encode_pub_key(self) -> bytes:
             """
             :return: exported public key
             :rtype: bytes
             """
             return self._encode_pub_key()
 
-        def encode_priv_key(self):
+        def encode_priv_key(self) -> bytes:
             """
             :return: exported private key
             :rtype: bytes
@@ -2385,7 +2447,7 @@ if _lib.ML_DSA_ENABLED:
 
             return _ffi.buffer(priv_key, out_size[0])[:]
 
-        def decode_key(self, priv_key, pub_key=None):
+        def decode_key(self, priv_key: BytesOrStr, pub_key: BytesOrStr | None = None) -> None:
             """
             :param priv_key: private key to be imported
             :type priv_key: bytes or str
@@ -2394,7 +2456,7 @@ if _lib.ML_DSA_ENABLED:
             """
             priv_key_bytestype = t2b(priv_key)
             ret = _lib.wc_dilithium_import_private(
-                _ffi.from_buffer(priv_key_bytestype),
+                priv_key_bytestype,
                 len(priv_key_bytestype),
                 self.native_object,
             )
@@ -2405,7 +2467,7 @@ if _lib.ML_DSA_ENABLED:
             if pub_key is not None:
                 self._decode_pub_key(pub_key)
 
-        def sign(self, message, rng=None, ctx=None):
+        def sign(self, message: BytesOrStr, rng: Random | None = None, ctx: BytesOrStr | None = None) -> bytes:
             """
             :param message: message to be signed
             :type message: bytes or str
@@ -2429,9 +2491,9 @@ if _lib.ML_DSA_ENABLED:
                 if len(ctx_bytestype) > 255:
                     raise ValueError(f"context length {len(ctx_bytestype)} too large: must be 255 bytes or less")
                 ret = _lib.wc_dilithium_sign_ctx_msg(
-                    _ffi.from_buffer(ctx_bytestype),
+                    ctx_bytestype,
                     len(ctx_bytestype),  # length must be < 256 bytes
-                    _ffi.from_buffer(msg_bytestype),
+                    msg_bytestype,
                     len(msg_bytestype),
                     signature,
                     out_size,
@@ -2442,7 +2504,7 @@ if _lib.ML_DSA_ENABLED:
                     raise WolfCryptApiError("wc_dilithium_sign_ctx_msg() error", ret)
             else:
                 ret = _lib.wc_dilithium_sign_msg(
-                    _ffi.from_buffer(msg_bytestype),
+                    msg_bytestype,
                     len(msg_bytestype),
                     signature,
                     out_size,
@@ -2457,7 +2519,7 @@ if _lib.ML_DSA_ENABLED:
 
             return _ffi.buffer(signature, out_size[0])[:]
 
-        def sign_with_seed(self, message, seed, ctx=None):
+        def sign_with_seed(self, message: BytesOrStr, seed: bytes, ctx: BytesOrStr | None = None) -> bytes:
             """
             :param message: message to be signed
             :type message: bytes or str
@@ -2475,16 +2537,14 @@ if _lib.ML_DSA_ENABLED:
             out_size[0] = in_size
 
             try:
-                seed_view = memoryview(seed)
+                memoryview(seed)
             except TypeError as exception:
-                raise TypeError(
-                    "seed must support the buffer protocol, such as `bytes` or `bytearray`"
-                ) from exception
-            if len(seed_view) != ML_DSA_SIGNATURE_SEED_LENGTH:
-                raise ValueError(
-                    f"Seed for generating a signature must be {ML_DSA_SIGNATURE_SEED_LENGTH}"
-                    "bytes."
-                )
+                raise TypeError("seed must support the buffer protocol, such as `bytes` or `bytearray`") from exception
+
+            seed = bytes(seed)
+
+            if len(seed) != ML_DSA_SIGNATURE_SEED_LENGTH:
+                raise ValueError(f"Seed for generating a signature must be {ML_DSA_SIGNATURE_SEED_LENGTH} bytes.")
 
             if ctx is not None:
                 ctx_bytestype = t2b(ctx)
@@ -2493,25 +2553,25 @@ if _lib.ML_DSA_ENABLED:
                         f"context length {len(ctx_bytestype)} too large: must be 255 or less"
                     )
                 ret = _lib.wc_dilithium_sign_ctx_msg_with_seed(
-                    _ffi.from_buffer(ctx_bytestype),
+                    ctx_bytestype,
                     len(ctx_bytestype),  # length must be < 256 bytes
-                    _ffi.from_buffer(msg_bytestype),
+                    msg_bytestype,
                     len(msg_bytestype),
                     signature,
                     out_size,
                     self.native_object,
-                    _ffi.from_buffer(seed_view),
+                    seed,
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_ctx_msg_with_seed() error", ret)
             else:
                 ret = _lib.wc_dilithium_sign_msg_with_seed(
-                    _ffi.from_buffer(msg_bytestype),
+                    msg_bytestype,
                     len(msg_bytestype),
                     signature,
                     out_size,
                     self.native_object,
-                    _ffi.from_buffer(seed_view),
+                    seed,
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_msg_with_seed() error", ret)
@@ -2524,21 +2584,21 @@ if _lib.ML_DSA_ENABLED:
 
     class MlDsaPublic(_MlDsaBase):
         @property
-        def key_size(self):
+        def key_size(self) -> int:
             """
             :return: public key size in bytes
             :rtype: int
             """
             return self._pub_key_size
 
-        def decode_key(self, pub_key):
+        def decode_key(self, pub_key: BytesOrStr) -> None:
             """
             :param pub_key: public key to be imported
             :type pub_key: bytes or str
             """
-            return self._decode_pub_key(pub_key)
+            self._decode_pub_key(pub_key)
 
-        def encode_key(self):
+        def encode_key(self) -> bytes:
             """
             :return: exported public key
             :rtype: bytes

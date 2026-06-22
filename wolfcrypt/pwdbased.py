@@ -20,13 +20,15 @@
 
 # pylint: disable=no-member,no-name-in-module
 
+from __future__ import annotations
+
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 
 from wolfcrypt.exceptions import WolfCryptApiError
 
 if _lib.PWDBASED_ENABLED:
-    def PBKDF2(password, salt, iterations, key_length, hash_type):
+    def PBKDF2(password: bytes | str, salt: bytes | str, iterations: int, key_length: int, hash_type: int) -> bytes:
         if isinstance(salt, str):
             salt = str.encode(salt)
 

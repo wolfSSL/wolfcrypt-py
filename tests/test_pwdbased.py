@@ -19,6 +19,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
 # pylint: disable=redefined-outer-name
+# ty: ignore[possibly-missing-import]
+
 from collections import namedtuple
 import pytest
 from wolfcrypt._ffi import lib as _lib

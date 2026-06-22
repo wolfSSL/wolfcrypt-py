@@ -19,6 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
 # pylint: disable=redefined-outer-name
+# ty: ignore[possibly-missing-import]
 
 from wolfcrypt._ffi import lib as _lib
 
@@ -35,6 +36,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         gcm = AesGcmStream(key, iv)
         buf = gcm.encrypt("hello world")
         authTag = gcm.final()
+        assert authTag is not None
         assert b2h(authTag) == bytes('ac8fcee96dc6ef8e5236da19b6197d2e', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
         gcmdec = AesGcmStream(key, iv)
@@ -48,6 +50,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         gcm = AesGcmStream(key, iv, 12)
         buf = gcm.encrypt("hello world")
         authTag = gcm.final()
+        assert authTag is not None
         assert b2h(authTag) == bytes('ac8fcee96dc6ef8e5236da19', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
         gcmdec = AesGcmStream(key, iv, 12)
@@ -62,6 +65,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         buf = gcm.encrypt("hello")
         buf += gcm.encrypt(" world")
         authTag = gcm.final()
+        assert authTag is not None
         assert b2h(authTag) == bytes('ac8fcee96dc6ef8e5236da19b6197d2e', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
         gcmdec = AesGcmStream(key, iv)
@@ -78,6 +82,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         gcm.set_aad(aad)
         buf = gcm.encrypt("hello world")
         authTag = gcm.final()
+        assert authTag is not None
         print(b2h(authTag))
         assert b2h(authTag) == bytes('8f85338aa0b13f48f8b17482dbb8acca', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
@@ -96,6 +101,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         buf = gcm.encrypt("hello")
         buf += gcm.encrypt(" world")
         authTag = gcm.final()
+        assert authTag is not None
         assert b2h(authTag) == bytes('8f85338aa0b13f48f8b17482dbb8acca', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
         gcmdec = AesGcmStream(key, iv)
@@ -114,6 +120,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         gcm.set_aad(aad)
         buf = gcm.encrypt("hello world")
         authTag = gcm.final()
+        assert authTag is not None
         print(b2h(authTag))
         assert b2h(authTag) == bytes('8f85338aa0b13f48f8b17482dbb8acca', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
@@ -142,6 +149,7 @@ if _lib.AESGCM_STREAM_ENABLED:
             gcm = AesGcmStream(key, iv, tag_bytes=good)
             gcm.encrypt("hello world")
             tag = gcm.final()
+            assert tag is not None
             assert len(tag) == good
 
     def test_decrypt_rejects_wrong_tag_length():
@@ -150,6 +158,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         gcm = AesGcmStream(key, iv, tag_bytes=16)
         buf = gcm.encrypt("hello world")
         authTag = gcm.final()
+        assert authTag is not None
         assert len(authTag) == 16
 
         # Truncated tag: would silently lower the verification window to

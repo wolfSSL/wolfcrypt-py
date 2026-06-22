@@ -55,39 +55,39 @@ def _static_attrs():
     yield Random, "_delete"
 
     if _lib.SHA_ENABLED:
-        from wolfcrypt.hashes import Sha
+        from wolfcrypt.hashes import Sha  # ty: ignore[possibly-missing-import]
         yield Sha, "_delete"
         yield Sha, "_copy"
     if _lib.SHA256_ENABLED:
-        from wolfcrypt.hashes import Sha256
+        from wolfcrypt.hashes import Sha256  # ty: ignore[possibly-missing-import]
         yield Sha256, "_delete"
         yield Sha256, "_copy"
     if _lib.SHA384_ENABLED:
-        from wolfcrypt.hashes import Sha384
+        from wolfcrypt.hashes import Sha384  # ty: ignore[possibly-missing-import]
         yield Sha384, "_delete"
         yield Sha384, "_copy"
     if _lib.SHA512_ENABLED:
-        from wolfcrypt.hashes import Sha512
+        from wolfcrypt.hashes import Sha512  # ty: ignore[possibly-missing-import]
         yield Sha512, "_delete"
         yield Sha512, "_copy"
     if _lib.HMAC_ENABLED:
-        from wolfcrypt.hashes import _Hmac
+        from wolfcrypt.hashes import _Hmac  # ty: ignore[possibly-missing-import]
         yield _Hmac, "_delete"
 
     if _lib.AESGCM_STREAM_ENABLED:
-        from wolfcrypt.ciphers import AesGcmStream
+        from wolfcrypt.ciphers import AesGcmStream  # ty: ignore[possibly-missing-import]
         yield AesGcmStream, "_delete"
     if _lib.RSA_ENABLED:
-        from wolfcrypt.ciphers import _Rsa
+        from wolfcrypt.ciphers import _Rsa  # ty: ignore[possibly-missing-import]
         yield _Rsa, "_delete"
     if _lib.ECC_ENABLED:
-        from wolfcrypt.ciphers import _Ecc
+        from wolfcrypt.ciphers import _Ecc  # ty: ignore[possibly-missing-import]
         yield _Ecc, "_delete"
     if _lib.ED25519_ENABLED:
-        from wolfcrypt.ciphers import _Ed25519
+        from wolfcrypt.ciphers import _Ed25519  # ty: ignore[possibly-missing-import]
         yield _Ed25519, "_delete"
     if _lib.ED448_ENABLED:
-        from wolfcrypt.ciphers import _Ed448
+        from wolfcrypt.ciphers import _Ed448  # ty: ignore[possibly-missing-import]
         yield _Ed448, "_delete"
 
 
@@ -173,7 +173,6 @@ def test_random_delete_receives_only_native_object():
         r = Random()
         native = r.native_object
         r.__del__()
-        r.native_object = None  # prevent real cleanup on the way out
         assert received, "recorder was never called"
         args, kwargs = received[-1]
         assert kwargs == {}

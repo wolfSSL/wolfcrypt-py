@@ -20,23 +20,27 @@
 
 # pylint: disable=no-member,no-name-in-module
 
+from __future__ import annotations
+
 import hmac as _hmac
 
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.exceptions import WolfCryptError, WolfCryptApiError
+from wolfcrypt.hashes import _Hash
+from .wc_types import SupportsRsaSign, SupportsRsaVerify
 
 if _lib.SHA_ENABLED:
-    from wolfcrypt.hashes import Sha
+    from wolfcrypt.hashes import Sha  # ty: ignore[possibly-missing-import]
 if _lib.SHA256_ENABLED:
-    from wolfcrypt.hashes import Sha256
+    from wolfcrypt.hashes import Sha256  # ty: ignore[possibly-missing-import]
 if _lib.SHA384_ENABLED:
-    from wolfcrypt.hashes import Sha384
+    from wolfcrypt.hashes import Sha384  # ty: ignore[possibly-missing-import]
 if _lib.SHA512_ENABLED:
-    from wolfcrypt.hashes import Sha512
+    from wolfcrypt.hashes import Sha512  # ty: ignore[possibly-missing-import]
 
 if _lib.ASN_ENABLED:
-    def pem_to_der(pem, pem_type):
+    def pem_to_der(pem: bytes, pem_type: int) -> bytes:
         der = _ffi.new("DerBuffer**")
         ret = _lib.wc_PemToDer(pem, len(pem), pem_type, der, _ffi.NULL,
                                _ffi.NULL, _ffi.NULL)
@@ -49,7 +53,7 @@ if _lib.ASN_ENABLED:
             _lib.wc_FreeDer(der)
         return result
 
-    def der_to_pem(der, pem_type):
+    def der_to_pem(der: bytes, pem_type: int) -> bytes:
         pem_length = _lib.wc_DerToPemEx(der, len(der), _ffi.NULL, 0, _ffi.NULL,
                                         pem_type)
         if pem_length <= 0:
@@ -63,7 +67,7 @@ if _lib.ASN_ENABLED:
 
         return _ffi.buffer(pem, pem_length)[:]
 
-    def hash_oid_from_class(hash_cls):
+    def hash_oid_from_class(hash_cls: type[_Hash]) -> int:
         if _lib.SHA_ENABLED and hash_cls == Sha:
             return _lib.SHAh
         elif _lib.SHA256_ENABLED and hash_cls == Sha256:
@@ -75,7 +79,7 @@ if _lib.ASN_ENABLED:
         else:
             raise WolfCryptError(f"Unknown hash class {hash_cls.__name__}")
 
-    def make_signature(data, hash_cls, key=None):
+    def make_signature(data: bytes, hash_cls: type[_Hash], key: SupportsRsaSign | None = None) -> bytes:
         hash_obj = hash_cls()
         hash_obj.update(data)
         digest = hash_obj.digest()
@@ -93,7 +97,7 @@ if _lib.ASN_ENABLED:
         else:
             return plaintext_sig
 
-    def check_signature(signature, data, hash_cls, pub_key):
+    def check_signature(signature: bytes, data: bytes, hash_cls: type[_Hash], pub_key: SupportsRsaVerify) -> bool:
         computed_signature = make_signature(data, hash_cls)
         decrypted_signature = pub_key.verify(signature)
         return _hmac.compare_digest(computed_signature, decrypted_signature)
