@@ -1,4 +1,4 @@
-# types.py
+# wc_types.py
 #
 # Copyright (C) 2026 wolfSSL Inc.
 #

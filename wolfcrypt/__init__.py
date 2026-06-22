@@ -50,7 +50,7 @@ if top_level_py not in ["setup.py", "build_ffi.py"]:
 
     if hasattr(_lib, 'WC_RNG_SEED_CB_ENABLED'):
         if _lib.WC_RNG_SEED_CB_ENABLED:
-            ret = _lib.wc_SetSeed_Cb(_ffi.addressof(_lib, "wc_GenerateSeed"))  # ty:ignore[no-matching-overload]
+            ret = _lib.wc_SetSeed_Cb(_ffi.addressof(_lib, "wc_GenerateSeed"))  # ty: ignore[no-matching-overload]
             if ret < 0:
                 raise WolfCryptApiError("wc_SetSeed_Cb failed", ret)
     if _lib.FIPS_ENABLED and _lib.FIPS_VERSION >= 5:

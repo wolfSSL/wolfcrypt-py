@@ -28,7 +28,7 @@ from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.exceptions import WolfCryptError, WolfCryptApiError
 from wolfcrypt.hashes import _Hash
-from .types import SupportsRsaSign, SupportsRsaVerify
+from .wc_types import SupportsRsaSign, SupportsRsaVerify
 
 if _lib.SHA_ENABLED:
     from wolfcrypt.hashes import Sha  # ty: ignore[possibly-missing-import]
