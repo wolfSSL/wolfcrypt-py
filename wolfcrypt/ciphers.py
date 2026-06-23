@@ -523,6 +523,22 @@ if _lib.CHACHA_ENABLED:
                 self.key_size = len(self._key)
             self._IV_nonce = b""
             self._IV_counter = 0
+            # ChaCha takes no IV at construction; set_iv() must be called
+            # before any encrypt()/decrypt() so a real nonce is available.
+            self._iv_set = False
+
+        def encrypt(self, string):
+            self._require_iv()
+            return super().encrypt(string)
+
+        def decrypt(self, string):
+            self._require_iv()
+            return super().decrypt(string)
+
+        def _require_iv(self):
+            if not self._iv_set:
+                raise WolfCryptError(
+                    "set_iv() must be called before encrypt()/decrypt()")
 
         # Sentinel for "rekey both contexts" used by set_iv. Must not
         # collide with _ENCRYPTION (0) or _DECRYPTION (1).
@@ -567,6 +583,7 @@ if _lib.CHACHA_ENABLED:
             if len(self._IV_nonce) != self._NONCE_SIZE:
                 raise ValueError(f"nonce must be {self._NONCE_SIZE} bytes, got {len(self._IV_nonce)}")
             self._IV_counter = counter
+            self._iv_set = True
             ret = self._set_key(self._REKEY_BOTH)
             if ret < 0:
                 raise WolfCryptApiError("ChaCha set_iv error", ret)
