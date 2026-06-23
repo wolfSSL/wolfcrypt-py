@@ -64,3 +64,28 @@ def test_encrypt_decrypt_after_set_iv_roundtrips():
     dec = ChaCha(KEY)
     dec.set_iv(NONCE)
     assert dec.decrypt(ciphertext) == plaintext
+
+
+def test_failed_set_iv_keeps_encrypt_blocked(monkeypatch):
+    """
+    If re-keying fails inside set_iv(), the IV must be treated as not set so
+    encrypt()/decrypt() stay blocked rather than running with a stale or
+    partially-applied IV.
+    """
+    from wolfcrypt.ciphers import ChaCha
+
+    cipher = ChaCha(KEY)
+    # First, establish a valid IV so a later failure would otherwise leave
+    # _iv_set True under the old ordering.
+    cipher.set_iv(NONCE)
+
+    monkeypatch.setattr(cipher, "_set_key", lambda direction: -1)
+    with pytest.raises(WolfCryptError):
+        cipher.set_iv(NONCE)
+    monkeypatch.undo()  # restore real _set_key
+
+    # The failed re-key must have cleared the "IV is set" state, so encrypt()
+    # refuses here. Under the old ordering _iv_set stayed True and this
+    # encrypt() would instead run with a stale IV.
+    with pytest.raises(WolfCryptError):
+        cipher.encrypt(b"A" * 16)

@@ -159,12 +159,11 @@ class _Cipher:
         """
         Returns a ciphering object, using the secret key contained in
         the string **key**, and using the feedback mode **mode**, which
-        must be one of MODE_* defined in this module.
+        must be one of the supported MODE_* values (MODE_CBC, MODE_CTR).
 
-        If **mode** is MODE_CBC or MODE_CFB, **IV** must be provided and
-        must be a string of the same length as the block size. Not
-        providing a value of **IV** will result in a ValueError exception
-        being raised.
+        Both supported modes require **IV** to be provided as a string of
+        the same length as the block size. Not providing a value of **IV**
+        will result in a ValueError exception being raised.
         """
         return cls(key, mode, IV)
 
@@ -173,8 +172,9 @@ class _Cipher:
         Encrypts a non-empty string, using the key-dependent data in
         the object, and with the appropriate feedback mode.
 
-        The string's length must be an exact multiple of the algorithm's
-        block size or, in CFB mode, of the segment size.
+        In MODE_CBC the string's length must be an exact multiple of the
+        algorithm's block size. MODE_CTR is a stream mode and imposes no
+        length restriction.
 
         Returns a string containing the ciphertext.
         """
@@ -205,8 +205,9 @@ class _Cipher:
         Decrypts **string**, using the key-dependent data in the
         object and with the appropriate feedback mode.
 
-        The string's length must be an exact multiple of the algorithm's
-        block size or, in CFB mode, of the segment size.
+        In MODE_CBC the string's length must be an exact multiple of the
+        algorithm's block size. MODE_CTR is a stream mode and imposes no
+        length restriction.
 
         Returns a string containing the plaintext.
         """
@@ -583,10 +584,11 @@ if _lib.CHACHA_ENABLED:
             if len(self._IV_nonce) != self._NONCE_SIZE:
                 raise ValueError(f"nonce must be {self._NONCE_SIZE} bytes, got {len(self._IV_nonce)}")
             self._IV_counter = counter
-            self._iv_set = True
+            self._iv_set = False
             ret = self._set_key(self._REKEY_BOTH)
             if ret < 0:
                 raise WolfCryptApiError("ChaCha set_iv error", ret)
+            self._iv_set = True
 
 if _lib.CHACHA20_POLY1305_ENABLED:
     class ChaCha20Poly1305:
