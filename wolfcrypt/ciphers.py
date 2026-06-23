@@ -43,7 +43,9 @@ MODE_CFB = 3  # Cipher Feedback
 MODE_OFB = 5  # Output Feedback
 MODE_CTR = 6  # Counter
 
-_FEEDBACK_MODES = [MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR]
+# Only the modes the generic _Cipher actually supports. MODE_ECB/MODE_CFB/
+# MODE_OFB are defined above for PEP 272 completeness but are not implemented.
+_FEEDBACK_MODES = [MODE_CBC, MODE_CTR]
 
 # ECC curve id
 ECC_CURVE_INVALID = -1
@@ -120,11 +122,9 @@ class _Cipher:
         if mode not in _FEEDBACK_MODES:
             raise ValueError("this mode is not supported")
 
-        if mode == MODE_CBC or mode == MODE_CTR:
-            if IV is None:
-                raise ValueError("this mode requires an 'IV' string")
-        else:
-            raise ValueError("this mode is not supported by this cipher")
+        # Both supported modes (CBC, CTR) require an IV / initial counter.
+        if IV is None:
+            raise ValueError("this mode requires an 'IV' string")
 
         self.mode = mode
 
