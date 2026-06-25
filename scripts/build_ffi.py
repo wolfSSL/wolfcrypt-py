@@ -373,6 +373,9 @@ def get_features(local_wolfssl, features):
     features["ASN"] = 0 if '#define NO_ASN' in defines else 1
     features["WC_RNG_SEED_CB"] = 1 if '#define WC_RNG_SEED_CB' in defines else 0
     features["AESGCM_STREAM"] = 1 if '#define WOLFSSL_AESGCM_STREAM' in defines else 0
+    # Try to read minimum AESGCM authentication tag size from settings, else use default.
+    min_auth_tag_sz = re.search(r'#define\s+WOLFSSL_MIN_AUTH_TAG_SZ\s+(\d+)', '\n'.join(defines))
+    features["MIN_AUTH_TAG_SZ"] = int(min_auth_tag_sz.group(1)) if min_auth_tag_sz else 12
     features["RSA_PSS"] = 1 if '#define WC_RSA_PSS' in defines else 0
     features["CHACHA20_POLY1305"] = 1 if ('#define HAVE_CHACHA' in defines and '#define HAVE_POLY1305' in defines) else 0
     features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
@@ -382,9 +385,6 @@ def get_features(local_wolfssl, features):
     ) else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
-    # Try to read minimum AESGCM authentication tag size from settings, else use default.
-    min_auth_tag_sz = re.search(r'#define\s+WOLFSSL_MIN_AUTH_TAG_SZ\s+(\d+)', '\n'.join(defines))
-    features["MIN_AUTH_TAG_SZ"] = int(min_auth_tag_sz.group(1)) if min_auth_tag_sz else 12
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -499,13 +499,13 @@ def build_ffi(local_wolfssl, features):
         int ASN_ENABLED = {features["ASN"]};
         int WC_RNG_SEED_CB_ENABLED = {features["WC_RNG_SEED_CB"]};
         int AESGCM_STREAM_ENABLED = {features["AESGCM_STREAM"]};
+        int MIN_AUTH_TAG_SZ = {features["MIN_AUTH_TAG_SZ"]};
         int RSA_PSS_ENABLED = {features["RSA_PSS"]};
         int CHACHA20_POLY1305_ENABLED = {features["CHACHA20_POLY1305"]};
         int ML_KEM_ENABLED = {features["ML_KEM"]};
         int ML_DSA_ENABLED = {features["ML_DSA"]};
         int ML_DSA_NO_CTX = {features["ML_DSA_NO_CTX"]};
         int HKDF_ENABLED = {features["HKDF"]};
-        int MIN_AUTH_TAG_SZ = {features["MIN_AUTH_TAG_SZ"]};
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -541,13 +541,13 @@ def build_ffi(local_wolfssl, features):
         extern int ASN_ENABLED;
         extern int WC_RNG_SEED_CB_ENABLED;
         extern int AESGCM_STREAM_ENABLED;
+        extern int MIN_AUTH_TAG_SZ;
         extern int RSA_PSS_ENABLED;
         extern int CHACHA20_POLY1305_ENABLED;
         extern int ML_KEM_ENABLED;
         extern int ML_DSA_ENABLED;
         extern int ML_DSA_NO_CTX;
         extern int HKDF_ENABLED;
-        extern int MIN_AUTH_TAG_SZ;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1378,13 +1378,13 @@ def main(ffibuilder):
         "ASN": 1,
         "WC_RNG_SEED_CB": 0,
         "AESGCM_STREAM": 1,
+        "MIN_AUTH_TAG_SZ": 12,
         "RSA_PSS": 1,
         "CHACHA20_POLY1305": 1,
         "ML_KEM": 1,
         "ML_DSA": 1,
         "ML_DSA_NO_CTX": 0,
         "HKDF": 1,
-        "MIN_AUTH_TAG_SZ": 12,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
