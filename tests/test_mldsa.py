@@ -25,6 +25,7 @@ from wolfcrypt._ffi import lib as _lib
 if _lib.ML_DSA_ENABLED:
     import pytest
     from wolfcrypt.ciphers import MlDsaPrivate, MlDsaPublic, MlDsaType, ML_DSA_SIGNATURE_SEED_LENGTH
+    from wolfcrypt.exceptions import WolfCryptError
     from wolfcrypt.random import Random
 
     @pytest.fixture
@@ -155,6 +156,14 @@ if _lib.ML_DSA_ENABLED:
         if _lib.ML_DSA_NO_CTX:
             # Verify but do not provide a context
             assert not mldsa_pub.verify(signature, message, ctx=None)
+
+        if not _lib.ML_DSA_NO_CTX:
+            with pytest.raises(WolfCryptError):
+                mldsa_priv.sign(message)
+            with pytest.raises(WolfCryptError):
+                mldsa_priv.sign_with_seed(message, bytes(ML_DSA_SIGNATURE_SEED_LENGTH))
+            with pytest.raises(WolfCryptError):
+                mldsa_pub.verify(b'\x00' * mldsa_pub.sig_size, message)
 
         # Verify with wrong context
         assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
