@@ -379,6 +379,9 @@ def get_features(local_wolfssl, features):
     features["ML_DSA_NO_CTX"] = 1 if '#define WOLFSSL_DILITHIUM_NO_CTX' in defines else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
+    # Try to read minimum AESGCM authentication tag size from settings, else use default.
+    min_auth_tag_sz = re.search(r'#define\s+WOLFSSL_MIN_AUTH_TAG_SZ\s+(\d+)', '\n'.join(defines))
+    features["MIN_AUTH_TAG_SZ"] = int(min_auth_tag_sz.group(1)) if min_auth_tag_sz else 12
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -499,6 +502,7 @@ def build_ffi(local_wolfssl, features):
         int ML_DSA_ENABLED = {features["ML_DSA"]};
         int ML_DSA_NO_CTX = {features["ML_DSA_NO_CTX"]};
         int HKDF_ENABLED = {features["HKDF"]};
+        int MIN_AUTH_TAG_SZ = {features["MIN_AUTH_TAG_SZ"]};
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -540,6 +544,7 @@ def build_ffi(local_wolfssl, features):
         extern int ML_DSA_ENABLED;
         extern int ML_DSA_NO_CTX;
         extern int HKDF_ENABLED;
+        extern int MIN_AUTH_TAG_SZ;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1375,6 +1380,7 @@ def main(ffibuilder):
         "ML_KEM": 1,
         "ML_DSA": 1,
         "HKDF": 1,
+        "MIN_AUTH_TAG_SZ": 12,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
