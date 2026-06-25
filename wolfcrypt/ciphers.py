@@ -2241,8 +2241,9 @@ if _lib.ML_DSA_ENABLED:
             :type signature: bytes or str
             :param message: message to be verified
             :type message: bytes or str
-            :param ctx: context (optional)
-            :type ctx: None for no context, str or bytes otherwise
+            :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
+                signing/verification compiled in; pass empty string "" for FIPS-204 empty-context verification).
+            :type ctx: bytes or str. None for no-context verification.
             :return: True if the verification is successful, False otherwise
             :rtype: bool
             """
@@ -2265,7 +2266,7 @@ if _lib.ML_DSA_ENABLED:
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_verify_ctx_msg() error", ret)
             elif not _lib.ML_DSA_NO_CTX:
-                raise WolfCryptError("support verifying without context is disabled")
+                raise WolfCryptError("support for verifying without context is disabled")
             else:
                 ret = _lib.wc_dilithium_verify_msg(
                     _ffi.from_buffer(sig_bytestype),
@@ -2413,8 +2414,9 @@ if _lib.ML_DSA_ENABLED:
             :type message: bytes or str
             :param rng: random number generator for sign
             :type rng: Random
-            :param ctx: context (optional, maximum 255 bytes)
-            :type ctx: None for no context, str or bytes otherwise
+            :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
+                signing/verification compiled in; pass empty string "" for FIPS-204 empty-context signing).
+            :type ctx: bytes or str. None for no-context signing.
             :return: signature
             :rtype: bytes
             """
@@ -2467,8 +2469,9 @@ if _lib.ML_DSA_ENABLED:
             :type message: bytes or str
             :param seed: 32-byte seed for deterministic signature generation.
             :type seed: bytes
-            :param ctx: context (optional, maximum 255 bytes)
-            :type ctx: None for no context, str or bytes otherwise
+            :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
+                signing/verification compiled in; pass empty string "" for FIPS-204 empty-context signing).
+            :type ctx: bytes or str. None for no-context signing.
             :return: signature
             :rtype: bytes
             """
