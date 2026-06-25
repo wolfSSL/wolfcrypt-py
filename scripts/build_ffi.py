@@ -376,7 +376,10 @@ def get_features(local_wolfssl, features):
     features["RSA_PSS"] = 1 if '#define WC_RSA_PSS' in defines else 0
     features["CHACHA20_POLY1305"] = 1 if ('#define HAVE_CHACHA' in defines and '#define HAVE_POLY1305' in defines) else 0
     features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
-    features["ML_DSA_NO_CTX"] = 1 if '#define WOLFSSL_DILITHIUM_NO_CTX' in defines else 0
+    features["ML_DSA_NO_CTX"] = 1 if (
+        '#define WOLFSSL_DILITHIUM_NO_CTX' in defines
+        or '#define WOLFSSL_DILITHIUM_FIPS204_DRAFT' in defines
+    ) else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
     # Try to read minimum AESGCM authentication tag size from settings, else use default.
@@ -1379,6 +1382,7 @@ def main(ffibuilder):
         "CHACHA20_POLY1305": 1,
         "ML_KEM": 1,
         "ML_DSA": 1,
+        "ML_DSA_NO_CTX": 0,
         "HKDF": 1,
         "MIN_AUTH_TAG_SZ": 12,
     }
