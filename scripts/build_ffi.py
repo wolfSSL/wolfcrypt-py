@@ -378,6 +378,7 @@ def get_features(local_wolfssl, features):
     features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
+    features["HASHDRBG"] = 1 if "#define HAVE_HASHDRBG" in defines else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -497,6 +498,7 @@ def build_ffi(local_wolfssl, features):
         int ML_KEM_ENABLED = {features["ML_KEM"]};
         int ML_DSA_ENABLED = {features["ML_DSA"]};
         int HKDF_ENABLED = {features["HKDF"]};
+        int HASHDRBG_ENABLED = {features["HASHDRBG"]};
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -537,6 +539,7 @@ def build_ffi(local_wolfssl, features):
         extern int ML_KEM_ENABLED;
         extern int ML_DSA_ENABLED;
         extern int HKDF_ENABLED;
+        extern int HASHDRBG_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -551,6 +554,10 @@ def build_ffi(local_wolfssl, features):
         int wc_RNG_GenerateByte(WC_RNG*, byte*);
         int wc_FreeRng(WC_RNG*);
     """
+    if features["HASHDRBG"]:
+        cdef += """
+        int wc_RNG_DRBG_Reseed(WC_RNG*, const byte*, word32);
+        """
 
     if features["ERROR_STRINGS"]:
         cdef += """
@@ -1369,6 +1376,7 @@ def main(ffibuilder):
         "ML_KEM": 1,
         "ML_DSA": 1,
         "HKDF": 1,
+        "HASHDRBG": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.

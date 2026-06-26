@@ -21,7 +21,9 @@
 # pylint: disable=redefined-outer-name
 
 import pytest
+from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.random import Random
+from wolfcrypt.exceptions import WolfCryptApiError
 
 
 @pytest.fixture
@@ -48,3 +50,17 @@ def test_nonce_byte(rng_nonce):
 @pytest.mark.parametrize("length", (1, 8, 128))
 def test_nonce_bytes(rng_nonce, length):
     assert len(rng_nonce.bytes(length)) == length
+
+
+@pytest.mark.skipif(not _lib.HASHDRBG_ENABLED, reason="Reseeding only available with hash-DRBG")
+def test_reseed(rng):
+    rng.reseed(b"some seed material for testing")
+    assert len(rng.bytes(32)) == 32
+
+
+@pytest.mark.skipif(not _lib.HASHDRBG_ENABLED, reason="Reseeding only available with hash-DRBG")
+def test_reseed_empty(rng):
+    try:
+        rng.reseed(b"")
+    except WolfCryptApiError:
+        pass  # acceptable — C rejects zero-length seed
