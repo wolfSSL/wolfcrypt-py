@@ -6,8 +6,7 @@ requires-python = ">=3.10"
 authors = [
     {name = "wolfSSL Inc.", email="info@wolfssl.com"},
 ]
-license = "GPL-2.0-only OR LicenseRef-WolfSSL"
-license-files = ["LICENSING.rst"]
+license = {file = "LICENSING.rst"}
 keywords = ["wolfssl", "wolfcrypt", "security", "cryptography"]
 classifiers = [
     "Operating System :: OS Independent",
