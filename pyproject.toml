@@ -41,20 +41,9 @@ dev = [
     "ruff",
     "sphinx",
     "sphinx-rtd-theme",
-    "tox >= 4",
     "ty",
     "types-cffi",
 ]
-
-[tool.tox]
-requires = ["tox>=4"]
-env_list = ["py3"]
-
-[tool.tox.env_run_base]
-package = "wheel"
-deps = ["-rrequirements/test.txt"]
-commands = [["py.test", "tests/"]]
-
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
