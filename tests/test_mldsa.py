@@ -168,6 +168,12 @@ if _lib.ML_DSA_ENABLED:
         # Verify with wrong context
         assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
 
+        # Sign a message with empty context
+        signature = mldsa_priv.sign(message, rng, ctx=b"")
+        assert len(signature) == mldsa_priv.sig_size
+        # Verify message with empty context
+        assert mldsa_pub.verify(signature, message, ctx=b"")
+
     @pytest.mark.skipif(not _lib.ML_DSA_NO_CTX_ENABLED, reason="Requires support for signing without context")
     def test_sign_with_seed(mldsa_type, rng):
         signature_seed = rng.bytes(ML_DSA_SIGNATURE_SEED_LENGTH)
@@ -215,6 +221,9 @@ if _lib.ML_DSA_ENABLED:
         # test that the context length is checked (more than 255 bytes is invalid):
         with pytest.raises(ValueError):
             _ = mldsa_priv.sign_with_seed(message, signature_seed[:-1], ctx=bytes(1000))
+        # Re-generate from the same seed
+        signature_from_same_seed = mldsa_priv.sign_with_seed(message, signature_seed, ctx=context)
+        assert signature == signature_from_same_seed
 
     def test_make_key_from_seed(mldsa_type):
         seed = bytes(MlDsaPrivate.ML_DSA_KEYGEN_SEED_LENGTH)
