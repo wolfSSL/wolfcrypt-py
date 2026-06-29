@@ -20,6 +20,8 @@
 
 # pylint: disable=redefined-outer-name
 
+from contextlib import nullcontext
+
 from wolfcrypt._ffi import lib as _lib
 
 if _lib.AESGCM_STREAM_ENABLED:
@@ -139,12 +141,15 @@ if _lib.AESGCM_STREAM_ENABLED:
                 AesGcmStream(key, iv, tag_bytes=bad)
         # Valid NIST sizes: verify the resulting tag has the requested length.
         for good in (4, 8, 12, 13, 14, 15, 16):
+            expected_error = nullcontext()
             if good < _lib.MIN_AUTH_TAG_SZ:
-                continue
-            gcm = AesGcmStream(key, iv, tag_bytes=good)
-            gcm.encrypt("hello world")
-            tag = gcm.final()
-            assert len(tag) == good
+                # Number of tag bytes not supported by the current build.
+                expected_error = pytest.raises(ValueError, match="not supported by current build configuration")
+            with expected_error:
+                gcm = AesGcmStream(key, iv, tag_bytes=good)
+                gcm.encrypt("hello world")
+                tag = gcm.final()
+                assert len(tag) == good
 
     def test_decrypt_rejects_wrong_tag_length():
         key = "fedcba9876543210"

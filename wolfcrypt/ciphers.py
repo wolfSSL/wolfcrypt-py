@@ -404,6 +404,11 @@ if _lib.AESGCM_STREAM_ENABLED:
             if tag_bytes not in (4, 8, 12, 13, 14, 15, 16):
                 raise ValueError(
                     "tag_bytes must be one of 4, 8, 12, 13, 14, 15, or 16")
+            if tag_bytes < _lib.MIN_AUTH_TAG_SZ:
+                raise ValueError(
+                    f"tag_bytes {tag_bytes} not supported by current build configuration, "
+                    f"minimum: {_lib.MIN_AUTH_TAG_SZ}"
+                )
             # Per-instance state: AAD, tag length, and current mode (enc/dec).
             self._aad = b""
             self._tag_bytes = tag_bytes
