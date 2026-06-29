@@ -504,7 +504,7 @@ def build_ffi(local_wolfssl, features):
         int CHACHA20_POLY1305_ENABLED = {features["CHACHA20_POLY1305"]};
         int ML_KEM_ENABLED = {features["ML_KEM"]};
         int ML_DSA_ENABLED = {features["ML_DSA"]};
-        int ML_DSA_NO_CTX = {features["ML_DSA_NO_CTX"]};
+        int ML_DSA_NO_CTX_ENABLED = {features["ML_DSA_NO_CTX"]};
         int HKDF_ENABLED = {features["HKDF"]};
     """
 
@@ -546,7 +546,7 @@ def build_ffi(local_wolfssl, features):
         extern int CHACHA20_POLY1305_ENABLED;
         extern int ML_KEM_ENABLED;
         extern int ML_DSA_ENABLED;
-        extern int ML_DSA_NO_CTX;
+        extern int ML_DSA_NO_CTX_ENABLED;
         extern int HKDF_ENABLED;
 
         typedef unsigned char byte;

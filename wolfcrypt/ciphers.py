@@ -2265,7 +2265,7 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_verify_ctx_msg() error", ret)
-            elif not _lib.ML_DSA_NO_CTX:
+            elif not _lib.ML_DSA_NO_CTX_ENABLED:
                 raise WolfCryptError("support for verifying without context is disabled")
             else:
                 ret = _lib.wc_dilithium_verify_msg(
@@ -2444,7 +2444,7 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_ctx_msg() error", ret)
-            elif not _lib.ML_DSA_NO_CTX:
+            elif not _lib.ML_DSA_NO_CTX_ENABLED:
                 raise WolfCryptError("support for signing without context is disabled")
             else:
                 ret = _lib.wc_dilithium_sign_msg(
@@ -2511,7 +2511,7 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_ctx_msg_with_seed() error", ret)
-            elif not _lib.ML_DSA_NO_CTX:
+            elif not _lib.ML_DSA_NO_CTX_ENABLED:
                 raise WolfCryptError("support for signing without context is disabled")
             else:
                 ret = _lib.wc_dilithium_sign_msg_with_seed(

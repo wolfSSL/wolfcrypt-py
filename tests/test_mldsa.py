@@ -125,7 +125,7 @@ if _lib.ML_DSA_ENABLED:
         ctx = b"This is a test context for ML-DSA signature"
         wrong_ctx = b"This is a wrong context for ML-DSA signature"
 
-        if _lib.ML_DSA_NO_CTX:
+        if _lib.ML_DSA_NO_CTX_ENABLED:
             signature = mldsa_priv.sign(message, rng)
             assert len(signature) == mldsa_priv.sig_size
 
@@ -153,11 +153,11 @@ if _lib.ML_DSA_ENABLED:
         # Verify the signature by MlDsaPublic
         assert mldsa_pub.verify(signature, message, ctx=ctx)
 
-        if _lib.ML_DSA_NO_CTX:
+        if _lib.ML_DSA_NO_CTX_ENABLED:
             # Verify but do not provide a context
             assert not mldsa_pub.verify(signature, message, ctx=None)
 
-        if not _lib.ML_DSA_NO_CTX:
+        if not _lib.ML_DSA_NO_CTX_ENABLED:
             with pytest.raises(WolfCryptError):
                 mldsa_priv.sign(message)
             with pytest.raises(WolfCryptError):
@@ -168,7 +168,7 @@ if _lib.ML_DSA_ENABLED:
         # Verify with wrong context
         assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
 
-    @pytest.mark.skipif(not _lib.ML_DSA_NO_CTX, reason="Requires support for signing without context")
+    @pytest.mark.skipif(not _lib.ML_DSA_NO_CTX_ENABLED, reason="Requires support for signing without context")
     def test_sign_with_seed(mldsa_type, rng):
         signature_seed = rng.bytes(ML_DSA_SIGNATURE_SEED_LENGTH)
         mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
