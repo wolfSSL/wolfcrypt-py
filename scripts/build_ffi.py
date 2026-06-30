@@ -233,10 +233,10 @@ def make_flags(prefix, fips):
         flags.append("--enable-pkcs7")
 
         # ML-KEM
-        flags.append("--enable-kyber")
+        flags.append("--enable-mlkem")
 
-        # ML-DSA
-        flags.append("--enable-dilithium")
+        # ML-DSA (note: to be able to use the legacy option of signing without context, pass `yes,no-ctx` as argument)
+        flags.append("--enable-mldsa=yes")
 
         # disabling other configs enabled by default
         flags.append("--disable-oldtls")
@@ -378,11 +378,17 @@ def get_features(local_wolfssl, features):
     features["MIN_AUTH_TAG_SZ"] = int(min_auth_tag_sz.group(1)) if min_auth_tag_sz else 12
     features["RSA_PSS"] = 1 if '#define WC_RSA_PSS' in defines else 0
     features["CHACHA20_POLY1305"] = 1 if ('#define HAVE_CHACHA' in defines and '#define HAVE_POLY1305' in defines) else 0
-    features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
-    features["ML_DSA_NO_CTX"] = 1 if (
-        '#define WOLFSSL_DILITHIUM_NO_CTX' in defines
-        or '#define WOLFSSL_DILITHIUM_FIPS204_DRAFT' in defines
-    ) else 0
+    features["ML_DSA"] = 1 if ('#define HAVE_DILITHIUM' in defines or '#define WOLFSSL_HAVE_MLDSA' in defines) else 0
+    # Determine if support for ML-DSDA signing & verification without context has been enabled.
+    mldsa_no_context_defines = [
+        "WOLFSSL_MLDSA_NO_CTX",
+        "WOLFSSL_MLDSA_FIPS204_DRAFT",
+        # Legacy options:
+        "WOLFSSL_DILITHIUM_NO_CTX",
+        "WOLFSSL_DILITHIUM_FIPS204_DRAFT",
+    ]
+    have_mldsa_no_context_support = re.search(r'#define\s+(' + '|'.join(mldsa_no_context_defines) + r')\s+', '\n'.join(defines))
+    features["ML_DSA_NO_CTX"] = 1 if have_mldsa_no_context_support else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
 
