@@ -23,7 +23,6 @@
 import pytest
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.random import Random
-from wolfcrypt.exceptions import WolfCryptApiError
 
 
 @pytest.fixture
@@ -53,14 +52,31 @@ def test_nonce_bytes(rng_nonce, length):
 
 
 @pytest.mark.skipif(not _lib.HASHDRBG_ENABLED, reason="Reseeding only available with hash-DRBG")
-def test_reseed(rng):
-    rng.reseed(b"some seed material for testing")
-    assert len(rng.bytes(32)) == 32
+@pytest.mark.parametrize("seed_size", [0, 1, 32, 1000])
+def test_reseed_sizes(rng, seed_size):
+    """
+    Test that reseeding the random number generator works, for various seed sizes.
+    """
+    # Create seed of required length.
+    seed = bytes(x % 255 for x in range(seed_size))
+    assert len(seed) == seed_size
+    rng.reseed(seed)
+    # Pull some bytes from the random number generator to test that it still works.
+    rng.bytes(32)
 
 
 @pytest.mark.skipif(not _lib.HASHDRBG_ENABLED, reason="Reseeding only available with hash-DRBG")
-def test_reseed_empty(rng):
-    try:
-        rng.reseed(b"")
-    except WolfCryptApiError:
-        pass  # acceptable — C rejects zero-length seed
+def test_reseed_multiple(rng):
+    """
+    Test that consecutive reseeding of the random number generator works.
+    """
+    # Using our own rng for getting random seed sizes.
+    for _ in range(10):
+        # Create seed using random seed size for each call.
+        seed_size = ord(rng.byte())
+        seed = bytes(x % 255 for x in range(seed_size))
+        rng.reseed(seed)
+    
+    # Pull some bytes from the random number generator to test that it still works.
+    num_bytes = ord(rng.byte())
+    rng.bytes(num_bytes)
