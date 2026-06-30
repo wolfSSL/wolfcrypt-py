@@ -45,7 +45,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         gcmdec.final(authTag)
         assert bufdec == t2b("hello world")
 
-    @pytest.mark.skipif(12 < _lib.MIN_AUTH_TAG_SZ, reason="test can only be performed when MIN_AUTH_TAG_SZ is larger than 12")
+    @pytest.mark.skipif(12 < _lib.MIN_AUTH_TAG_SZ, reason="test can only be performed when MIN_AUTH_TAG_SZ <= 12")
     def test_encrypt_short_tag():
         """Known answer encrypt-decrypt test with specific authentication tag size of 12 bytes"""
         key = "fedcba9876543210"
