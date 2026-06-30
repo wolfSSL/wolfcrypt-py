@@ -23,14 +23,14 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    "cffi>=1.0.0,<2",
+    "cffi>=1.17",
 ]
 
 [project.urls]
 Homepage = "https://github.com/wolfssl/wolfcrypt-py"
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "cffi>=1.17"]
 build-backend = "setuptools.build_meta:__legacy__"
 
 [dependency-groups]
