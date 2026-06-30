@@ -1,6 +1,7 @@
-wolfCrypt-py Release 5.9.1 (Jun 4, 2026)
+wolfCrypt-py Release 5.9.2 (Jul 1, 2026)
 ==========================================
 
+* Update to wolfSSL version 5.9.2
 * Make t2b support other types
 * Fix ChaCha20Poly1305 to be singleshot
 * Fix padding of small ECC signatures
@@ -23,7 +24,7 @@ wolfCrypt-py Release 5.9.1 (Jun 4, 2026)
 * Code modernization: f-strings, remove unicode prefix, remove redundant code
 * Fix issue in AES-GCM tag verification
 * Address many small issues found by Fenrir
-* Update to wolfSSL version 5.9.1
+* Add reseed support to random number generator
 
 
 wolfCrypt-py Release 5.8.4 (Jan 7, 2026)
