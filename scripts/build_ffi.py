@@ -545,8 +545,8 @@ def build_ffi(local_wolfssl, features):
         typedef struct { ...; } OS_Seed;
 
         int wc_InitRng(WC_RNG*);
-        int wc_InitRngNonce(WC_RNG*, const byte*, word32);
-        int wc_InitRngNonce_ex(WC_RNG*, const byte*, word32, void*, int);
+        int wc_InitRngNonce(WC_RNG*, byte*, word32);
+        int wc_InitRngNonce_ex(WC_RNG*, byte*, word32, void*, int);
         int wc_RNG_GenerateBlock(WC_RNG*, byte*, word32);
         int wc_RNG_GenerateByte(WC_RNG*, byte*);
         int wc_FreeRng(WC_RNG*);
@@ -1039,11 +1039,11 @@ def build_ffi(local_wolfssl, features):
                                 RsaKey*, WC_RNG*);
         int wc_RsaPublicEncrypt_ex(const byte* in, word32 inLen, byte* out,
                    word32 outLen, RsaKey* key, WC_RNG* rng, int type,
-                   enum wc_HashType hash, int mgf, const byte* label,
+                   enum wc_HashType hash, int mgf, byte* label,
                    word32 labelSz);
         int wc_RsaPrivateDecrypt_ex(const byte* in, word32 inLen,
                    byte* out, word32 outLen, RsaKey* key, int type,
-                   enum wc_HashType hash, int mgf, const byte* label,
+                   enum wc_HashType hash, int mgf, byte* label,
                    word32 labelSz);
         int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
         int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
