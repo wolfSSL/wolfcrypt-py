@@ -392,18 +392,21 @@ if _lib.HMAC_ENABLED:
         A **PEP 247: Cryptographic Hash Functions** compliant
         **Keyed Hash Function Interface**.
 
-        Note: wolfSSL does not provide a `wc_HmacCopy` equivalent, so
-        `copy()` falls back to a byte-level memmove. In default builds the
-        Hmac struct is self-contained and this is safe. In async or
-        hardware-accelerated builds where the struct contains internal
-        pointers, the copy shares those pointers with the original; the
-        copy must not outlive the original or be used after the original
-        is freed.
+        Note: wolfCrypt provides no safe public copy for an `Hmac` object.
+        Byte-copying the struct would alias the original's internal state
+        (e.g. async/hardware-accelerated builds keep pointers there), so
+        `copy()` is not supported and raises `NotImplementedError`.
         """
         digest_size = None
         _native_type = "Hmac *"
         _native_size = _ffi.sizeof("Hmac")
         _delete = staticmethod(_lib.wc_HmacFree)
+
+        def copy(self):
+            raise NotImplementedError(
+                "HMAC objects cannot be safely copied: wolfCrypt has no "
+                "wc_HmacCopy and byte-copying the state would alias the "
+                "original's internal C resources")
 
         def __del__(self):
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
