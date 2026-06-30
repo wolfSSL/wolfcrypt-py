@@ -77,3 +77,13 @@ class Random:
             raise WolfCryptApiError("RNG generate block error", ret)
 
         return _ffi.buffer(result, length)[:]
+
+    if _lib.HASHDRBG_ENABLED:
+        def reseed(self, seed: __builtins__.bytes) -> None:
+            """
+            Reseed the DRBG with the provided seed material.
+            """
+            assert self.native_object is not None
+            ret = _lib.wc_RNG_DRBG_Reseed(self.native_object, seed, len(seed))
+            if ret < 0:  # pragma: no cover
+                raise WolfCryptApiError("RNG reseed error", ret)
