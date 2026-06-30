@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
     - name: Set up Python 3.10
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v6
       with:
         python-version: "3.10"
     - name: Install uv
@@ -29,7 +29,7 @@ jobs:
         # Install a specific version of uv.
         version: "0.11.25"
     - name: Install the project
-      run: uv sync --locked --all-extras --dev
+      run: uv sync --dev
     - name: Perform static checks
       run: uv run ruff check
     - name: Run tests
@@ -43,13 +43,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
       with:
         submodules: recursive
     - name: Set up Python 3.10
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v6
       with:
         python-version: "3.10"
+    - name: Install uv
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      with:
+        # Install a specific version of uv.
+        version: "0.11.25"
     - name: Install build deps
       run: |
         sudo apt-get update
@@ -76,11 +81,6 @@ jobs:
     - name: Install wolfcrypt-py against the local wolfSSL
       env:
         USE_LOCAL_WOLFSSL: ${{ github.workspace }}/wolfssl-install
-    - name: Install uv
-      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-      with:
-        # Install a specific version of uv.
-        version: "0.11.25"
       run: |
         uv venv
         uv pip install -r requirements/test.txt
