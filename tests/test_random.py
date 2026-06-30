@@ -39,12 +39,15 @@ def test_bytes(rng):
     assert len(rng.bytes(8)) == 8
     assert len(rng.bytes(128)) == 128
 
+
 @pytest.fixture
 def rng_nonce():
     return Random(b"abcdefghijklmnopqrstuv")
 
+
 def test_nonce_byte(rng_nonce):
     assert len(rng_nonce.byte()) == 1
+
 
 @pytest.mark.parametrize("length", (1, 8, 128))
 def test_nonce_bytes(rng_nonce, length):
@@ -58,7 +61,7 @@ def test_reseed_sizes(rng, seed_size):
     Test that reseeding the random number generator works, for various seed sizes.
     """
     # Create seed of required length.
-    seed = bytes(x % 255 for x in range(seed_size))
+    seed = bytes(x % 256 for x in range(seed_size))
     assert len(seed) == seed_size
     rng.reseed(seed)
     # Pull some bytes from the random number generator to test that it still works.
@@ -74,9 +77,9 @@ def test_reseed_multiple(rng):
     for _ in range(10):
         # Create seed using random seed size for each call.
         seed_size = ord(rng.byte())
-        seed = bytes(x % 255 for x in range(seed_size))
+        seed = bytes(x % 256 for x in range(seed_size))
         rng.reseed(seed)
-    
+
     # Pull some bytes from the random number generator to test that it still works.
     num_bytes = ord(rng.byte())
     rng.bytes(num_bytes)

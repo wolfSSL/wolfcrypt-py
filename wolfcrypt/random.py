@@ -85,5 +85,5 @@ class Random:
             """
             assert self.native_object is not None
             ret = _lib.wc_RNG_DRBG_Reseed(self.native_object, seed, len(seed))
-            if ret < 0:
+            if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("RNG reseed error", ret)
