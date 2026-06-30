@@ -64,7 +64,7 @@ should be set equal to the installation path for the wolfSSL library:
 
 .. code-block:: bash
 
-    $ USE_LOCAL_WOLFSSL=/path/to/wolfssl/install uv pip install .
+    $ USE_LOCAL_WOLFSSL=/path/to/wolfssl/install uv sync
 
 If building wolfcrypt-py against a local wolfSSL library, wolfcrypt-py
 will attempt to do native feature detection to enable/disable wolfcrypt-py
@@ -73,6 +73,8 @@ features based on how native wolfSSL has been compiled.  It uses the
 
 Testing
 -------
+.. code-block:: console
+   $ uv run python3
 
 .. code-block:: python
 
@@ -81,7 +83,7 @@ Testing
     b'96e02e7b1cbcd6f104fe1fdb4652027a5505b68652b70095c6318f9dce0d1844'
 
 Testing ``wolfcrypt``'s source code with ``pytest``
-------------------------------------------------
+---------------------------------------------------
 
 To run the unit tests in the source code, you'll need ``uv`` and a few other
 requirements.
@@ -90,7 +92,7 @@ requirements.
 
 .. code-block:: console
 
-    $ uv run sync --dev
+    $ uv sync --dev
 
 
 2. Run ``pytest``:
