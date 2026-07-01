@@ -1,7 +1,30 @@
-wolfCrypt-py Release next (TBD, 2026)
+wolfCrypt-py Release 5.9.2 (Jul 1, 2026)
+==========================================
 
+* Update to wolfSSL version 5.9.2
+* Make t2b support other types
+* Fix ChaCha20Poly1305 to be singleshot
+* Fix padding of small ECC signatures
+* ML-DSA: Add support for generating private key deterministically from seed
+* ML-DSA: Add support for deterministic signing
+* ML-DSA: Add support for signing and verifying with context
 * Drop support for end-of-life Python versions (<= 3.9)
 * Add extra nonce parameter to Random generator
+* Add type annotations to utils and random
+* Add pyproject.toml for modern Python packaging
+* Fix AES-SIV silently mangling associated data
+* Fix ChaCha decrypt stream state wiping on first call
+* Fix Random AttributeError on builds without ML-KEM/ML-DSA
+* Fix Ed448 ctx cdef to match wolfSSL header signature
+* Fix wc_ecc_import_unsigned cdef to match wolfSSL header
+* Fix wc_RsaPSS_Verify const qualifier in cdef
+* Fix wc_GetPkcs8TraditionalOffset non-const bytes handling
+* Validate raw element lengths in EccPublic/EccPrivate.decode_key_raw
+* Improve WolfCryptError exception to include error return value
+* Code modernization: f-strings, remove unicode prefix, remove redundant code
+* Fix issue in AES-GCM tag verification
+* Address many small issues found by Fenrir
+* Add reseed support to random number generator
 
 
 wolfCrypt-py Release 5.8.4 (Jan 7, 2026)

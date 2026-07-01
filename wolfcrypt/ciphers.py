@@ -404,6 +404,11 @@ if _lib.AESGCM_STREAM_ENABLED:
             if tag_bytes not in (4, 8, 12, 13, 14, 15, 16):
                 raise ValueError(
                     "tag_bytes must be one of 4, 8, 12, 13, 14, 15, or 16")
+            if tag_bytes < _lib.MIN_AUTH_TAG_SZ:
+                raise ValueError(
+                    f"tag_bytes {tag_bytes} not supported by current build configuration, "
+                    f"minimum: {_lib.MIN_AUTH_TAG_SZ}"
+                )
             # Per-instance state: AAD, tag length, and current mode (enc/dec).
             self._aad = b""
             self._tag_bytes = tag_bytes
@@ -2241,8 +2246,9 @@ if _lib.ML_DSA_ENABLED:
             :type signature: bytes or str
             :param message: message to be verified
             :type message: bytes or str
-            :param ctx: context (optional)
-            :type ctx: None for no context, str or bytes otherwise
+            :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
+                signing/verification compiled in; pass empty string "" for FIPS-204 empty-context verification).
+            :type ctx: bytes or str. None for no-context verification.
             :return: True if the verification is successful, False otherwise
             :rtype: bool
             """
@@ -2264,6 +2270,8 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_verify_ctx_msg() error", ret)
+            elif not _lib.ML_DSA_NO_CTX_ENABLED:
+                raise WolfCryptError("support for verifying without context is disabled")
             else:
                 ret = _lib.wc_dilithium_verify_msg(
                     _ffi.from_buffer(sig_bytestype),
@@ -2279,7 +2287,7 @@ if _lib.ML_DSA_ENABLED:
             return res[0] == 1
 
     class MlDsaPrivate(_MlDsaBase):
-        
+
         @classmethod
         def make_key(cls, mldsa_type, rng=None):
             """
@@ -2411,8 +2419,9 @@ if _lib.ML_DSA_ENABLED:
             :type message: bytes or str
             :param rng: random number generator for sign
             :type rng: Random
-            :param ctx: context (optional, maximum 255 bytes)
-            :type ctx: None for no context, str or bytes otherwise
+            :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
+                signing/verification compiled in; pass empty string "" for FIPS-204 empty-context signing).
+            :type ctx: bytes or str. None for no-context signing.
             :return: signature
             :rtype: bytes
             """
@@ -2440,6 +2449,8 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_ctx_msg() error", ret)
+            elif not _lib.ML_DSA_NO_CTX_ENABLED:
+                raise WolfCryptError("support for signing without context is disabled")
             else:
                 ret = _lib.wc_dilithium_sign_msg(
                     _ffi.from_buffer(msg_bytestype),
@@ -2451,7 +2462,7 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_msg() error", ret)
-            
+
             if in_size != out_size[0]:
                 raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
 
@@ -2463,8 +2474,9 @@ if _lib.ML_DSA_ENABLED:
             :type message: bytes or str
             :param seed: 32-byte seed for deterministic signature generation.
             :type seed: bytes
-            :param ctx: context (optional, maximum 255 bytes)
-            :type ctx: None for no context, str or bytes otherwise
+            :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
+                signing/verification compiled in; pass empty string "" for FIPS-204 empty-context signing).
+            :type ctx: bytes or str. None for no-context signing.
             :return: signature
             :rtype: bytes
             """
@@ -2504,6 +2516,8 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_ctx_msg_with_seed() error", ret)
+            elif not _lib.ML_DSA_NO_CTX_ENABLED:
+                raise WolfCryptError("support for signing without context is disabled")
             else:
                 ret = _lib.wc_dilithium_sign_msg_with_seed(
                     _ffi.from_buffer(msg_bytestype),
