@@ -9,9 +9,9 @@ Open Source
 ~~~~~~~~~~~
 
 wolfCrypt and wolfSSL software are free software downloads and may be modified
-to the needs of the user as long as the user adheres to version two of the GPL
-License. The GPLv2 license can be found on the `gnu.org website
-<http://www.gnu.org/licenses/old-licenses/gpl-2.0.html>`_.
+to the needs of the user as long as the user adheres to version three of the GPL
+License. The GPLv3 license can be found on the `gnu.org website
+<https://www.gnu.org/licenses/gpl-3.0.html>`_.
 
 Commercial Licensing
 ~~~~~~~~~~~~~~~~~~~~
