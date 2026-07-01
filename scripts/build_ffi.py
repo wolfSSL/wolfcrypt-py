@@ -379,7 +379,7 @@ def get_features(local_wolfssl, features):
     features["RSA_PSS"] = 1 if '#define WC_RSA_PSS' in defines else 0
     features["CHACHA20_POLY1305"] = 1 if ('#define HAVE_CHACHA' in defines and '#define HAVE_POLY1305' in defines) else 0
     features["ML_DSA"] = 1 if ('#define HAVE_DILITHIUM' in defines or '#define WOLFSSL_HAVE_MLDSA' in defines) else 0
-    # Determine if support for ML-DSDA signing & verification without context has been enabled.
+    # Determine if support for ML-DSA signing & verification without context has been enabled.
     mldsa_no_context_defines = [
         "WOLFSSL_MLDSA_NO_CTX",
         "WOLFSSL_MLDSA_FIPS204_DRAFT",
