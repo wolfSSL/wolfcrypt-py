@@ -1,12 +1,12 @@
 # __init__.py
 #
-# Copyright (C) 2006-2022 wolfSSL Inc.
+# Copyright (C) 2006-2026 wolfSSL Inc.
 #
-# This file is part of wolfSSL. (formerly known as CyaSSL)
+# This file is part of wolfSSL.
 #
 # wolfSSL is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
+# the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 #
 # wolfSSL is distributed in the hope that it will be useful,
@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
 
 from wolfcrypt._version import __version__, __wolfssl_version__
 
@@ -27,8 +27,8 @@ __uri__ = "https://github.com/wolfssl/wolfcrypt-py"
 __author__ = "wolfSSL Inc."
 __email__ = "info@wolfssl.com"
 
-__license__ = "GPLv2 or Commercial License"
-__copyright__ = "Copyright (C) 2006-2022 wolfSSL Inc"
+__license__ = "GPLv3-or-later or Commercial License"
+__copyright__ = "Copyright (C) 2006-2026 wolfSSL Inc"
 
 __all__ = [
     "__title__", "__summary__", "__uri__", "__version__", "__wolfssl_version__",

@@ -51,7 +51,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'wolfcrypt Python'
-copyright = '2022, wolfSSL Inc. All rights reserved'
+copyright = '2006-2026, wolfSSL Inc. All rights reserved'
 author = 'wolfSSL'
 
 # The version info for the project you're documenting, acts as replacement for
