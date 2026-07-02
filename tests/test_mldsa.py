@@ -25,6 +25,7 @@ from wolfcrypt._ffi import lib as _lib
 if _lib.ML_DSA_ENABLED:
     import pytest
     from wolfcrypt.ciphers import MlDsaPrivate, MlDsaPublic, MlDsaType, ML_DSA_SIGNATURE_SEED_LENGTH
+    from wolfcrypt.exceptions import WolfCryptError
     from wolfcrypt.random import Random
 
     @pytest.fixture
@@ -121,24 +122,26 @@ if _lib.ML_DSA_ENABLED:
 
         # Sign a message
         message = b"This is a test message for ML-DSA signature"
-        signature = mldsa_priv.sign(message, rng)
-        assert len(signature) == mldsa_priv.sig_size
-
-        # Verify the signature by MlDsaPrivate
-        assert mldsa_priv.verify(signature, message)
-
-        # Verify the signature by MlDsaPublic
-        assert mldsa_pub.verify(signature, message)
-
-        # Verify with wrong message
-        wrong_message = b"This is a wrong message for ML-DSA signature"
-        assert not mldsa_pub.verify(signature, wrong_message)
-        
-        # Verify a signature generated without a context but where a context
-        # is provided during verify
         ctx = b"This is a test context for ML-DSA signature"
         wrong_ctx = b"This is a wrong context for ML-DSA signature"
-        assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
+
+        if _lib.ML_DSA_NO_CTX_ENABLED:
+            signature = mldsa_priv.sign(message, rng)
+            assert len(signature) == mldsa_priv.sig_size
+
+            # Verify the signature by MlDsaPrivate
+            assert mldsa_priv.verify(signature, message)
+
+            # Verify the signature by MlDsaPublic
+            assert mldsa_pub.verify(signature, message)
+
+            # Verify with wrong message
+            wrong_message = b"This is a wrong message for ML-DSA signature"
+            assert not mldsa_pub.verify(signature, wrong_message)
+
+            # Verify a signature generated without a context but where a context
+            # is provided during verify
+            assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
 
         # Sign a message with context
         signature = mldsa_priv.sign(message, rng, ctx=ctx)
@@ -150,12 +153,28 @@ if _lib.ML_DSA_ENABLED:
         # Verify the signature by MlDsaPublic
         assert mldsa_pub.verify(signature, message, ctx=ctx)
 
-        # Verify but do not provide a context
-        assert not mldsa_pub.verify(signature, message, ctx=None)
+        if _lib.ML_DSA_NO_CTX_ENABLED:
+            # Verify but do not provide a context
+            assert not mldsa_pub.verify(signature, message, ctx=None)
+
+        if not _lib.ML_DSA_NO_CTX_ENABLED:
+            with pytest.raises(WolfCryptError):
+                mldsa_priv.sign(message)
+            with pytest.raises(WolfCryptError):
+                mldsa_priv.sign_with_seed(message, bytes(ML_DSA_SIGNATURE_SEED_LENGTH))
+            with pytest.raises(WolfCryptError):
+                mldsa_pub.verify(b'\x00' * mldsa_pub.sig_size, message)
 
         # Verify with wrong context
         assert not mldsa_pub.verify(signature, message, ctx=wrong_ctx)
 
+        # Sign a message with empty context
+        signature = mldsa_priv.sign(message, rng, ctx=b"")
+        assert len(signature) == mldsa_priv.sig_size
+        # Verify message with empty context
+        assert mldsa_pub.verify(signature, message, ctx=b"")
+
+    @pytest.mark.skipif(not _lib.ML_DSA_NO_CTX_ENABLED, reason="Requires support for signing without context")
     def test_sign_with_seed(mldsa_type, rng):
         signature_seed = rng.bytes(ML_DSA_SIGNATURE_SEED_LENGTH)
         mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
@@ -202,6 +221,9 @@ if _lib.ML_DSA_ENABLED:
         # test that the context length is checked (more than 255 bytes is invalid):
         with pytest.raises(ValueError):
             _ = mldsa_priv.sign_with_seed(message, signature_seed[:-1], ctx=bytes(1000))
+        # Re-generate from the same seed
+        signature_from_same_seed = mldsa_priv.sign_with_seed(message, signature_seed, ctx=context)
+        assert signature == signature_from_same_seed
 
     def test_make_key_from_seed(mldsa_type):
         seed = bytes(MlDsaPrivate.ML_DSA_KEYGEN_SEED_LENGTH)

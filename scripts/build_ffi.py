@@ -233,10 +233,10 @@ def make_flags(prefix, fips):
         flags.append("--enable-pkcs7")
 
         # ML-KEM
-        flags.append("--enable-kyber")
+        flags.append("--enable-mlkem")
 
-        # ML-DSA
-        flags.append("--enable-dilithium")
+        # ML-DSA (note: to be able to use the legacy option of signing without context, pass `yes,no-ctx` as argument)
+        flags.append("--enable-mldsa=yes")
 
         # disabling other configs enabled by default
         flags.append("--disable-oldtls")
@@ -373,9 +373,22 @@ def get_features(local_wolfssl, features):
     features["ASN"] = 0 if '#define NO_ASN' in defines else 1
     features["WC_RNG_SEED_CB"] = 1 if '#define WC_RNG_SEED_CB' in defines else 0
     features["AESGCM_STREAM"] = 1 if '#define WOLFSSL_AESGCM_STREAM' in defines else 0
+    # Try to read minimum AESGCM authentication tag size from settings, else use default.
+    min_auth_tag_sz = re.search(r'#define\s+WOLFSSL_MIN_AUTH_TAG_SZ\s+(\d+)', '\n'.join(defines))
+    features["MIN_AUTH_TAG_SZ"] = int(min_auth_tag_sz.group(1)) if min_auth_tag_sz else 12
     features["RSA_PSS"] = 1 if '#define WC_RSA_PSS' in defines else 0
     features["CHACHA20_POLY1305"] = 1 if ('#define HAVE_CHACHA' in defines and '#define HAVE_POLY1305' in defines) else 0
-    features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
+    features["ML_DSA"] = 1 if ('#define HAVE_DILITHIUM' in defines or '#define WOLFSSL_HAVE_MLDSA' in defines) else 0
+    # Determine if support for ML-DSA signing & verification without context has been enabled.
+    mldsa_no_context_defines = [
+        "WOLFSSL_MLDSA_NO_CTX",
+        "WOLFSSL_MLDSA_FIPS204_DRAFT",
+        # Legacy options:
+        "WOLFSSL_DILITHIUM_NO_CTX",
+        "WOLFSSL_DILITHIUM_FIPS204_DRAFT",
+    ]
+    have_mldsa_no_context_support = re.search(r'#define\s+(' + '|'.join(mldsa_no_context_defines) + r')\s+', '\n'.join(defines))
+    features["ML_DSA_NO_CTX"] = 1 if have_mldsa_no_context_support else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
 
@@ -453,9 +466,8 @@ def build_ffi(local_wolfssl, features):
         #include <wolfssl/wolfcrypt/curve25519.h>
         #include <wolfssl/wolfcrypt/poly1305.h>
         #include <wolfssl/wolfcrypt/chacha20_poly1305.h>
-        #include <wolfssl/wolfcrypt/mlkem.h>
         #include <wolfssl/wolfcrypt/wc_mlkem.h>
-        #include <wolfssl/wolfcrypt/dilithium.h>
+        #include <wolfssl/wolfcrypt/wc_mldsa.h>
     """
 
     init_source_string = f"""
@@ -492,10 +504,12 @@ def build_ffi(local_wolfssl, features):
         int ASN_ENABLED = {features["ASN"]};
         int WC_RNG_SEED_CB_ENABLED = {features["WC_RNG_SEED_CB"]};
         int AESGCM_STREAM_ENABLED = {features["AESGCM_STREAM"]};
+        int MIN_AUTH_TAG_SZ = {features["MIN_AUTH_TAG_SZ"]};
         int RSA_PSS_ENABLED = {features["RSA_PSS"]};
         int CHACHA20_POLY1305_ENABLED = {features["CHACHA20_POLY1305"]};
         int ML_KEM_ENABLED = {features["ML_KEM"]};
         int ML_DSA_ENABLED = {features["ML_DSA"]};
+        int ML_DSA_NO_CTX_ENABLED = {features["ML_DSA_NO_CTX"]};
         int HKDF_ENABLED = {features["HKDF"]};
     """
 
@@ -532,10 +546,12 @@ def build_ffi(local_wolfssl, features):
         extern int ASN_ENABLED;
         extern int WC_RNG_SEED_CB_ENABLED;
         extern int AESGCM_STREAM_ENABLED;
+        extern int MIN_AUTH_TAG_SZ;
         extern int RSA_PSS_ENABLED;
         extern int CHACHA20_POLY1305_ENABLED;
         extern int ML_KEM_ENABLED;
         extern int ML_DSA_ENABLED;
+        extern int ML_DSA_NO_CTX_ENABLED;
         extern int HKDF_ENABLED;
 
         typedef unsigned char byte;
@@ -1323,17 +1339,20 @@ def build_ffi(local_wolfssl, features):
         int wc_dilithium_import_private(const byte* priv, word32 privSz, dilithium_key* key);
         int wc_dilithium_export_public(dilithium_key* key, byte* out, word32* outLen);
         int wc_dilithium_import_public(const byte* in, word32 inLen, dilithium_key* key);
-        int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
         int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
-        int wc_dilithium_sign_msg_with_seed(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
         int wc_dilithium_sign_ctx_msg_with_seed(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
-        int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
         int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx, word32 ctxLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
         typedef dilithium_key MlDsaKey;
         int wc_MlDsaKey_GetPrivLen(MlDsaKey* key, int* len);
         int wc_MlDsaKey_GetPubLen(MlDsaKey* key, int* len);
         int wc_MlDsaKey_GetSigLen(MlDsaKey* key, int* len);
         """
+        if features["ML_DSA_NO_CTX"]:
+            cdef += """
+            int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
+            int wc_dilithium_sign_msg_with_seed(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
+            int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
+            """
 
     ffibuilder.cdef(cdef)
 
@@ -1364,10 +1383,12 @@ def main(ffibuilder):
         "ASN": 1,
         "WC_RNG_SEED_CB": 0,
         "AESGCM_STREAM": 1,
+        "MIN_AUTH_TAG_SZ": 12,
         "RSA_PSS": 1,
         "CHACHA20_POLY1305": 1,
         "ML_KEM": 1,
         "ML_DSA": 1,
+        "ML_DSA_NO_CTX": 0,
         "HKDF": 1,
     }
 
