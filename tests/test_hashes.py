@@ -172,18 +172,24 @@ def test_hash(hash_cls, vectors):
     assert hash_obj.hexdigest() == digest
 
     # copy
-    hash_obj = hash_new(hash_cls)
-    copy = hash_obj.copy()
+    if hash_cls in hmac_params:
+        # HMAC copy is intentionally unsupported (see F-5428): wolfCrypt has
+        # no safe copy and byte-copying would alias the original's C state.
+        with pytest.raises(NotImplementedError):
+            hash_new(hash_cls).copy()
+    else:
+        hash_obj = hash_new(hash_cls)
+        copy = hash_obj.copy()
 
-    assert hash_obj.hexdigest() == copy.hexdigest()
+        assert hash_obj.hexdigest() == copy.hexdigest()
 
-    hash_obj.update("wolfcrypt")
+        hash_obj.update("wolfcrypt")
 
-    assert hash_obj.hexdigest() != copy.hexdigest()
+        assert hash_obj.hexdigest() != copy.hexdigest()
 
-    copy.update("wolfcrypt")
+        copy.update("wolfcrypt")
 
-    assert hash_obj.hexdigest() == copy.hexdigest() == digest
+        assert hash_obj.hexdigest() == copy.hexdigest() == digest
 
 
 def test_hash_repeated_construction_destruction(hash_cls, vectors):
@@ -198,6 +204,9 @@ def test_hash_repeated_construction_destruction(hash_cls, vectors):
 
 def test_hash_copy_destroy_lifecycle(hash_cls, vectors):
     import gc
+    if hash_cls in hmac_params:
+        # HMAC does not support copy() (see F-5428).
+        pytest.skip("HMAC copy is not supported")
     digest = vectors[hash_cls].digest
     for _ in range(100):
         h = hash_new(hash_cls, "wolfcrypt")
