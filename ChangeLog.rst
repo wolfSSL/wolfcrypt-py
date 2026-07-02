@@ -8,6 +8,8 @@ wolfCrypt-py Release 5.9.2 (Jul 1, 2026)
 * ML-DSA: Add support for generating private key deterministically from seed
 * ML-DSA: Add support for deterministic signing
 * ML-DSA: Add support for signing and verifying with context
+* ML-DSA: Signing without context is disabled by default.
+  Note: this can be enabled by compiling the C-library with `--enable-mldsa=yes,no-ctx`
 * Drop support for end-of-life Python versions (<= 3.9)
 * Add extra nonce parameter to Random generator
 * Add type annotations to utils and random
