@@ -2252,6 +2252,9 @@ if _lib.ML_DSA_ENABLED:
             :return: True if the verification is successful, False otherwise
             :rtype: bool
             """
+            if ctx is None and not _lib.ML_DSA_NO_CTX_ENABLED:
+                raise WolfCryptError("support for verifying without context is disabled")
+
             sig_bytestype = t2b(signature)
             msg_bytestype = t2b(message)
             res = _ffi.new("int *")
@@ -2270,8 +2273,6 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_verify_ctx_msg() error", ret)
-            elif not _lib.ML_DSA_NO_CTX_ENABLED:
-                raise WolfCryptError("support for verifying without context is disabled")
             else:
                 ret = _lib.wc_dilithium_verify_msg(
                     _ffi.from_buffer(sig_bytestype),
@@ -2425,6 +2426,9 @@ if _lib.ML_DSA_ENABLED:
             :return: signature
             :rtype: bytes
             """
+            if ctx is None and not _lib.ML_DSA_NO_CTX_ENABLED:
+                raise WolfCryptError("support for signing without context is disabled")
+
             if rng is None:
                 rng = Random()
             msg_bytestype = t2b(message)
@@ -2449,8 +2453,6 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_ctx_msg() error", ret)
-            elif not _lib.ML_DSA_NO_CTX_ENABLED:
-                raise WolfCryptError("support for signing without context is disabled")
             else:
                 ret = _lib.wc_dilithium_sign_msg(
                     _ffi.from_buffer(msg_bytestype),
@@ -2480,6 +2482,9 @@ if _lib.ML_DSA_ENABLED:
             :return: signature
             :rtype: bytes
             """
+            if ctx is None and not _lib.ML_DSA_NO_CTX_ENABLED:
+                raise WolfCryptError("support for signing without context is disabled")
+
             msg_bytestype = t2b(message)
             in_size = self.sig_size
             signature = _ffi.new(f"byte[{in_size}]")
@@ -2516,8 +2521,6 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_ctx_msg_with_seed() error", ret)
-            elif not _lib.ML_DSA_NO_CTX_ENABLED:
-                raise WolfCryptError("support for signing without context is disabled")
             else:
                 ret = _lib.wc_dilithium_sign_msg_with_seed(
                     _ffi.from_buffer(msg_bytestype),
