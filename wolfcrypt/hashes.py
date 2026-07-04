@@ -456,7 +456,8 @@ if _lib.HMAC_ENABLED:
         _native_size = _ffi.sizeof("Hmac")
         _delete = staticmethod(_lib.wc_HmacFree)
 
-        def copy(self):
+        @override
+        def copy(self) -> _Hmac:
             raise NotImplementedError(
                 "HMAC objects cannot be safely copied: wolfCrypt has no "
                 "wc_HmacCopy and byte-copying the state would alias the "

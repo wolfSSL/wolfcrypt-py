@@ -572,15 +572,17 @@ if _lib.CHACHA_ENABLED:
             # before any encrypt()/decrypt() so a real nonce is available.
             self._iv_set = False
 
-        def encrypt(self, string):
+        @override
+        def encrypt(self, string: BytesOrStr) -> bytes:
             self._require_iv()
             return super().encrypt(string)
 
-        def decrypt(self, string):
+        @override
+        def decrypt(self, string: BytesOrStr) -> bytes:
             self._require_iv()
             return super().decrypt(string)
 
-        def _require_iv(self):
+        def _require_iv(self) -> None:
             if not self._iv_set:
                 raise WolfCryptError(
                     "set_iv() must be called before encrypt()/decrypt()")
