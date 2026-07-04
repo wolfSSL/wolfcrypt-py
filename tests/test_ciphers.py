@@ -77,8 +77,8 @@ def vectors():
         )  # ty: ignore[missing-argument]
     if _lib.CHACHA_ENABLED:
         vectorArray[ChaCha]=TestVector(
-            key="0123456789abcdef01234567890abcdef",
-            iv="1234567890abcdef",
+            key="0123456789abcdef0123456789abcdef",
+            iv="1234567890ab",
         )  # ty: ignore[missing-argument]
     if _lib.DES3_ENABLED:
         vectorArray[Des3]=TestVector(
@@ -318,7 +318,6 @@ if _lib.CHACHA_ENABLED:
         r.set_iv(vectors[ChaCha].iv)
         return r
 
-    @pytest.fixture
     def test_chacha_enc_dec(chacha_obj, vectors):
         plaintext = t2b("Everyone gets Friday off.")
         cyt = chacha_obj.encrypt(plaintext)
