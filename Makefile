@@ -49,19 +49,21 @@ clean-test: ## remove test and coverage artifacts
 	rm -f .coverage
 	rm -fr htmlcov/
 
-lint: ## check style with flake8
-	flake8 src tests
-	pylint src tests/*
+lint: ## check style with ruff
+	uv run ruff check
 
-test: install ## run tests quickly with the default Python
-	py.test tests
+test: ## run tests quickly with the default Python
+	uv run py.test tests
 
 check: test ## run tests quickly with the default Python
 
-test-all: ## run tests on every Python version with tox
-	tox
+test-all: ## run tests on every Python version with uv
+	for version in 3.10 3.11 3.12 3.13 3.14; do \
+		echo "=== Python $$version ==="; \
+		uv run --python $$version pytest; \
+	done
 
-check-all: test-all ## run tests on every Python version with tox
+check-all: test-all ## run tests on every Python version with uv
 
 cov:  ## check code coverage quickly with the default Python
 	uv run pytest --cov=wolfcrypt tests
@@ -92,6 +94,3 @@ dist: clean ## builds source and wheel package
 
 release: ## package and upload a release
 	twine upload dist/*
-
-install: clean ## install the package to the active Python's site-packages
-	python setup.py install
