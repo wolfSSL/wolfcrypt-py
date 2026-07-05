@@ -37,6 +37,7 @@ build-backend = "setuptools.build_meta:__legacy__"
 dev = [
     "mypy",
     "pytest",
+    "pytest-cov",
     "ruff",
     "sphinx",
     "sphinx-rtd-theme",
