@@ -75,11 +75,9 @@ def test_reseed_multiple(rng):
     """
     # Using our own rng for getting random seed sizes.
     for _ in range(10):
-        # Create seed using random seed size for each call.
-        seed_size = ord(rng.byte())
-        seed = bytes(x % 256 for x in range(seed_size))
+        # Create seed of typical size. Testing with various seed sizes done in `test_reseed_sizes`.
+        seed = bytes(x % 256 for x in range(32))
         rng.reseed(seed)
 
     # Pull some bytes from the random number generator to test that it still works.
-    num_bytes = ord(rng.byte())
-    rng.bytes(num_bytes)
+    rng.bytes(100)

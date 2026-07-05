@@ -6,6 +6,7 @@
 #endif
 
 #define WOLFCRYPT_ONLY
+#define HAVE_HASHDRBG
 #define WOLFSSL_AESGCM_STREAM
 #define HAVE_AESGCM
 #define GCM_TABLE_4BIT
