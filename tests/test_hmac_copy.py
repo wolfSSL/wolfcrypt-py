@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # test_hmac_copy.py
 #
 # Copyright (C) 2006-2022 wolfSSL Inc.
