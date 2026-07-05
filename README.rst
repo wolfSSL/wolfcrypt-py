@@ -30,6 +30,8 @@ Then from the command line install `uv` using:
 
    pip install uv
 
+Or by following the installation instructions on the astral web site. `<https://docs.astral.sh/uv/getting-started/installation/>`_
+
 You can then build the source distribution packages using:
 
 .. code-block:: sh
@@ -40,7 +42,7 @@ You can then build the source distribution packages using:
 Linux
 ^^^^^
 
-The `setup.py` file covers most things you will need to do to build and install from source. As pre-requisites you will need to install either from your OS repository or pip. You'll also need the Python development package for your Python version:
+The `setup.py` file covers most things you will need to do to build and install from source. As pre-requisites you will need to install either from your OS repository or uv. You'll also need the Python development package for your Python version:
 
 * `uv`
 
@@ -59,21 +61,28 @@ To build wolfcrypt-py against a local installation of the native C wolfSSL
 library, use the USE_LOCAL_WOLFSSL variable.  This variable should be
 
 wolfcrypt-py can be built against a local version of the native wolfSSL
-library by using pip with the USE_LOCAL_WOLFSSL variable. USE_LOCAL_WOLFSSL
+library by using uv build --wheel with the USE_LOCAL_WOLFSSL variable. USE_LOCAL_WOLFSSL
 should be set equal to the installation path for the wolfSSL library:
 
 .. code-block:: bash
 
-    $ USE_LOCAL_WOLFSSL=/path/to/wolfssl/install uv sync
+    $ USE_LOCAL_WOLFSSL=/path/to/wolfssl/install uv build --wheel
 
 If building wolfcrypt-py against a local wolfSSL library, wolfcrypt-py
 will attempt to do native feature detection to enable/disable wolfcrypt-py
 features based on how native wolfSSL has been compiled.  It uses the
 <wolfssl/options.h> header to do feature detection.
 
+After this the local build can be installed from the locally built wheel in dist.
+
+.. code-block:: bash
+
+    $ pip install dist/wolfcrypt*.whl
+
 Testing
 -------
 .. code-block:: console
+
    $ uv run python3
 
 .. code-block:: python

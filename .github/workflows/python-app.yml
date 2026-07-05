@@ -18,22 +18,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Set up Python 3.10
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v6
       with:
         python-version: "3.10"
     - name: Install uv
       uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       with:
         # Install a specific version of uv.
-        version: "0.11.25"
+        version: "0.11.26"
+    - name: Build the wheel
+      run: uv build --wheel
     - name: Install the project
       run: uv sync --dev
     - name: Perform static checks
       run: uv run ruff check
-    - name: Run tests
-      run: uv run pytest tests
+    - name: Run tests using the locally built wheel
+      run: |
+        uv pip install dist/*.whl
+        uv run pytest tests
 
   build-no-pqc:
     # Regression coverage for issue #2659: INVALID_DEVID is only declared
@@ -43,18 +47,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
       with:
         submodules: recursive
     - name: Set up Python 3.10
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v6
       with:
         python-version: "3.10"
     - name: Install uv
       uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       with:
         # Install a specific version of uv.
-        version: "0.11.25"
+        version: "0.11.26"
     - name: Install build deps
       run: |
         sudo apt-get update
@@ -64,7 +68,7 @@ jobs:
         cd lib/wolfssl
         ./autogen.sh
         ./configure --enable-cryptonly --disable-shared \
-                    --disable-kyber --disable-dilithium \
+                    --disable-mlkem --disable-mldsa \
                     --enable-aes --enable-aesgcm --enable-aessiv \
                     --enable-aesctr --enable-aesgcm-stream \
                     --enable-des3 --enable-chacha --enable-poly1305 \
@@ -85,6 +89,10 @@ jobs:
         uv venv
         uv pip install -r requirements/test.txt
         uv pip install -e .
+    - name: Check absence of ML-KEM and ML-DSA support
+      run: |
+        uv run python -c "from wolfcrypt._ffi import lib as _lib; assert _lib.ML_KEM_ENABLED == 0, 'ML-KEM should be disabled'"
+        uv run python -c "from wolfcrypt._ffi import lib as _lib; assert _lib.ML_DSA_ENABLED == 0, 'ML-DSA should be disabled'"
     - name: Import smoke (regression for INVALID_DEVID)
       run: uv run python -c "from wolfcrypt.random import Random; Random()"
     - name: Run tests
