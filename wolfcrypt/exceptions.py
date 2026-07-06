@@ -59,6 +59,6 @@ def error_string(err_code: int) -> str:
     :return: error string
     """
     if _lib.ERROR_STRINGS_ENABLED:
-        return cast(bytes, _ffi.string(_lib.wc_GetErrorString(err_code))).decode()
+        return cast("bytes", _ffi.string(_lib.wc_GetErrorString(err_code))).decode()
     else:
         return ""

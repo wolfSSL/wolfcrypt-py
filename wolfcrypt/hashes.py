@@ -23,13 +23,16 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-
-from _cffi_backend import FFI
+from typing import TYPE_CHECKING
 from typing_extensions import override
+
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.exceptions import WolfCryptApiError
 from wolfcrypt.utils import t2b, b2h, BytesOrStr
+
+if TYPE_CHECKING:
+    from _cffi_backend import FFI
 
 
 class _Hash(ABC):

@@ -22,13 +22,16 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import hmac as _hmac
 
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.exceptions import WolfCryptError, WolfCryptApiError
 from wolfcrypt.hashes import _Hash
-from .wc_types import SupportsRsaSign, SupportsRsaVerify
+if TYPE_CHECKING:
+    from .wc_types import SupportsRsaSign, SupportsRsaVerify
 
 if _lib.SHA_ENABLED:
     from wolfcrypt.hashes import Sha  # ty: ignore[possibly-missing-import]

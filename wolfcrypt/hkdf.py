@@ -22,16 +22,20 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 
 from wolfcrypt.exceptions import WolfCryptApiError
 from wolfcrypt.utils import t2b
 
+if TYPE_CHECKING:
+    if _lib.HMAC_ENABLED:
+        from wolfcrypt.hashes import _Hmac
+
 
 if _lib.HKDF_ENABLED:
-    if _lib.HMAC_ENABLED:
-        from wolfcrypt.hashes import _Hmac  # ty: ignore[possibly-missing-import]
 
     def HKDF(hash_cls: type[_Hmac], in_key: bytes | str, salt: bytes | str | None = None, info: bytes | str | None = None, out_len: int | None = None) -> bytes:
         """
