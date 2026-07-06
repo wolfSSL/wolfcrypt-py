@@ -2092,6 +2092,14 @@ if _lib.ML_KEM_ENABLED:
             :return: tuple of a shared secret (first element) and the cipher text (second element)
             :rtype: tuple[bytes, bytes]
             """
+
+            try:
+                memoryview(rand)
+            except TypeError as exception:
+                raise TypeError("rand must support the buffer protocol, such as `bytes` or `bytearray`") from exception
+
+            rand = bytes(rand)
+
             ct_size = self.ct_size
             ss_size = self.ss_size
             ct = _ffi.new(f"unsigned char[{ct_size}]")
