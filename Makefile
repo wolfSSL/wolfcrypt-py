@@ -21,7 +21,7 @@ for line in sys.stdin:
 		print("%-20s %s" % (target, help))
 endef
 export PRINT_HELP_PYSCRIPT
-BROWSER := python -c "$$BROWSER_PYSCRIPT"
+BROWSER := uv run python -c "$$BROWSER_PYSCRIPT"
 
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
@@ -63,10 +63,10 @@ test-all: ## run tests on every Python version with tox
 
 check-all: test-all ## run tests on every Python version with tox
 
-cov: install ## check code coverage quickly with the default Python
-	py.test --cov-config .coveragerc --cov=wolfcrypt tests
-	coverage report -m
-	coverage html
+cov:  ## check code coverage quickly with the default Python
+	uv run pytest --cov=wolfcrypt tests
+	uv run coverage report -m
+	uv run coverage html
 	$(BROWSER) htmlcov/index.html
 
 docs: install ## generate Sphinx HTML documentation, including API docs
