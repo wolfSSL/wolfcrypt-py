@@ -24,14 +24,16 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from types import TracebackType
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from typing_extensions import Self
 
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.exceptions import WolfCryptError
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 log = logging.getLogger(__name__)
 
@@ -100,7 +102,7 @@ if _lib.CRYPTO_CB_ENABLED:
         def __del__(self) -> None:
             self._unregister()
 
-        def callback(self, device_id: int, info: _ffi.CData) -> int:
+        def callback(self, device_id: int, info: _lib.wc_CryptoInfo) -> int:
             log.debug("device_id=%d algo_type = %s", device_id, ALGO_TYPE_NAME[info.algo_type])
             try:
                 if info.algo_type == _lib.WC_ALGO_TYPE_HASH:
@@ -137,7 +139,7 @@ if _lib.CRYPTO_CB_ENABLED:
             except NotImplementedError:
                 return _lib.CRYPTOCB_UNAVAILABLE
 
-        def rng_callback(self, device_id: int, rng, size: int) -> bytes:
+        def rng_callback(self, device_id: int, rng: _lib.RNG, size: int) -> bytes:
             raise NotImplementedError
 
         def hash_update_callback(self, device_id: int, hash_type: int, data: bytes) -> None:
