@@ -18,6 +18,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
 
+import os
+import sys
+from typing import TYPE_CHECKING
+
 from wolfcrypt._version import __version__, __wolfssl_version__
 
 __title__ = "wolfcrypt"
@@ -36,9 +40,6 @@ __all__ = [
     "ciphers", "hashes", "random", "pwdbased", "cryptocb"
 ]
 
-import os
-import sys
-
 top_level_py = os.path.basename(sys.argv[0])
 
 # The code below is intended to only be used after the CFFI is built, so we
@@ -46,8 +47,10 @@ top_level_py = os.path.basename(sys.argv[0])
 if top_level_py not in ["setup.py", "build_ffi.py"]:
     from wolfcrypt._ffi import ffi as _ffi
     from wolfcrypt._ffi import lib as _lib
-    if _lib.CRYPTO_CB_ENABLED:
-        from wolfcrypt.cryptocb import CryptoCallback
+
+    if TYPE_CHECKING:
+        if _lib.CRYPTO_CB_ENABLED:
+            from wolfcrypt.cryptocb import CryptoCallback
     from wolfcrypt.exceptions import WolfCryptApiError
 
     ret = _lib.wolfCrypt_Init()

@@ -18,8 +18,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
 
-from _cffi_backend import FFI
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TypeAlias
+
+from _cffi_backend import FFI
 
 INVALID_DEVID: int
 
@@ -30,6 +33,7 @@ ASN_ENABLED: int
 CHACHA_ENABLED: int
 CHACHA_STREAM_ENABLED: int
 CHACHA20_POLY1305_ENABLED: int
+CRYPTO_CB_ENABLED: int
 DES3_ENABLED: int
 ECC_ENABLED: int
 ED25519_ENABLED: int
@@ -282,6 +286,20 @@ WC_MGF1SHA256: int
 WC_MGF1SHA384: int
 WC_MGF1SHA512: int
 
+WC_ALGO_TYPE_NONE: int
+WC_ALGO_TYPE_HASH: int
+WC_ALGO_TYPE_CIPHER: int
+WC_ALGO_TYPE_PK: int
+WC_ALGO_TYPE_RNG: int
+WC_ALGO_TYPE_SEED: int
+WC_ALGO_TYPE_HMAC: int
+WC_ALGO_TYPE_CMAC: int
+WC_ALGO_TYPE_CERT: int
+WC_ALGO_TYPE_KDF: int
+WC_ALGO_TYPE_COPY: int
+WC_ALGO_TYPE_FREE: int
+WC_ALGO_TYPE_MAX: int
+
 WC_HASH_TYPE_NONE: int
 WC_HASH_TYPE_MD2: int
 WC_HASH_TYPE_MD4: int
@@ -328,6 +346,7 @@ RNG: TypeAlias = FFI.CData
 def wc_SetSeed_Cb(cb: FFI.CData) -> int: ...
 def wolfCrypt_SetPrivateKeyReadEnable_fips(enable: int, key_type: int) -> int: ...
 def wc_GetErrorString(error: int) -> FFI.CData: ...
+def wolfCrypt_Init() -> int: ...
 
 def wc_InitRngNonce_ex(rng: RNG, nonce: bytes, nonce_size: int, heap: FFI.CData, device_id: int) -> int: ...
 def wc_RNG_GenerateByte(rng: RNG, buffer: FFI.CData) -> int: ...
@@ -569,3 +588,36 @@ def wc_dilithium_sign_msg_with_seed(msg: bytes, msg_len: int, sig: BytePtr, sig_
 def wc_MlDsaKey_GetPrivLen(key: DilithiumKey, len: IntPtr) -> int: ...
 def wc_MlDsaKey_GetPubLen(key: DilithiumKey, len: IntPtr) -> int: ...
 def wc_MlDsaKey_GetSigLen(key: DilithiumKey, len: IntPtr) -> int: ...
+
+@dataclass
+class wc_HashInfo:
+    type: int
+    data: FFI.CData
+    data_size: int
+    digest: FFI.CData
+    sha: FFI.CData
+    sha256: FFI.CData
+    sha384: FFI.CData
+    sha512: FFI.CData
+    sha3: FFI.CData
+    ctx: FFI.CData
+
+
+@dataclass
+class wc_RngInfo:
+    rng: RNG
+    out: FFI.CData
+    sz: int
+
+
+@dataclass
+class wc_CryptoInfo:
+    algo_type: int
+    hash: wc_HashInfo
+    rng: wc_RngInfo
+
+
+def wc_CryptoCb_RegisterDevice(dev_id: int, cb: Callable[[int, wc_CryptoInfo, FFI.CData], int], ctx: FFI.CData) -> int: ...
+def wc_CryptoCb_UnRegisterDevice(dev_id: int) -> None: ...
+def wc_CryptoCb_DefaultDevID() -> int: ...
+def py_wc_crypto_callback(dev_id: int, info: wc_CryptoInfo, ctx: FFI.CData) -> int: ...
