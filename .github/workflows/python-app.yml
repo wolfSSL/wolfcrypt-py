@@ -36,8 +36,8 @@ jobs:
       run: uv run ruff check
     - name: Run tests using the locally built wheel
       run: |
-        uv pip install dist/*.whl
-        uv run pytest tests
+        uv pip install --reinstall dist/*.whl
+        uv run --no-sync pytest tests
 
   build-no-pqc:
     # Regression coverage for issue #2659: INVALID_DEVID is only declared
@@ -91,8 +91,8 @@ jobs:
         uv pip install -e .
     - name: Check absence of ML-KEM and ML-DSA support
       run: |
-        uv run python -c "from wolfcrypt._ffi import lib as _lib; assert _lib.ML_KEM_ENABLED == 0, 'ML-KEM should be disabled'"
-        uv run python -c "from wolfcrypt._ffi import lib as _lib; assert _lib.ML_DSA_ENABLED == 0, 'ML-DSA should be disabled'"
+        uv run --no-sync python -c "from wolfcrypt._ffi import lib as _lib; assert _lib.ML_KEM_ENABLED == 0, 'ML-KEM should be disabled'"
+        uv run --no-sync python -c "from wolfcrypt._ffi import lib as _lib; assert _lib.ML_DSA_ENABLED == 0, 'ML-DSA should be disabled'"
     - name: Import smoke (regression for INVALID_DEVID)
       run: uv run python -c "from wolfcrypt.random import Random; Random()"
     - name: Run tests

@@ -60,7 +60,7 @@ check: test ## run tests quickly with the default Python
 test-all: ## run tests on every Python version with uv
 	for version in 3.10 3.11 3.12 3.13 3.14; do \
 		echo "=== Python $$version ==="; \
-		uv run --python $$version pytest; \
+		uv run --python $$version pytest tests || exit 1; \
 	done
 
 check-all: test-all ## run tests on every Python version with uv
@@ -71,14 +71,14 @@ cov:  ## check code coverage quickly with the default Python
 	uv run coverage html
 	$(BROWSER) htmlcov/index.html
 
-docs: install ## generate Sphinx HTML documentation, including API docs
+docs: ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
+	uv run $(MAKE) -C docs html
 	$(BROWSER) docs/_build/html/index.html
 
-doctest: install ## generate Sphinx HTML documentation, including API docs
+doctest: ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs clean
-	$(MAKE) -C docs doctest
+	uv run $(MAKE) -C docs doctest
 
 servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .

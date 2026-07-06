@@ -42,7 +42,7 @@ You can then build the source distribution packages using:
 Linux
 ^^^^^
 
-The `setup.py` file covers most things you will need to do to build and install from source. As pre-requisites you will need to install either from your OS repository or uv. You'll also need the Python development package for your Python version:
+The `setup.py` file covers most things you will need to do to build and install from source. As pre-requisites you will need to install either from your OS repository or with uv. You'll also need the Python development package for your Python version:
 
 * `uv`
 
