@@ -378,7 +378,9 @@ def get_features(local_wolfssl, features):
     features["ML_DSA"] = 1 if '#define HAVE_DILITHIUM'  in defines else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
-    features["HASHDRBG"] = 1 if "#define HAVE_HASHDRBG" in defines else 0
+    # Unlike the other fatures, HASHDRBG is enabled by default in random.h, unless WC_NO_HASHDRBG or
+    # CUSTOM_RAND_GENERATE_BLOCK is defined.
+    features["HASHDRBG"] = 0 if ("#define WC_NO_HASHDRBG" in defines or "#define CUSTOM_RAND_GENERATE_BLOCK" in defines) else 1
 
     if '#define HAVE_FIPS' in defines:
         if not fips:

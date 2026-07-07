@@ -73,7 +73,6 @@ def test_reseed_multiple(rng):
     """
     Test that consecutive reseeding of the random number generator works.
     """
-    # Using our own rng for getting random seed sizes.
     for _ in range(10):
         # Create seed of typical size. Testing with various seed sizes done in `test_reseed_sizes`.
         seed = bytes(x % 256 for x in range(32))
