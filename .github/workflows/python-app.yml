@@ -45,6 +45,8 @@ jobs:
     # without those features must still import wolfcrypt.random successfully.
 
     runs-on: ubuntu-latest
+    env:
+      USE_LOCAL_WOLFSSL: ${{ github.workspace }}/wolfssl-install
 
     steps:
     - uses: actions/checkout@v7
@@ -83,19 +85,15 @@ jobs:
         make
         make install
     - name: Install wolfcrypt-py against the local wolfSSL
-      env:
-        USE_LOCAL_WOLFSSL: ${{ github.workspace }}/wolfssl-install
       run: |
         uv venv
-        uv pip install -r requirements/test.txt
+        uv pip install pytest
         uv pip install -e .
     - name: Check absence of ML-KEM and ML-DSA support
       run: |
         uv run --no-sync python -c "from wolfcrypt._ffi import lib as _lib; assert _lib.ML_KEM_ENABLED == 0, 'ML-KEM should be disabled'"
         uv run --no-sync python -c "from wolfcrypt._ffi import lib as _lib; assert _lib.ML_DSA_ENABLED == 0, 'ML-DSA should be disabled'"
     - name: Import smoke (regression for INVALID_DEVID)
-      run: uv run python -c "from wolfcrypt.random import Random; Random()"
+      run: uv run --no-sync python -c "from wolfcrypt.random import Random; Random()"
     - name: Run tests
-      env:
-        USE_LOCAL_WOLFSSL: ${{ github.workspace }}/wolfssl-install
-      run: uv run pytest tests
+      run: uv run --no-sync pytest tests

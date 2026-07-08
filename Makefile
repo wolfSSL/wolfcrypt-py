@@ -84,8 +84,8 @@ servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
 dist: clean ## builds source and wheel package
-	python setup.py sdist
-	
+	uv build --sdist
+
 	./make/osx/build_wheels.sh
 
 	./make/manylinux1/build_wheels.sh

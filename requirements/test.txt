@@ -1,3 +1,0 @@
--r prod.txt
-pytest>=8
-types-cffi>=1.17

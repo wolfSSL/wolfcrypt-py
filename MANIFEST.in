@@ -7,6 +7,5 @@ include windows/fips_ready/user_settings.h
 include windows/non_fips/user_settings.h
 
 recursive-include tests *
-recursive-include requirements *
 
 recursive-include docs *.rst conf.py Makefile
