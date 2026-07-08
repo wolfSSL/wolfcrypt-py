@@ -1,4 +1,3 @@
-
 # test_chacha20poly1305.py
 #
 # Copyright (C) 2022 wolfSSL Inc.

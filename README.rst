@@ -21,32 +21,32 @@ Install the following on Windows:
 
 * `CMake <https://cmake.org/download/>`_
 * `Git <https://git-scm.com/download/win>`_
-* `Python 3.9 <https://www.python.org/downloads/windows/>`_
+* `Python 3.10 or newer <https://www.python.org/downloads/windows/>`_
 * `Build Tools for Visual Studio <https://visualstudio.microsoft.com/downloads/>`_. This is in the "Tools for Visual Studio" section at the bottom of the page. The "Desktop development with C++" pack is needed from the installer.
 
-Then from the command line install tox and CFFI using:
+Then from the command line install `uv` using:
 
 .. code-block:: sh
 
-   pip install tox cffi
+   pip install uv
+
+Or by following the installation instructions on the astral web site. `<https://docs.astral.sh/uv/getting-started/installation/>`_
 
 You can then build the source distribution packages using:
 
 .. code-block:: sh
 
-   python setup.py sdist
+   uv build --sdist
 
 
 Linux
 ^^^^^
 
-The `setup.py` file covers most things you will need to do to build and install from source. As pre-requisites you will need to install either from your OS repository or pip. You'll also need the Python development package for your Python version:
+The `setup.py` file covers most things you will need to do to build and install from source. As pre-requisites you will need to install either from your OS repository or with uv. You'll also need the Python development package for your Python version:
 
-* `cffi`
-* `tox`
-* `pytest`
+* `uv`
 
-To build a source package run `python setup.py sdist`, to build a wheel package run `python setup.py bdist_wheel`. To test the build run `tox`. The `tox` tests rely on Python 3.9 being installed, if you do not have this version we recommend using `pyenv` to install it.
+To build a source package run `uv build --sdist`, to build a wheel package run `uv build --wheel`. To test the build run `uv run pytest`. The tests rely on Python 3.10 or later being installed.
 
 Installation
 ------------
@@ -61,20 +61,29 @@ To build wolfcrypt-py against a local installation of the native C wolfSSL
 library, use the USE_LOCAL_WOLFSSL variable.  This variable should be
 
 wolfcrypt-py can be built against a local version of the native wolfSSL
-library by using pip with the USE_LOCAL_WOLFSSL variable. USE_LOCAL_WOLFSSL
+library by using uv build --wheel with the USE_LOCAL_WOLFSSL variable. USE_LOCAL_WOLFSSL
 should be set equal to the installation path for the wolfSSL library:
 
 .. code-block:: bash
 
-    $ USE_LOCAL_WOLFSSL=/path/to/wolfssl/install pip install .
+    $ USE_LOCAL_WOLFSSL=/path/to/wolfssl/install uv build --wheel
 
 If building wolfcrypt-py against a local wolfSSL library, wolfcrypt-py
 will attempt to do native feature detection to enable/disable wolfcrypt-py
 features based on how native wolfSSL has been compiled.  It uses the
 <wolfssl/options.h> header to do feature detection.
 
+After this the local build can be installed from the locally built wheel in dist.
+
+.. code-block:: bash
+
+    $ pip install dist/wolfcrypt*.whl
+
 Testing
 -------
+.. code-block:: console
+
+   $ uv run python3
 
 .. code-block:: python
 
@@ -82,25 +91,41 @@ Testing
     >>> Sha256('wolfcrypt').hexdigest()
     b'96e02e7b1cbcd6f104fe1fdb4652027a5505b68652b70095c6318f9dce0d1844'
 
-Testing ``wolfcrypt``'s source code with ``tox``
-------------------------------------------------
+Testing ``wolfcrypt``'s source code with ``pytest``
+---------------------------------------------------
 
-To run the unit tests in the source code, you'll need ``tox`` and a few other
+To run the unit tests in the source code, you'll need ``uv`` and a few other
 requirements.
 
 1. Make sure that the testing requirements are installed:
 
 .. code-block:: console
 
-    $ sudo -H pip install -r requirements/test.txt
+    $ uv sync --dev
 
 
-2. Run ``tox``:
+2. Run ``pytest``:
 
 .. code-block:: console
 
-    $ tox
-    ...
-    _________________________________ summary _________________________________
-    py3: commands succeeded
-    congratulations :)
+    $ uv run pytest
+    ======================================= test session starts =======================================
+    platform linux -- Python 3.10.12, pytest-9.1.1, pluggy-1.6.0
+    rootdir: /some_directory/wolfcrypt-py
+    configfile: pyproject.toml
+    collected 165 items
+
+    tests/test_aesgcmstream.py .........                                                        [  5%]
+    tests/test_asn.py ..                                                                        [  6%]
+    tests/test_chacha20poly1305.py ......                                                       [ 10%]
+    tests/test_ciphers.py ...........................................                           [ 36%]
+    tests/test_delete_descriptor_binding.py .................                                   [ 46%]
+    tests/test_error_string.py ....                                                             [ 49%]
+    tests/test_hashes.py ...........................                                            [ 65%]
+    tests/test_hkdf.py ........                                                                 [ 70%]
+    tests/test_mldsa.py ..............................                                          [ 88%]
+    tests/test_mlkem.py ............                                                            [ 95%]
+    tests/test_pwdbased.py .                                                                    [ 96%]
+    tests/test_random.py ......                                                                 [100%]
+
+    ======================================= 165 passed in 7.09s =======================================
