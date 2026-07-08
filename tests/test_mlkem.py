@@ -618,6 +618,21 @@ if _lib.ML_KEM_ENABLED:
         assert ss_send == ss_recv
 
     @pytest.mark.parametrize("mlkem_type", mlkem_types)
+    @pytest.mark.parametrize("rand", [0, "rand"])
+    def test_make_key_with_random_bad_random_type(mlkem_type, rand: int | str):
+        with pytest.raises(TypeError):
+            MlKemPrivate.make_key_with_random(mlkem_type, rand)
+
+    @pytest.mark.parametrize("mlkem_type", mlkem_types)
+    @pytest.mark.parametrize("rand", [0, "rand"])
+    def test_encapsulate_with_random_bad_random_type(mlkem_type, rand: int | str):
+        mlkem_pub = MlKemPublic(mlkem_type)
+        assert type(mlkem_pub) is MlKemPublic
+
+        with pytest.raises(TypeError):
+            mlkem_pub.encapsulate_with_random(rand)
+
+    @pytest.mark.parametrize("mlkem_type", mlkem_types)
     def test_size_properties(mlkem_type):
         refvals = {
             MlKemType.ML_KEM_512: {

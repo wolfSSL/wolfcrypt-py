@@ -69,7 +69,7 @@ class _Hash(ABC):
 
     @property
     @abstractmethod
-    def digest_size(self) -> int: ...
+    def digest_size(self) -> int | None: ...
 
     @classmethod
     @abstractmethod

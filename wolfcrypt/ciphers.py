@@ -174,7 +174,7 @@ class _Cipher(ABC):
 
     @property
     @abstractmethod
-    def key_size(self) -> int: ...
+    def key_size(self) -> int | None: ...
 
     @property
     @abstractmethod
@@ -2148,6 +2148,14 @@ if _lib.ML_KEM_ENABLED:
             :rtype: MlKemPrivate
             """
             mlkem_priv = cls(mlkem_type)
+
+            try:
+                memoryview(rand)
+            except TypeError as exception:
+                raise TypeError("rand must support the buffer protocol, such as `bytes` or `bytearray`") from exception
+
+            rand = bytes(rand)
+
             ret = _lib.wc_KyberKey_MakeKeyWithRandom(mlkem_priv.native_object, rand, len(rand))
 
             if ret < 0:  # pragma: no cover
