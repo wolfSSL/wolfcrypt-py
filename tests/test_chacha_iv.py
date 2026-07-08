@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # test_chacha_iv.py
 #
 # Copyright (C) 2006-2022 wolfSSL Inc.
@@ -26,6 +24,9 @@ import pytest
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.exceptions import WolfCryptError
 
+if _lib.CHACHA_ENABLED:
+    from wolfcrypt.ciphers import ChaCha  # ty: ignore[possibly-missing-import]
+
 pytestmark = pytest.mark.skipif(
     not _lib.CHACHA_ENABLED, reason="ChaCha not enabled")
 
@@ -38,24 +39,18 @@ def test_encrypt_before_set_iv_raises():
     F-4463: encrypt() before set_iv() must not feed an empty IV buffer to
     wc_Chacha_SetIV (which unconditionally reads 12 bytes). It must raise.
     """
-    from wolfcrypt.ciphers import ChaCha
-
     cipher = ChaCha(KEY)
     with pytest.raises(WolfCryptError):
         cipher.encrypt(b"A" * 16)
 
 
 def test_decrypt_before_set_iv_raises():
-    from wolfcrypt.ciphers import ChaCha
-
     cipher = ChaCha(KEY)
     with pytest.raises(WolfCryptError):
         cipher.decrypt(b"A" * 16)
 
 
 def test_encrypt_decrypt_after_set_iv_roundtrips():
-    from wolfcrypt.ciphers import ChaCha
-
     enc = ChaCha(KEY)
     enc.set_iv(NONCE)
     plaintext = b"the quick brown fox"
@@ -72,8 +67,6 @@ def test_failed_set_iv_keeps_encrypt_blocked(monkeypatch):
     encrypt()/decrypt() stay blocked rather than running with a stale or
     partially-applied IV.
     """
-    from wolfcrypt.ciphers import ChaCha
-
     cipher = ChaCha(KEY)
     # First, establish a valid IV so a later failure would otherwise leave
     # _iv_set True under the old ordering.

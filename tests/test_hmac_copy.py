@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # test_hmac_copy.py
 #
 # Copyright (C) 2006-2022 wolfSSL Inc.
@@ -39,7 +37,7 @@ def test_hmac_copy_raises_not_implemented():
     state (use-after-free risk in async/HW builds). wolfCrypt has no safe
     public copy, so HMAC copy() must refuse rather than alias.
     """
-    from wolfcrypt.hashes import HmacSha256
+    from wolfcrypt.hashes import HmacSha256  # ty: ignore[possibly-missing-import]
 
     hmac = HmacSha256.new(KEY, b"some message")
     with pytest.raises(NotImplementedError):
@@ -48,7 +46,7 @@ def test_hmac_copy_raises_not_implemented():
 
 def test_hmac_digest_unaffected_by_copy_removal():
     """digest()/hexdigest() must keep working and remain repeatable."""
-    from wolfcrypt.hashes import HmacSha256
+    from wolfcrypt.hashes import HmacSha256  # ty: ignore[possibly-missing-import]
 
     hmac = HmacSha256.new(KEY, b"some message")
     first = hmac.hexdigest()

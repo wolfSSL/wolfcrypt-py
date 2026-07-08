@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # test_cipher_modes.py
 #
 # Copyright (C) 2006-2022 wolfSSL Inc.
@@ -49,7 +47,7 @@ def test_unsupported_mode_gives_single_consistent_error():
     then hit a contradictory "not supported by this cipher" branch. The
     rejection must now be a single, consistent message.
     """
-    from wolfcrypt.ciphers import Aes
+    from wolfcrypt.ciphers import Aes  # ty: ignore[possibly-missing-import]
 
     key = b"0" * 16
     iv = b"0" * 16
