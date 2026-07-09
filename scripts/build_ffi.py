@@ -1314,7 +1314,7 @@ def build_ffi(local_wolfssl, features):
         int wolfCrypt_GetPrivateKeyReadEnable_fips(enum wc_KeyType);
         """
 
-    if features["ML_KEM"] or features["ML_DSA"]:
+    if features["ML_KEM"] or features["ML_DSA"] or features["CRYPTO_CB"]:
         cdef += """
         static const int INVALID_DEVID;
         """
