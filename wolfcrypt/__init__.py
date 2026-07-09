@@ -50,9 +50,12 @@ if top_level_py not in ["setup.py", "build_ffi.py"]:
 
     if TYPE_CHECKING:
         if _lib.CRYPTO_CB_ENABLED:
-            from wolfcrypt.cryptocb import CryptoCallback
+            from wolfcrypt.cryptocb import CryptoCallback  # ty: ignore[possibly-missing-import]
     from wolfcrypt.exceptions import WolfCryptApiError
 
+    # Only wolfCrypt_Init() is called here.
+    # Calling wolfCrypt_Cleanup() is not needed as the application exit() will clean up the entire process
+    # including any wolfcrypt data in any case.
     ret = _lib.wolfCrypt_Init()
     if ret < 0:
         raise WolfCryptApiError("WolfCrypt_Init failed", ret)

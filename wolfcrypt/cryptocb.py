@@ -124,9 +124,6 @@ if _lib.CRYPTO_CB_ENABLED:
                             )
                         _ffi.buffer(info.hash.digest, DIGEST_SIZE[info.hash.type])[:] = digest
                     return 0
-                if info.algo_type == _lib.WC_ALGO_TYPE_CIPHER:
-                    self.cipher_callback(device_id)
-                    return 0
                 if info.algo_type == _lib.WC_ALGO_TYPE_RNG:
                     out = self.rng_callback(device_id, info.rng.rng, info.rng.sz)
                     if len(out) != info.rng.sz:
@@ -146,9 +143,6 @@ if _lib.CRYPTO_CB_ENABLED:
             raise NotImplementedError
 
         def hash_finalize_callback(self, device_id: int, hash_type: int) -> bytes:
-            raise NotImplementedError
-
-        def cipher_callback(self, device_id: int) -> None:
             raise NotImplementedError
 
         def _unregister(self) -> None:
