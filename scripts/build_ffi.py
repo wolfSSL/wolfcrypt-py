@@ -870,7 +870,7 @@ def build_ffi(local_wolfssl, features):
     if features["SHA"]:
         cdef += """
         typedef struct { ...; } wc_Sha;
-        int wc_InitSha(wc_Sha*);
+        int wc_InitSha_ex(wc_Sha*, void*, int);
         int wc_ShaUpdate(wc_Sha*, const byte*, word32);
         int wc_ShaFinal(wc_Sha*, byte*);
         void wc_ShaFree(wc_Sha*);
@@ -1456,12 +1456,28 @@ def build_ffi(local_wolfssl, features):
                 word32 data_size;
                 byte* digest;
                 union {
+        """
+        if features["SHA"]:
+            cdef += """
                     wc_Sha* sha1;
-                    // wc_Sha224* sha224;
+            """
+        if features["SHA256"]:
+            cdef += """
                     wc_Sha256* sha256;
+            """
+        if features["SHA384"]:
+            cdef += """
                     wc_Sha384* sha384;
+            """
+        if features["SHA512"]:
+            cdef += """
                     wc_Sha512* sha512;
+            """
+        if features["SHA3"]:
+            cdef += """
                     wc_Sha3* sha3;
+            """
+        cdef += """
                     void* ctx;
                 } u;
             } hash;
