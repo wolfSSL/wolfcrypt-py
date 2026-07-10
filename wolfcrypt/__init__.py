@@ -18,9 +18,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
 
+from __future__ import annotations
+
 import os
 import sys
-from typing import TYPE_CHECKING
 
 from wolfcrypt._version import __version__, __wolfssl_version__
 
@@ -45,13 +46,18 @@ top_level_py = os.path.basename(sys.argv[0])
 # The code below is intended to only be used after the CFFI is built, so we
 # don't want it invoked whilst building the CFFI with build_ffi.py or setup.py.
 if top_level_py not in ["setup.py", "build_ffi.py"]:
+    import logging
+    from typing import TYPE_CHECKING
     from wolfcrypt._ffi import ffi as _ffi
     from wolfcrypt._ffi import lib as _lib
 
     if TYPE_CHECKING:
         if _lib.CRYPTO_CB_ENABLED:
+            from types import TracebackType
             from wolfcrypt.cryptocb import CryptoCallback  # ty: ignore[possibly-missing-import]
     from wolfcrypt.exceptions import WolfCryptApiError
+
+    log = logging.getLogger("wolfcrypt")
 
     # Only wolfCrypt_Init() is called here.
     # Calling wolfCrypt_Cleanup() is not needed as the application exit() will clean up the entire process
@@ -61,8 +67,14 @@ if top_level_py not in ["setup.py", "build_ffi.py"]:
         raise WolfCryptApiError("WolfCrypt_Init failed", ret)
 
     if _lib.CRYPTO_CB_ENABLED:
-        @_ffi.def_extern()
-        def py_wc_crypto_callback(device_id: int, info: _ffi.CData, ctx: _ffi.CData) -> int:
+        def crypto_cb_error_handler(exception: Exception, exc_value: Exception, traceback: TracebackType | None) -> int:  # noqa: ANN401
+            if isinstance(exc_value, WolfCryptApiError):
+                return exc_value.err_code
+            log.error(exc_value)
+            return -1
+
+        @_ffi.def_extern(onerror=crypto_cb_error_handler)
+        def py_wc_crypto_callback(device_id: int, info: _lib.wc_CryptoInfo, ctx: _ffi.CData) -> int:
             if ctx == _ffi.NULL:
                 return _lib.CRYPTOCB_UNAVAILABLE
             crypto_cb: CryptoCallback = _ffi.from_handle(ctx)

@@ -882,7 +882,7 @@ def build_ffi(local_wolfssl, features):
     if features["SHA256"]:
         cdef += """
         typedef struct { ...; } wc_Sha256;
-        int wc_InitSha256(wc_Sha256*);
+        int wc_InitSha256_ex(wc_Sha256*, void*, int);
         int wc_Sha256Update(wc_Sha256*, const byte*, word32);
         int wc_Sha256Final(wc_Sha256*, byte*);
         void wc_Sha256Free(wc_Sha256*);
@@ -892,7 +892,7 @@ def build_ffi(local_wolfssl, features):
     if features["SHA384"]:
         cdef += """
         typedef struct { ...; } wc_Sha384;
-        int wc_InitSha384(wc_Sha384*);
+        int wc_InitSha384_ex(wc_Sha384*, void*, int);
         int wc_Sha384Update(wc_Sha384*, const byte*, word32);
         int wc_Sha384Final(wc_Sha384*, byte*);
         void wc_Sha384Free(wc_Sha384*);
@@ -903,7 +903,7 @@ def build_ffi(local_wolfssl, features):
         cdef += """
         typedef struct { ...; } wc_Sha512;
 
-        int wc_InitSha512(wc_Sha512*);
+        int wc_InitSha512_ex(wc_Sha512*, void*, int);
         int wc_Sha512Update(wc_Sha512*, const byte*, word32);
         int wc_Sha512Final(wc_Sha512*, byte*);
         void wc_Sha512Free(wc_Sha512*);

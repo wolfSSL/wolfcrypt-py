@@ -26,6 +26,7 @@ import struct
 import pytest
 from typing_extensions import override
 
+from wolfcrypt.exceptions import WolfCryptApiError
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.random import Random
 
@@ -85,3 +86,16 @@ if _lib.SHA_ENABLED:
             sha.update(bytes(5))
             digest = sha.digest()
             assert digest == struct.pack("I16x", 15)
+
+class BadHashCryptoCallback(CryptoCallback):
+    @override
+    def hash_finalize_callback(self, device_id: int, hash_type: int) -> bytes:
+        return bytes(1)  # bad hash length
+
+if _lib.SHA_ENABLED:
+    def test_hash_callback_failure():
+        with BadHashCryptoCallback(12):
+            sha = Sha(device_id=12)
+            sha.update(bytes(10))
+            with pytest.raises(WolfCryptApiError):
+                sha.digest()
