@@ -504,7 +504,7 @@ if _lib.HMAC_ENABLED:
         def _type(self) -> int: ...
 
         def _hmac_init(self, hmac: int, key: bytes) -> int:
-            ret = _lib.wc_HmacInit(self._native_object, _ffi.NULL, -2)
+            ret = _lib.wc_HmacInit(self._native_object, _ffi.NULL, _lib.INVALID_DEVID)
             if ret < 0:
                 raise WolfCryptApiError("wc_HmacInit error", ret)
             # If the key isn't set, don't call wc_HmacSetKey. This can happen,

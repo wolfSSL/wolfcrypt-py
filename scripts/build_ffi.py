@@ -567,6 +567,8 @@ def build_ffi(local_wolfssl, features):
         extern int HASHDRBG_ENABLED;
         extern int CRYPTO_CB_ENABLED;
 
+        static const int INVALID_DEVID;
+
         typedef unsigned char byte;
         typedef unsigned int word32;
 
@@ -1312,11 +1314,6 @@ def build_ffi(local_wolfssl, features):
 
         int wolfCrypt_SetPrivateKeyReadEnable_fips(int, enum wc_KeyType);
         int wolfCrypt_GetPrivateKeyReadEnable_fips(enum wc_KeyType);
-        """
-
-    if features["ML_KEM"] or features["ML_DSA"] or features["CRYPTO_CB"]:
-        cdef += """
-        static const int INVALID_DEVID;
         """
 
     if features["ML_KEM"]:
