@@ -41,6 +41,7 @@ class WolfCryptApiError(WolfCryptError):
         :param message: error message
         :param err_code: WolfCrypt error code
         """
+        self.err_code = err_code
         err_string = error_string(err_code)
 
         if err_string:
