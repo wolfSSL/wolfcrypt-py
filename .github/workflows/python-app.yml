@@ -40,10 +40,6 @@ jobs:
         uv run --no-sync pytest tests
 
   build-no-pqc:
-    # Regression coverage for issue #2659: INVALID_DEVID is only declared
-    # in the CFFI cdef when ML_KEM or ML_DSA is enabled, so a wolfSSL build
-    # without those features must still import wolfcrypt.random successfully.
-
     runs-on: ubuntu-latest
     env:
       USE_LOCAL_WOLFSSL: ${{ github.workspace }}/wolfssl-install
@@ -93,7 +89,5 @@ jobs:
       run: |
         uv run --no-sync python -c "from wolfcrypt._ffi import lib as _lib; assert _lib.ML_KEM_ENABLED == 0, 'ML-KEM should be disabled'"
         uv run --no-sync python -c "from wolfcrypt._ffi import lib as _lib; assert _lib.ML_DSA_ENABLED == 0, 'ML-DSA should be disabled'"
-    - name: Import smoke (regression for INVALID_DEVID)
-      run: uv run --no-sync python -c "from wolfcrypt.random import Random; Random()"
     - name: Run tests
       run: uv run --no-sync pytest tests

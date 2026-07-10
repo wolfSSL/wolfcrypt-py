@@ -460,7 +460,7 @@ if _lib.AESGCM_STREAM_ENABLED:
                 raise ValueError(f"key must be {self._key_sizes} in length, not {len(key)}")
             self._init_done = False
             self._native_object = _ffi.new(self._native_type)
-            ret = _lib.wc_AesInit(self._native_object, _ffi.NULL, -2)
+            ret = _lib.wc_AesInit(self._native_object, _ffi.NULL, _lib.INVALID_DEVID)
             if ret < 0:
                 raise WolfCryptApiError("AES init error", ret)
             self._init_done = True
