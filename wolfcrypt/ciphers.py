@@ -2364,6 +2364,10 @@ if _lib.ML_DSA_ENABLED:
 
             if ctx is not None:
                 ctx_bytestype = t2b(ctx)
+                if len(ctx_bytestype) > 255:
+                    raise ValueError(
+                        f"context length {len(ctx_bytestype)} too large: must be 255 or less"
+                    )
                 ret = _lib.wc_dilithium_verify_ctx_msg(
                     sig_bytestype,
                     len(sig_bytestype),
