@@ -1,7 +1,8 @@
-wolfCrypt-py Release 5.9.2 (Jul 1, 2026)
+wolfCrypt-py Release 5.9.2 (Jul 16, 2026)
 ==========================================
 
 * Update to wolfSSL version 5.9.2
+* Update license from GPLv2 to GPLv3
 * Make t2b support other types
 * Fix ChaCha20Poly1305 to be singleshot
 * Fix padding of small ECC signatures
@@ -12,7 +13,6 @@ wolfCrypt-py Release 5.9.2 (Jul 1, 2026)
   Note: this can be enabled by compiling the C-library with `--enable-mldsa=yes,no-ctx`
 * Drop support for end-of-life Python versions (<= 3.9)
 * Add extra nonce parameter to Random generator
-* Add type annotations to utils and random
 * Add pyproject.toml for modern Python packaging
 * Fix AES-SIV silently mangling associated data
 * Fix ChaCha decrypt stream state wiping on first call
@@ -29,7 +29,7 @@ wolfCrypt-py Release 5.9.2 (Jul 1, 2026)
 * Add reseed support to random number generator
 * The RsaPublic key parameter is now mandatory as it is always needed by an internal function call.
 * The `native_object` attribute of `Random` is now read-only.
-* Add typing annotations.
+* Add type annotations across all public modules and ship a `py.typed` marker so downstream projects can consume them.
 
 
 wolfCrypt-py Release 5.8.4 (Jan 7, 2026)
