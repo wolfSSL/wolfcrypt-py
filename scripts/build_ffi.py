@@ -1350,7 +1350,7 @@ def build_ffi(local_wolfssl, features):
         int wc_dilithium_import_public(const byte* in, word32 inLen, dilithium_key* key);
         int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
         int wc_dilithium_sign_ctx_msg_with_seed(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
-        int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx, word32 ctxLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
+        int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
         typedef dilithium_key MlDsaKey;
         int wc_MlDsaKey_GetPrivLen(MlDsaKey* key, int* len);
         int wc_MlDsaKey_GetPubLen(MlDsaKey* key, int* len);
