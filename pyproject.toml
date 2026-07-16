@@ -46,6 +46,9 @@ dev = [
     "types-cffi",
 ]
 
+[tool.setuptools.packages.find]
+include = ["wolfcrypt", "wolfcrypt._ffi"]
+
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 exclude = [

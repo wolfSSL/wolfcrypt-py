@@ -23,7 +23,7 @@
 import os
 import re
 import sys
-from setuptools import setup, find_packages
+from setuptools import setup
 
 os.chdir(os.path.dirname(sys.argv[0]) or ".")
 
@@ -47,20 +47,11 @@ else:
 with open("README.rst") as readme_file:
     long_description = readme_file.read()
 
-with open("LICENSING.rst") as licensing_file:
-    long_description = long_description.replace(".. include:: LICENSING.rst\n",
-                                                licensing_file.read())
-
 setup(
     name="wolfcrypt",
     version=verstr,
     long_description=long_description,
     long_description_content_type='text/x-rst',
 
-    packages=find_packages(),
-
-    setup_requires=["cffi>=1.17"],
     cffi_modules=["./scripts/build_ffi.py:ffibuilder"],
-
-    package_data={"wolfcrypt": ["*.dll", "**/*.pyi", "py.typed"]},
 )
