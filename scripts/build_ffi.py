@@ -560,7 +560,7 @@ def build_ffi(local_wolfssl, features):
         extern int HASHDRBG_ENABLED;
 
         typedef unsigned char byte;
-        typedef unsigned int word32;
+        typedef uint32_t word32;
 
         typedef struct { ...; } WC_RNG;
         typedef struct { ...; } OS_Seed;
