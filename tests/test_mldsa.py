@@ -232,7 +232,7 @@ if _lib.ML_DSA_ENABLED:
         message = b"This is a test message for ML-DSA signature"
         context = b"Some context for the signature"
         with pytest.raises(TypeError):
-            mldsa_priv.sign_with_seed(message, seed, ctx=context)
+            mldsa_priv.sign_with_seed(message, seed, ctx=context)  # ty: ignore [invalid-argument-type]
 
     def test_make_key_from_seed(mldsa_type):
         seed = bytes(MlDsaPrivate.ML_DSA_KEYGEN_SEED_LENGTH)
@@ -249,4 +249,4 @@ if _lib.ML_DSA_ENABLED:
     @pytest.mark.parametrize("seed", [0, "seed"])
     def test_make_key_from_seed_bad_type(mldsa_type, seed: int | str):
         with pytest.raises(TypeError):
-            MlDsaPrivate.make_key_from_seed(mldsa_type, seed)
+            MlDsaPrivate.make_key_from_seed(mldsa_type, seed)  # ty: ignore [invalid-argument-type]

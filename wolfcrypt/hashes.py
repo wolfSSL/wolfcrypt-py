@@ -457,6 +457,7 @@ if _lib.HMAC_ENABLED:
         digest_size = None
         _native_type = "Hmac *"
         _native_size = _ffi.sizeof("Hmac")
+        _type: int
         _delete = staticmethod(_lib.wc_HmacFree)
 
         @override
@@ -497,11 +498,6 @@ if _lib.HMAC_ENABLED:
             state, as if obj.update(string) was called.
             """
             return cls(key, string)
-
-
-        @property
-        @abstractmethod
-        def _type(self) -> int: ...
 
         def _hmac_init(self, hmac: int, key: bytes) -> int:
             ret = _lib.wc_HmacInit(self._native_object, _ffi.NULL, -2)
