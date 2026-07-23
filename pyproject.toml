@@ -31,7 +31,7 @@ dependencies = [
 Homepage = "https://github.com/wolfssl/wolfcrypt-py"
 
 [build-system]
-requires = ["setuptools", "cffi>=1.17"]
+requires = ["setuptools>=64,<81", "cffi>=1.17"]
 build-backend = "setuptools.build_meta:__legacy__"
 
 [dependency-groups]
