@@ -18,6 +18,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1335, USA
 
+from __future__ import annotations
+
+import os
+import sys
+
 from wolfcrypt._version import __version__, __wolfssl_version__
 
 __title__ = "wolfcrypt"
@@ -33,20 +38,47 @@ __copyright__ = "Copyright (C) 2006-2026 wolfSSL Inc"
 __all__ = [
     "__title__", "__summary__", "__uri__", "__version__", "__wolfssl_version__",
     "__author__", "__email__", "__license__", "__copyright__",
-    "ciphers", "hashes", "random", "pwdbased"
+    "ciphers", "hashes", "random", "pwdbased", "cryptocb"
 ]
-
-import os
-import sys
 
 top_level_py = os.path.basename(sys.argv[0])
 
 # The code below is intended to only be used after the CFFI is built, so we
 # don't want it invoked whilst building the CFFI with build_ffi.py or setup.py.
 if top_level_py not in ["setup.py", "build_ffi.py"]:
+    import logging
+    from typing import TYPE_CHECKING
     from wolfcrypt._ffi import ffi as _ffi
     from wolfcrypt._ffi import lib as _lib
+
+    if TYPE_CHECKING:
+        if _lib.CRYPTO_CB_ENABLED:
+            from types import TracebackType
+            from wolfcrypt.cryptocb import CryptoCallback  # ty: ignore[possibly-missing-import]
     from wolfcrypt.exceptions import WolfCryptApiError
+
+    log = logging.getLogger("wolfcrypt")
+
+    # Only wolfCrypt_Init() is called here.
+    # Calling wolfCrypt_Cleanup() is not needed as the application exit() will clean up the entire process
+    # including any wolfcrypt data in any case.
+    ret = _lib.wolfCrypt_Init()
+    if ret < 0:
+        raise WolfCryptApiError("WolfCrypt_Init failed", ret)
+
+    if _lib.CRYPTO_CB_ENABLED:
+        def crypto_cb_error_handler(exception: Exception, exc_value: Exception, traceback: TracebackType | None) -> int:  # noqa: ANN401
+            if isinstance(exc_value, WolfCryptApiError):
+                return exc_value.err_code
+            log.error(exc_value)
+            return -1
+
+        @_ffi.def_extern(onerror=crypto_cb_error_handler)
+        def py_wc_crypto_callback(device_id: int, info: _lib.wc_CryptoInfo, ctx: _ffi.CData) -> int:
+            if ctx == _ffi.NULL:
+                return _lib.CRYPTOCB_UNAVAILABLE
+            crypto_cb: CryptoCallback = _ffi.from_handle(ctx)
+            return crypto_cb.callback(device_id, info)
 
     if hasattr(_lib, 'WC_RNG_SEED_CB_ENABLED'):
         if _lib.WC_RNG_SEED_CB_ENABLED:
