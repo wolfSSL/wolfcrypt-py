@@ -97,3 +97,29 @@ jobs:
       run: uv run --no-sync python -c "from wolfcrypt.random import Random; Random()"
     - name: Run tests
       run: uv run --no-sync pytest tests
+
+  build-windows:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.10"
+    - name: Install uv
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      with:
+        # Install a specific version of uv.
+        version: "0.11.26"
+    - name: Build the wheel
+      run: uv build --wheel
+    - name: Install the project
+      run: uv sync --dev
+    - name: Perform static checks
+      run: uv run ruff check
+    - name: Run tests using the locally built wheel
+      run: |
+        uv pip install --reinstall dist/*.whl
+        uv run --no-sync pytest tests
