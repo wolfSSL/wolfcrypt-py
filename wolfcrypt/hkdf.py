@@ -32,7 +32,7 @@ from wolfcrypt.utils import t2b
 
 if TYPE_CHECKING:
     if _lib.HMAC_ENABLED:
-        from wolfcrypt.hashes import _Hmac
+        from wolfcrypt.hashes import _Hmac  # ty: ignore[possibly-missing-import]
 
 
 if _lib.HKDF_ENABLED:

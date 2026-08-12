@@ -1372,7 +1372,7 @@ if _lib.ECC_ENABLED:
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
         @override
-        def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, d: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
+        def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, d: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:  # ty: ignore[invalid-method-override]
             """
             Decodes an ECC private key from its raw elements: public (Qx,Qy)
             and private(d)
@@ -1394,7 +1394,7 @@ if _lib.ECC_ENABLED:
                 raise WolfCryptApiError("Key decode error", ret)
 
         @override
-        def encode_key(self) -> bytes:
+        def encode_key(self, with_curve: bool = True) -> bytes:
             """
             Encodes the ECC private key in an ASN sequence.
 
@@ -1409,7 +1409,7 @@ if _lib.ECC_ENABLED:
             return _ffi.buffer(key, ret)[:]
 
         @override
-        def encode_key_raw(self) -> tuple[bytes, bytes, bytes]:
+        def encode_key_raw(self) -> tuple[bytes, bytes, bytes]:  # ty: ignore[invalid-method-override]
             """
             Encodes the ECC private key in its three raw elements
 
@@ -1680,7 +1680,7 @@ if _lib.ED25519_ENABLED:
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
         @override
-        def encode_key(self) -> tuple[bytes, bytes]:
+        def encode_key(self) -> tuple[bytes, bytes]:  # ty: ignore[invalid-method-override]
             """
             Encodes the ED25519 private key.
 
@@ -1889,7 +1889,7 @@ if _lib.ED448_ENABLED:
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
         @override
-        def encode_key(self) -> tuple[bytes, bytes]:
+        def encode_key(self) -> tuple[bytes, bytes]:  # ty: ignore[invalid-method-override]
             """
             Encodes the ED448 private key.
 

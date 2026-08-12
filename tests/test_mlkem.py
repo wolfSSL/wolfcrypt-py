@@ -621,7 +621,7 @@ if _lib.ML_KEM_ENABLED:
     @pytest.mark.parametrize("rand", [0, "rand"])
     def test_make_key_with_random_bad_random_type(mlkem_type, rand: int | str):
         with pytest.raises(TypeError):
-            MlKemPrivate.make_key_with_random(mlkem_type, rand)
+            MlKemPrivate.make_key_with_random(mlkem_type, rand)  # ty: ignore [invalid-argument-type]
 
     @pytest.mark.parametrize("mlkem_type", mlkem_types)
     @pytest.mark.parametrize("rand", [0, "rand"])
@@ -630,7 +630,7 @@ if _lib.ML_KEM_ENABLED:
         assert type(mlkem_pub) is MlKemPublic
 
         with pytest.raises(TypeError):
-            mlkem_pub.encapsulate_with_random(rand)
+            mlkem_pub.encapsulate_with_random(rand)  # ty: ignore [invalid-argument-type]
 
     @pytest.mark.parametrize("mlkem_type", mlkem_types)
     def test_size_properties(mlkem_type):
