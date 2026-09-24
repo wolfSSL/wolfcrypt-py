@@ -23,7 +23,11 @@ import sys
 import re
 import subprocess
 from contextlib import contextmanager
-from distutils.util import get_platform
+try:
+    from distutils.util import get_platform
+except ImportError:
+    # Python >= 3.12 without setuptools' distutils shim (unit tests).
+    from sysconfig import get_platform
 from cffi import FFI
 import shutil
 from wolfcrypt._version import __wolfssl_version__ as version
@@ -365,6 +369,16 @@ def get_features(local_wolfssl, features):
         with open(file) as f:
             defines += f.read().splitlines()
 
+    return detect_features(defines, features, fips, include_dirs)
+
+
+def detect_features(defines, features, fips=False, include_dirs=()):
+    """Set features from the lines of options.h/user_settings.h."""
+    text = "\n".join(defines)
+
+    def defined(name):
+        return re.search(rf"^\s*#\s*define\s+{name}\b", text, re.MULTILINE) is not None
+
     features["MPAPI"] = 1 if '#define WOLFSSL_PUBLIC_MP' in defines else 0
     features["SHA"] = 0 if '#define NO_SHA' in defines else 1
     features["SHA256"] = 0 if '#define NO_SHA256' in defines else 1
@@ -421,6 +435,8 @@ def get_features(local_wolfssl, features):
                 with open(hmac_h) as f:
                     if "wc_HmacCopy" in f.read():
                         features["HMAC_COPY"] = 1
+    # aes.h declares wc_AesCtrEncrypt only with WOLFSSL_AES_COUNTER.
+    features["AES_CTR"] = 1 if features["AES"] and defined("WOLFSSL_AES_COUNTER") else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -458,6 +474,16 @@ def build_ffi(local_wolfssl, features):
     else:
         cffi_libraries.append("wolfssl")
 
+    ffibuilder.set_source("wolfcrypt._ffi", make_source(features),
+        include_dirs=cffi_include_dirs,
+        library_dirs=[wolfssl_lib_dir(local_wolfssl, features["FIPS"])],
+        libraries=cffi_libraries)
+
+    ffibuilder.cdef(make_cdef(features))
+
+
+def make_source(features):
+    """Return the C source passed to set_source()."""
     includes_string = ""
 
     if sys.platform == 'win32':
@@ -548,13 +574,14 @@ def build_ffi(local_wolfssl, features):
         int CRYPTO_CB_COPY_ENABLED = {features["CRYPTO_CB_COPY"]};
         int CRYPTO_CB_FREE_ENABLED = {features["CRYPTO_CB_FREE"]};
         int HMAC_COPY_ENABLED = {features["HMAC_COPY"]};
+        int AES_CTR_ENABLED = {features["AES_CTR"]};
     """
 
-    ffibuilder.set_source("wolfcrypt._ffi", init_source_string,
-        include_dirs=cffi_include_dirs,
-        library_dirs=[wolfssl_lib_dir(local_wolfssl, features["FIPS"])],
-        libraries=cffi_libraries)
+    return init_source_string
 
+
+def make_cdef(features):
+    """Return the cdef for the given features."""
     # TODO: change cdef to cdef.
     # cdef = ""
     cdef = """
@@ -599,6 +626,7 @@ def build_ffi(local_wolfssl, features):
         static const int INVALID_DEVID;
         static const int WC_HW_E;
         static const int CRYPTOCB_UNAVAILABLE;
+        extern int AES_CTR_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -978,8 +1006,11 @@ def build_ffi(local_wolfssl, features):
         int wc_AesSetKey(Aes*, const byte*, word32, const byte*, int);
         int wc_AesCbcEncrypt(Aes*, byte*, const byte*, word32);
         int wc_AesCbcDecrypt(Aes*, byte*, const byte*, word32);
-        int wc_AesCtrEncrypt(Aes*, byte*, const byte*, word32);
         """
+        if features["AES_CTR"]:
+            cdef += """
+            int wc_AesCtrEncrypt(Aes*, byte*, const byte*, word32);
+            """
 
     if features["AES"] and features["AESGCM_STREAM"]:
         cdef += """
@@ -1552,11 +1583,11 @@ def build_ffi(local_wolfssl, features):
         // void wc_CryptoCb_InfoString(wc_CryptoInfo* info);
         """
 
-    ffibuilder.cdef(cdef)
+    return cdef
 
 
-def main(ffibuilder):
-    # Default features.
+def default_features():
+    """Return the default features, before detection."""
     features = {
         "MPAPI": 1,
         "SHA": 1,
@@ -1594,6 +1625,7 @@ def main(ffibuilder):
         "CRYPTO_CB_COPY": 1,
         "CRYPTO_CB_FREE": 1,
         "HMAC_COPY": 1,
+        "AES_CTR": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
@@ -1601,6 +1633,12 @@ def main(ffibuilder):
         features["ED448"] = 0
     else:
         features["ED448"] = 1
+
+    return features
+
+
+def main(ffibuilder):
+    features = default_features()
 
     local_wolfssl = os.environ.get("USE_LOCAL_WOLFSSL")
     if local_wolfssl:
@@ -1624,7 +1662,10 @@ def main(ffibuilder):
 
 
 ffibuilder = FFI()
-main(ffibuilder)
+
+# cffi's setuptools integration runs this file with __name__ == "__cffi__".
+if __name__ in ("__main__", "__cffi__"):
+    main(ffibuilder)
 
 if __name__ == "__main__":
     ffibuilder.compile(verbose=True)

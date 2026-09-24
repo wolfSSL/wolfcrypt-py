@@ -281,6 +281,12 @@ if _lib.AES_ENABLED:
         _native_type = "Aes *"
 
         @override
+        def __init__(self, key: BytesOrStr, mode: int, IV: BytesOrStr | None = None) -> None:
+            if mode == MODE_CTR and not _lib.AES_CTR_ENABLED:
+                raise NotImplementedError("AES-CTR is not supported by this wolfSSL build")
+            super().__init__(key, mode, IV)
+
+        @override
         def _set_key(self, direction: int) -> int:
             if direction == _ENCRYPTION:
                 assert self._enc is not None
