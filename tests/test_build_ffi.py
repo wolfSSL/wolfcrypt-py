@@ -49,6 +49,7 @@ SUBCAPABILITIES = {
     "SHA3_384": "SHA3",
     "SHA3_512": "SHA3",
     "HKDF": "HMAC",
+    "PBKDF2": "PWDBASED",
 }
 
 
@@ -234,3 +235,23 @@ def test_hkdf_needs_hmac(bf):
         assert name not in cdef, name
 
     assert detect(bf)["HKDF"] == 0
+
+
+def test_pbkdf2_needs_hmac_and_pbkdf2(bf):
+    features = detect(bf)
+    assert features["PBKDF2"] == 1
+    assert "wc_PBKDF2(" in cdef_for(bf, features)
+
+    # pwdbased.c builds wc_PBKDF2 only with HAVE_PBKDF2 and without NO_HMAC.
+    for define in ("#define NO_HMAC", "#define NO_PBKDF2", "  #define NO_PBKDF2 1", "#define NO_PWDBASED"):
+        features = detect(bf, define)
+        assert features["PBKDF2"] == 0, define
+        assert "wc_PBKDF2(" not in cdef_for(bf, features), define
+
+    # settings.h defines HAVE_PBKDF2 for PKCS7 and scrypt even with NO_PBKDF2.
+    for define in ("#define HAVE_PBKDF2", "#define HAVE_PKCS7", "#define HAVE_SCRYPT"):
+        features = detect(bf, "#define NO_PBKDF2", define)
+        assert features["PBKDF2"] == 1, define
+        assert "wc_PBKDF2(" in cdef_for(bf, features), define
+
+    assert detect(bf, "#define NO_HMAC", "#define HAVE_PKCS7")["PBKDF2"] == 0

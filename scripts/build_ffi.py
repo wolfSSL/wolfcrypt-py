@@ -440,6 +440,11 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     for bits in (224, 256, 384, 512):
         disabled = defined(f"WOLFSSL_NOSHA3_{bits}") or (xilinx_sha3 and bits != 384)
         features[f"SHA3_{bits}"] = 1 if features["SHA3"] and not disabled else 0
+    # pwdbased.c builds wc_PBKDF2 only with HAVE_PBKDF2 and without NO_HMAC.
+    # settings.h defines HAVE_PBKDF2 unless NO_PBKDF2, and always for PKCS7 and scrypt.
+    features["PBKDF2"] = 1 if features["PWDBASED"] and features["HMAC"] and (
+        not defined("NO_PBKDF2") or defined("HAVE_PBKDF2") or defined("HAVE_PKCS7")
+        or defined("HAVE_SCRYPT")) else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -583,6 +588,7 @@ def make_source(features):
         int SHA3_256_ENABLED = {features["SHA3_256"]};
         int SHA3_384_ENABLED = {features["SHA3_384"]};
         int SHA3_512_ENABLED = {features["SHA3_512"]};
+        int PBKDF2_ENABLED = {features["PBKDF2"]};
     """
 
     return init_source_string
@@ -641,6 +647,7 @@ def make_cdef(features):
         extern int SHA3_256_ENABLED;
         extern int SHA3_384_ENABLED;
         extern int SHA3_512_ENABLED;
+        extern int PBKDF2_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1334,7 +1341,7 @@ def make_cdef(features):
                               void* heap, int devId);
         """
 
-    if features["PWDBASED"]:
+    if features["PBKDF2"]:
         cdef += """
         int wc_PBKDF2(byte* output, const byte* passwd, int pLen,
                       const byte* salt, int sLen, int iterations, int kLen,
@@ -1646,6 +1653,7 @@ def default_features():
         "SHA3_256": 1,
         "SHA3_384": 1,
         "SHA3_512": 1,
+        "PBKDF2": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
