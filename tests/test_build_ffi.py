@@ -48,6 +48,7 @@ SUBCAPABILITIES = {
     "SHA3_256": "SHA3",
     "SHA3_384": "SHA3",
     "SHA3_512": "SHA3",
+    "HKDF": "HMAC",
 }
 
 
@@ -213,3 +214,23 @@ def test_sha3_variants_follow_nosha3_macros(bf):
     features = detect(bf)
     for bits in SHA3_BITS:
         assert features[f"SHA3_{bits}"] == 0, bits
+
+
+def test_hkdf_needs_hmac(bf):
+    hkdf_funcs = ("wc_HKDF(", "wc_HKDF_Extract(", "wc_HKDF_Extract_ex(", "wc_HKDF_Expand(", "wc_HKDF_Expand_ex(")
+
+    features = detect(bf, "#define HAVE_HKDF")
+    assert features["HKDF"] == 1
+    cdef = cdef_for(bf, features)
+    for name in hkdf_funcs:
+        assert name in cdef, name
+
+    # hmac.h and hmac.c provide HKDF only without NO_HMAC.
+    features = detect(bf, "#define HAVE_HKDF", "#define NO_HMAC")
+    assert features["HMAC"] == 0
+    assert features["HKDF"] == 0
+    cdef = cdef_for(bf, features)
+    for name in hkdf_funcs:
+        assert name not in cdef, name
+
+    assert detect(bf)["HKDF"] == 0
