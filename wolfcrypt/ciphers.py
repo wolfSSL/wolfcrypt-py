@@ -1162,6 +1162,11 @@ if _lib.ECC_ENABLED:
             if key:
                 self.decode_key(key)
 
+        def _check_key(self) -> None:
+            ret = _lib.wc_ecc_check_key(self.native_object)
+            if ret != 0:
+                raise WolfCryptApiError("Key check error", ret)
+
         def decode_key(self, key: BytesOrStr) -> None:
             """
             Decodes an ECC public key from an ASN sequence.
@@ -1179,6 +1184,7 @@ if _lib.ECC_ENABLED:
                 raise WolfCryptError(f"Key decode error ({self.size})")
             if self.max_signature_size <= 0:  # pragma: no cover
                 raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
+            self._check_key()
 
         def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
             """
@@ -1197,6 +1203,7 @@ if _lib.ECC_ENABLED:
                     _ffi.NULL, curve_id)
             if ret != 0:
                 raise WolfCryptApiError("Key decode error", ret)
+            self._check_key()
 
         def encode_key(self, with_curve: bool = True) -> bytes:
             """
@@ -1241,6 +1248,7 @@ if _lib.ECC_ENABLED:
             ret = _lib.wc_ecc_import_x963(x963, len(x963), self.native_object)
             if ret != 0:
                 raise WolfCryptApiError("x963 import error", ret)
+            self._check_key()
 
         def export_x963(self) -> bytes:
             """
