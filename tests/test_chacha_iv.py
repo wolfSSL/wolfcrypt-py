@@ -82,3 +82,34 @@ def test_failed_set_iv_keeps_encrypt_blocked(monkeypatch):
     # encrypt() would instead run with a stale IV.
     with pytest.raises(WolfCryptError):
         cipher.encrypt(b"A" * 16)
+
+
+def test_invalid_nonce_length_disarms_cipher():
+    """
+    F-10069: a set_iv() that fails on nonce length must not leave the cipher
+    usable with the rejected nonce, even after an earlier successful set_iv().
+    """
+    cipher = ChaCha(KEY)
+    cipher.set_iv(NONCE)
+
+    with pytest.raises(ValueError):
+        cipher.set_iv(b"\x02" * 5)
+
+    with pytest.raises(WolfCryptError):
+        cipher.encrypt(b"A" * 16)
+    with pytest.raises(WolfCryptError):
+        cipher.decrypt(b"A" * 16)
+
+
+def test_set_iv_after_invalid_nonce_rearms():
+    enc = ChaCha(KEY)
+    enc.set_iv(NONCE)
+    with pytest.raises(ValueError):
+        enc.set_iv(b"\x02" * 5)
+    enc.set_iv(NONCE)
+    plaintext = b"the quick brown fox"
+    ciphertext = enc.encrypt(plaintext)
+
+    dec = ChaCha(KEY)
+    dec.set_iv(NONCE)
+    assert dec.decrypt(ciphertext) == plaintext
