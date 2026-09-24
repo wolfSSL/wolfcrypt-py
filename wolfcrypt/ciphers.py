@@ -38,7 +38,7 @@ from wolfcrypt.random import Random
 from wolfcrypt.utils import BytesOrStr, t2b
 from .wc_types import SupportsRsaSign, SupportsRsaVerify
 
-if _lib.ASN_ENABLED:
+if _lib.PEM_TO_DER_ENABLED:
     from wolfcrypt.asn import pem_to_der  # ty: ignore[possibly-missing-import]
 
 
@@ -844,7 +844,7 @@ if _lib.RSA_ENABLED:
             if self.output_size <= 0:  # pragma: no cover
                 raise WolfCryptApiError("Invalid key error", self.output_size)
 
-        if _lib.ASN_ENABLED:
+        if _lib.PEM_TO_DER_ENABLED:
             @classmethod
             def from_pem(cls, file: bytes, hash_type: int | None = None, rng: Random | None = None) -> RsaPublic:
                 der = pem_to_der(file, _lib.PUBLICKEY_TYPE)
@@ -1013,7 +1013,7 @@ if _lib.RSA_ENABLED:
                 if self.output_size <= 0:  # pragma: no cover
                     raise WolfCryptApiError("Invalid key size error", self.output_size)
 
-        if _lib.ASN_ENABLED:
+        if _lib.PEM_TO_DER_ENABLED:
             @override
             @classmethod
             def from_pem(cls, file: bytes, hash_type: int | None = None, rng: Random | None = None) -> RsaPrivate:

@@ -21,6 +21,7 @@
 # pylint: disable=redefined-outer-name
 # ty: ignore[possibly-missing-import]
 
+import importlib.util
 import os
 import random
 from collections import namedtuple
@@ -513,6 +514,7 @@ if _lib.RSA_ENABLED:
             assert 1024 / 8 == len(signature) == rsa_private_pss.output_size
             assert rsa_private_pss.verify_pss(plaintext, signature) is True
 
+    @pytest.mark.skipif(not _lib.PEM_TO_DER_ENABLED, reason="PEM to DER not enabled")
     def test_rsa_sign_verify_pem(rsa_private_pem, rsa_public_pem):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -529,6 +531,7 @@ if _lib.RSA_ENABLED:
         assert 256 == len(signature) == rsa_private_pem.output_size
         assert plaintext == rsa_private_pem.verify(signature)
 
+    @pytest.mark.skipif(not _lib.PEM_TO_DER_ENABLED, reason="PEM to DER not enabled")
     def test_rsa_sign_verify_pem_rng(rsa_private_pem_rng, rsa_public_pem_rng):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -1236,3 +1239,16 @@ if _lib.RSA_ENABLED:
         rsa = RsaPrivate(vectors[RsaPrivate].key)
         with pytest.raises(WolfCryptError, match="Hash type not set"):
             rsa.decrypt_oaep(b"\x00" * rsa.output_size)
+
+    def test_rsa_from_pem_defined_only_when_enabled(monkeypatch):
+        """F-12233: from_pem needs wc_PemToDer in the linked wolfSSL."""
+        for cls in (RsaPublic, RsaPrivate):
+            assert hasattr(cls, "from_pem") == bool(_lib.PEM_TO_DER_ENABLED), cls
+
+        # Load a fresh copy of the module as if wc_PemToDer were not compiled in.
+        monkeypatch.setattr(_lib, "PEM_TO_DER_ENABLED", 0)
+        spec = importlib.util.find_spec("wolfcrypt.ciphers")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        for cls in (module.RsaPublic, module.RsaPrivate):
+            assert not hasattr(cls, "from_pem"), cls

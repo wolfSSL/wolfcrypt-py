@@ -22,13 +22,19 @@
 # ty: ignore[possibly-missing-import]
 
 from collections import namedtuple
+import importlib.util
 import pytest
 import os
+from wolfcrypt import asn
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import h2b
 
 if _lib.ASN_ENABLED:
-    from wolfcrypt.asn import pem_to_der, der_to_pem, make_signature, check_signature
+    from wolfcrypt.asn import make_signature, check_signature
+if _lib.PEM_TO_DER_ENABLED:
+    from wolfcrypt.asn import pem_to_der
+if _lib.DER_TO_PEM_ENABLED:
+    from wolfcrypt.asn import der_to_pem
 if _lib.SHA256_ENABLED:
     from wolfcrypt.hashes import Sha256
 if _lib.RSA_ENABLED:
@@ -77,7 +83,7 @@ def signature_vectors():
     # Signature computed with:
     # echo -n "wolfcrypt is the best crypto around" | \
     # openssl dgst -hex -sha256 -sign tests/certs/server-key.pem
-    if _lib.ASN_ENABLED and _lib.SHA256_ENABLED and _lib.RSA_ENABLED:
+    if _lib.PEM_TO_DER_ENABLED and _lib.SHA256_ENABLED and _lib.RSA_ENABLED:
         vectors.append(TestVector(
             data="wolfcrypt is the best crypto around",
             signature=h2b("1d65f21df8fdc9f3c2351792840423481c6b0f2332105abd9248"
@@ -99,14 +105,35 @@ def signature_vectors():
 
 def test_pem_der_conversion(pem_der_conversion_vectors):
     for vector in pem_der_conversion_vectors:
-        computed_der = pem_to_der(vector.pem, vector.type)
-        assert computed_der == vector.der
+        if _lib.PEM_TO_DER_ENABLED:
+            computed_der = pem_to_der(vector.pem, vector.type)
+            assert computed_der == vector.der
 
-        computed_pem = der_to_pem(vector.der, vector.type)
-        assert computed_pem == vector.pem
+        if _lib.DER_TO_PEM_ENABLED:
+            computed_pem = der_to_pem(vector.der, vector.type)
+            assert computed_pem == vector.pem
 
 def test_signature(signature_vectors):
     for vector in signature_vectors:
         assert make_signature(vector.data, vector.hash_cls, vector.priv_key) == vector.signature
         assert check_signature(vector.signature, vector.data, vector.hash_cls,
                                vector.pub_key)
+
+def test_pem_der_helpers_defined_only_when_enabled(monkeypatch):
+    """F-12233: each conversion direction needs its own wolfSSL function."""
+    helpers = {"PEM_TO_DER_ENABLED": "pem_to_der", "DER_TO_PEM_ENABLED": "der_to_pem"}
+    for flag, name in helpers.items():
+        assert hasattr(asn, name) == bool(getattr(_lib, flag)), name
+
+    # Load fresh copies of the module as if one direction were not compiled in.
+    for disabled, disabled_name in helpers.items():
+        with monkeypatch.context() as m:
+            m.setattr(_lib, disabled, 0)
+            spec = importlib.util.find_spec("wolfcrypt.asn")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+        assert not hasattr(module, disabled_name), disabled
+        for flag, name in helpers.items():
+            if flag != disabled:
+                assert hasattr(module, name) == bool(getattr(_lib, flag)), (disabled, name)
+        assert hasattr(module, "make_signature") == bool(_lib.ASN_ENABLED), disabled
