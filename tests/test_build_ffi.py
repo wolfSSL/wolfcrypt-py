@@ -50,6 +50,8 @@ SUBCAPABILITIES = {
     "SHA3_512": "SHA3",
     "HKDF": "HMAC",
     "PBKDF2": "PWDBASED",
+    "PEM_TO_DER": "ASN",
+    "DER_TO_PEM": "ASN",
 }
 
 
@@ -255,3 +257,51 @@ def test_pbkdf2_needs_hmac_and_pbkdf2(bf):
         assert "wc_PBKDF2(" in cdef_for(bf, features), define
 
     assert detect(bf, "#define NO_HMAC", "#define HAVE_PKCS7")["PBKDF2"] == 0
+
+
+PEM_TO_DER_DECLS = ("DerBuffer", "EncryptedInfo", "wc_PemToDer(", "wc_FreeDer(")
+
+
+def test_pem_der_conversions_follow_their_own_macros(bf):
+    # settings.h derives WOLFSSL_DER_TO_PEM only from KEY_GEN, CERT_GEN or OPENSSL_EXTRA.
+    features = detect(bf)
+    assert features["PEM_TO_DER"] == 1
+    assert features["DER_TO_PEM"] == 0
+    cdef = cdef_for(bf, features)
+    assert "wc_EncodeSignature(" in cdef
+    for name in PEM_TO_DER_DECLS:
+        assert name in cdef, name
+    assert "wc_DerToPemEx(" not in cdef
+
+    for define in ("#define WOLFSSL_KEY_GEN", "  #define WOLFSSL_KEY_GEN 1", "#define WOLFSSL_CERT_GEN",
+                   "#define OPENSSL_EXTRA", "#define OPENSSL_ALL", "#define WOLFSSL_DUAL_ALG_CERTS",
+                   "#define WOLFSSL_DER_TO_PEM"):
+        features = detect(bf, define)
+        assert features["DER_TO_PEM"] == 1, define
+        assert "wc_DerToPemEx(" in cdef_for(bf, features), define
+
+    features = detect(bf, "#define WOLFSSL_KEY_GEN", "#define WOLFSSL_NO_DER_TO_PEM")
+    assert features["DER_TO_PEM"] == 0
+    assert "wc_DerToPemEx(" not in cdef_for(bf, features)
+    assert detect(bf, "#define WOLFSSL_CERT_GEN", "#define WOLFSSL_NO_DER_TO_PEM")["DER_TO_PEM"] == 1
+
+    # settings.h derives WOLFSSL_PEM_TO_DER unless WOLFSSL_NO_PEM or NO_CODING.
+    for define in ("#define WOLFSSL_NO_PEM", "#define NO_CODING", "    #define NO_CODING 1"):
+        features = detect(bf, "#define WOLFSSL_KEY_GEN", define)
+        assert features["PEM_TO_DER"] == 0, define
+        assert features["DER_TO_PEM"] == 1, define
+        cdef = cdef_for(bf, features)
+        assert "wc_EncodeSignature(" in cdef, define
+        assert "wc_DerToPemEx(" in cdef, define
+        for name in PEM_TO_DER_DECLS:
+            assert name not in cdef, (define, name)
+    assert detect(bf, "#define WOLFSSL_NO_PEM", "#define WOLFSSL_PEM_TO_DER")["PEM_TO_DER"] == 1
+
+    # asn.c builds both directions only with ASN and certificate support.
+    for define in ("#define NO_ASN", "#define NO_CERTS"):
+        features = detect(bf, "#define WOLFSSL_KEY_GEN", define)
+        assert features["PEM_TO_DER"] == 0, define
+        assert features["DER_TO_PEM"] == 0, define
+        cdef = cdef_for(bf, features)
+        for name in (*PEM_TO_DER_DECLS, "wc_DerToPemEx("):
+            assert name not in cdef, (define, name)

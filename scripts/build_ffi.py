@@ -455,6 +455,15 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     features["PBKDF2"] = 1 if features["PWDBASED"] and features["HMAC"] and (
         not defined("NO_PBKDF2") or defined("HAVE_PBKDF2") or defined("HAVE_PKCS7")
         or defined("HAVE_SCRYPT")) else 0
+    # asn.c builds the PEM/DER conversions only with certificate support.
+    # settings.h derives WOLFSSL_PEM_TO_DER and WOLFSSL_DER_TO_PEM.
+    certs = features["ASN"] and not defined("NO_CERTS")
+    features["PEM_TO_DER"] = 1 if certs and (defined("WOLFSSL_PEM_TO_DER") or not (
+        defined("WOLFSSL_NO_PEM") or defined("NO_CODING"))) else 0
+    features["DER_TO_PEM"] = 1 if certs and (defined("WOLFSSL_DER_TO_PEM")
+        or defined("WOLFSSL_CERT_GEN") or defined("OPENSSL_EXTRA") or defined("OPENSSL_ALL")
+        or defined("WOLFSSL_DUAL_ALG_CERTS")
+        or (defined("WOLFSSL_KEY_GEN") and not defined("WOLFSSL_NO_DER_TO_PEM"))) else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -601,6 +610,8 @@ def make_source(features):
         int SHA3_384_ENABLED = {features["SHA3_384"]};
         int SHA3_512_ENABLED = {features["SHA3_512"]};
         int PBKDF2_ENABLED = {features["PBKDF2"]};
+        int PEM_TO_DER_ENABLED = {features["PEM_TO_DER"]};
+        int DER_TO_PEM_ENABLED = {features["DER_TO_PEM"]};
     """
 
     return init_source_string
@@ -661,6 +672,8 @@ def make_cdef(features):
         extern int SHA3_384_ENABLED;
         extern int SHA3_512_ENABLED;
         extern int PBKDF2_ENABLED;
+        extern int PEM_TO_DER_ENABLED;
+        extern int DER_TO_PEM_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1371,6 +1384,12 @@ def make_cdef(features):
         static const long SHA384h;
         static const long SHA512h;
 
+        word32 wc_EncodeSignature(byte* out, const byte* digest, word32 digSz,
+                                  int hashOID);
+        """
+
+    if features["PEM_TO_DER"]:
+        cdef += """
         typedef struct DerBuffer {
             byte*  buffer;
             void*  heap;
@@ -1380,12 +1399,14 @@ def make_cdef(features):
         } DerBuffer;
         typedef struct { ...; } EncryptedInfo;
 
-        word32 wc_EncodeSignature(byte* out, const byte* digest, word32 digSz,
-                                  int hashOID);
         int wc_PemToDer(const unsigned char* buff, long longSz, int type,
                         DerBuffer** pDer, void* heap, EncryptedInfo* info,
                         int* keyFormat);
         void wc_FreeDer(DerBuffer** pDer);
+        """
+
+    if features["DER_TO_PEM"]:
+        cdef += """
         int wc_DerToPemEx(const byte* der, word32 derSz, byte* output, word32 outSz,
                         byte *cipher_info, int type);
         """
@@ -1666,6 +1687,8 @@ def default_features():
         "SHA3_384": 1,
         "SHA3_512": 1,
         "PBKDF2": 1,
+        "PEM_TO_DER": 1,
+        "DER_TO_PEM": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
