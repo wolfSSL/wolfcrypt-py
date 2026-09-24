@@ -540,6 +540,16 @@ def test_ecc_subsets_need_ecc(bf):
             assert name not in cdef, name
 
 
+def test_ecc_digest_bounds_without_rsa(bf):
+    """F-8279: ECDSA checks digest sizes against wolfSSL's bounds, also without RSA."""
+    features = detect(bf, "#define HAVE_ECC", "#define NO_RSA")
+    assert features["ECC"] == 1
+    assert features["RSA"] == 0
+    cdef = cdef_for(bf, features)
+    for name in ("WC_MIN_DIGEST_SIZE", "WC_MAX_DIGEST_SIZE"):
+        assert name in cdef, name
+
+
 ED25519_SUBSETS = ("ED25519_MAKE_KEY", "ED25519_SIGN", "ED25519_VERIFY", "ED25519_KEY_IMPORT",
                    "ED25519_KEY_EXPORT")
 ED25519_OPS = {
