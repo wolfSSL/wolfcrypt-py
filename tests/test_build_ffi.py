@@ -52,6 +52,7 @@ SUBCAPABILITIES = {
     "PBKDF2": "PWDBASED",
     "PEM_TO_DER": "ASN",
     "DER_TO_PEM": "ASN",
+    "PKCS8": "ASN",
 }
 
 
@@ -305,3 +306,31 @@ def test_pem_der_conversions_follow_their_own_macros(bf):
         cdef = cdef_for(bf, features)
         for name in (*PEM_TO_DER_DECLS, "wc_DerToPemEx("):
             assert name not in cdef, (define, name)
+
+
+def test_pkcs8_offset_needs_pkcs8(bf):
+    helper = "wc_GetPkcs8TraditionalOffset("
+
+    features = detect(bf)
+    assert features["PKCS8"] == 1
+    assert helper in cdef_for(bf, features)
+
+    # settings.h defines HAVE_PKCS8 unless both NO_PKCS8 and NO_PKCS12.
+    for define in ("#define NO_PKCS8", "#define NO_PKCS12"):
+        features = detect(bf, define)
+        assert features["PKCS8"] == 1, define
+        assert helper in cdef_for(bf, features), define
+
+    features = detect(bf, "#define NO_PKCS8", "  #define NO_PKCS12 1")
+    assert features["PKCS8"] == 0
+    assert features["RSA"] == 1
+    assert helper not in cdef_for(bf, features)
+
+    for define in ("#define HAVE_PKCS8", "#define HAVE_PKCS12"):
+        assert detect(bf, "#define NO_PKCS8", "#define NO_PKCS12", define)["PKCS8"] == 1, define
+
+    # asn.c builds it only without NO_ASN, even with RSA.
+    features = detect(bf, "#define NO_ASN")
+    assert features["RSA"] == 1
+    assert features["PKCS8"] == 0
+    assert helper not in cdef_for(bf, features)

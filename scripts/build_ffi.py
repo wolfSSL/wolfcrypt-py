@@ -464,6 +464,10 @@ def detect_features(defines, features, fips=False, include_dirs=()):
         or defined("WOLFSSL_CERT_GEN") or defined("OPENSSL_EXTRA") or defined("OPENSSL_ALL")
         or defined("WOLFSSL_DUAL_ALG_CERTS")
         or (defined("WOLFSSL_KEY_GEN") and not defined("WOLFSSL_NO_DER_TO_PEM"))) else 0
+    # asn.c builds wc_GetPkcs8TraditionalOffset only with HAVE_PKCS8.
+    # settings.h defines HAVE_PKCS8 unless both NO_PKCS8 and NO_PKCS12.
+    features["PKCS8"] = 1 if features["ASN"] and (not defined("NO_PKCS8") or not defined("NO_PKCS12")
+        or defined("HAVE_PKCS8") or defined("HAVE_PKCS12")) else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -612,6 +616,7 @@ def make_source(features):
         int PBKDF2_ENABLED = {features["PBKDF2"]};
         int PEM_TO_DER_ENABLED = {features["PEM_TO_DER"]};
         int DER_TO_PEM_ENABLED = {features["DER_TO_PEM"]};
+        int PKCS8_ENABLED = {features["PKCS8"]};
     """
 
     return init_source_string
@@ -674,6 +679,7 @@ def make_cdef(features):
         extern int PBKDF2_ENABLED;
         extern int PEM_TO_DER_ENABLED;
         extern int DER_TO_PEM_ENABLED;
+        extern int PKCS8_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1411,8 +1417,7 @@ def make_cdef(features):
                         byte *cipher_info, int type);
         """
 
-    if features["ASN"] or features["RSA"]:
-        # This ASN function is used by the RSA binding as well.
+    if features["PKCS8"]:
         cdef += """
         int wc_GetPkcs8TraditionalOffset(byte* input, word32* inOutIdx, word32 sz);
         """
@@ -1689,6 +1694,7 @@ def default_features():
         "PBKDF2": 1,
         "PEM_TO_DER": 1,
         "DER_TO_PEM": 1,
+        "PKCS8": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
