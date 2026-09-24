@@ -44,6 +44,10 @@ SUBCAPABILITIES = {
     "AES_CBC": "AES",
     "AES_DECRYPT": "AES",
     "AESGCM_STREAM_DECRYPT": "AESGCM_STREAM",
+    "SHA3_224": "SHA3",
+    "SHA3_256": "SHA3",
+    "SHA3_384": "SHA3",
+    "SHA3_512": "SHA3",
 }
 
 
@@ -169,3 +173,43 @@ def test_aesgcm_stream_decrypt_needs_decrypt_support(bf):
 
     assert detect(bf, "#define NO_AES", stream, "#define HAVE_AESGCM_DECRYPT")["AESGCM_STREAM_DECRYPT"] == 0
     assert detect(bf)["AESGCM_STREAM_DECRYPT"] == 0
+
+
+SHA3_BITS = (224, 256, 384, 512)
+
+
+def sha3_funcs(bits):
+    return (f"wc_InitSha3_{bits}", f"wc_Sha3_{bits}_Update", f"wc_Sha3_{bits}_Final",
+            f"wc_Sha3_{bits}_Free", f"wc_Sha3_{bits}_Copy")
+
+
+def test_sha3_variants_follow_nosha3_macros(bf):
+    sha3 = "#define WOLFSSL_SHA3"
+
+    features = detect(bf, sha3)
+    cdef = cdef_for(bf, features)
+    for bits in SHA3_BITS:
+        assert features[f"SHA3_{bits}"] == 1, bits
+        for name in sha3_funcs(bits):
+            assert name in cdef, name
+
+    for disabled in SHA3_BITS:
+        features = detect(bf, sha3, f"#define WOLFSSL_NOSHA3_{disabled}")
+        cdef = cdef_for(bf, features)
+        assert "wc_Sha3;" in cdef
+        for bits in SHA3_BITS:
+            enabled = bits != disabled
+            assert features[f"SHA3_{bits}"] == enabled, (disabled, bits)
+            for name in sha3_funcs(bits):
+                assert (name in cdef) == enabled, (disabled, name)
+
+    assert detect(bf, sha3, "    #define WOLFSSL_NOSHA3_512 1")["SHA3_512"] == 0
+
+    # settings.h keeps only SHA3-384 on Xilinx.
+    for xilinx in ("#define WOLFSSL_XILINX_CRYPT", "#define WOLFSSL_AFALG_XILINX"):
+        features = detect(bf, sha3, xilinx)
+        assert [features[f"SHA3_{bits}"] for bits in SHA3_BITS] == [0, 0, 1, 0], xilinx
+
+    features = detect(bf)
+    for bits in SHA3_BITS:
+        assert features[f"SHA3_{bits}"] == 0, bits

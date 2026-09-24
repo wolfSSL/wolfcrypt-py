@@ -443,6 +443,12 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     # aes.c builds streaming GCM decryption only with HAVE_AES_DECRYPT or HAVE_AESGCM_DECRYPT.
     features["AESGCM_STREAM_DECRYPT"] = 1 if features["AES"] and features["AESGCM_STREAM"] and (
         features["AES_DECRYPT"] or defined("HAVE_AESGCM_DECRYPT")) else 0
+    # sha3.c builds each SHA-3 size unless WOLFSSL_NOSHA3_<bits>. settings.h
+    # leaves only SHA3-384 on Xilinx.
+    xilinx_sha3 = defined("WOLFSSL_XILINX_CRYPT") or defined("WOLFSSL_AFALG_XILINX")
+    for bits in (224, 256, 384, 512):
+        disabled = defined(f"WOLFSSL_NOSHA3_{bits}") or (xilinx_sha3 and bits != 384)
+        features[f"SHA3_{bits}"] = 1 if features["SHA3"] and not disabled else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -584,6 +590,10 @@ def make_source(features):
         int AES_CBC_ENABLED = {features["AES_CBC"]};
         int AES_DECRYPT_ENABLED = {features["AES_DECRYPT"]};
         int AESGCM_STREAM_DECRYPT_ENABLED = {features["AESGCM_STREAM_DECRYPT"]};
+        int SHA3_224_ENABLED = {features["SHA3_224"]};
+        int SHA3_256_ENABLED = {features["SHA3_256"]};
+        int SHA3_384_ENABLED = {features["SHA3_384"]};
+        int SHA3_512_ENABLED = {features["SHA3_512"]};
     """
 
     return init_source_string
@@ -639,6 +649,10 @@ def make_cdef(features):
         extern int AES_CBC_ENABLED;
         extern int AES_DECRYPT_ENABLED;
         extern int AESGCM_STREAM_DECRYPT_ENABLED;
+        extern int SHA3_224_ENABLED;
+        extern int SHA3_256_ENABLED;
+        extern int SHA3_384_ENABLED;
+        extern int SHA3_512_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -981,27 +995,16 @@ def make_cdef(features):
     if features["SHA3"]:
         cdef += """
         typedef struct { ...; } wc_Sha3;
-        int wc_InitSha3_224(wc_Sha3*, void *, int);
-        int wc_InitSha3_256(wc_Sha3*, void *, int);
-        int wc_InitSha3_384(wc_Sha3*, void *, int);
-        int wc_InitSha3_512(wc_Sha3*, void *, int);
-        int wc_Sha3_224_Update(wc_Sha3*, const byte*, word32);
-        int wc_Sha3_256_Update(wc_Sha3*, const byte*, word32);
-        int wc_Sha3_384_Update(wc_Sha3*, const byte*, word32);
-        int wc_Sha3_512_Update(wc_Sha3*, const byte*, word32);
-        int wc_Sha3_224_Final(wc_Sha3*, byte*);
-        int wc_Sha3_256_Final(wc_Sha3*, byte*);
-        int wc_Sha3_384_Final(wc_Sha3*, byte*);
-        int wc_Sha3_512_Final(wc_Sha3*, byte*);
-        void wc_Sha3_224_Free(wc_Sha3*);
-        void wc_Sha3_256_Free(wc_Sha3*);
-        void wc_Sha3_384_Free(wc_Sha3*);
-        void wc_Sha3_512_Free(wc_Sha3*);
-        int wc_Sha3_224_Copy(wc_Sha3*, wc_Sha3*);
-        int wc_Sha3_256_Copy(wc_Sha3*, wc_Sha3*);
-        int wc_Sha3_384_Copy(wc_Sha3*, wc_Sha3*);
-        int wc_Sha3_512_Copy(wc_Sha3*, wc_Sha3*);
         """
+        for bits in (224, 256, 384, 512):
+            if features[f"SHA3_{bits}"]:
+                cdef += f"""
+                int wc_InitSha3_{bits}(wc_Sha3*, void *, int);
+                int wc_Sha3_{bits}_Update(wc_Sha3*, const byte*, word32);
+                int wc_Sha3_{bits}_Final(wc_Sha3*, byte*);
+                void wc_Sha3_{bits}_Free(wc_Sha3*);
+                int wc_Sha3_{bits}_Copy(wc_Sha3*, wc_Sha3*);
+                """
 
     if features["DES3"]:
         cdef += """
@@ -1650,6 +1653,10 @@ def default_features():
         "AES_CBC": 1,
         "AES_DECRYPT": 1,
         "AESGCM_STREAM_DECRYPT": 1,
+        "SHA3_224": 1,
+        "SHA3_256": 1,
+        "SHA3_384": 1,
+        "SHA3_512": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
