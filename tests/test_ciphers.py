@@ -340,6 +340,9 @@ if _lib.CHACHA_ENABLED:
         assert plaintext == dec
 
 if _lib.RSA_ENABLED:
+    # RSA key objects always create a Random.
+    needs_rng = pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
+
     @pytest.fixture
     def rng():
         return Random()
@@ -404,6 +407,7 @@ if _lib.RSA_ENABLED:
             pem = f.read()
         return RsaPublic.from_pem(pem, rng=rng)   # ty: ignore[possibly-missing-attribute]
 
+    @needs_rng
     def test_new_rsa_raises(vectors):
         with pytest.raises(WolfCryptError):
             RsaPrivate(vectors[RsaPrivate].key[:-1])  # invalid key length
@@ -416,6 +420,7 @@ if _lib.RSA_ENABLED:
                 RsaPrivate.make_key(16384)   # ty: ignore[possibly-missing-attribute]
 
 
+    @needs_rng
     def test_rsa_encrypt_decrypt(rsa_private, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -432,6 +437,7 @@ if _lib.RSA_ENABLED:
         assert 1024 / 8 == len(ciphertext) == rsa_private.output_size
         assert plaintext == rsa_private.decrypt(ciphertext)
 
+    @needs_rng
     def test_rsa_encrypt_decrypt_rng(rsa_private_rng, rsa_public_rng):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -448,6 +454,7 @@ if _lib.RSA_ENABLED:
         assert 1024 / 8 == len(ciphertext) == rsa_private_rng.output_size
         assert plaintext == rsa_private_rng.decrypt(ciphertext)
 
+    @needs_rng
     def test_rsa_encrypt_decrypt_pad_oaep(rsa_private_oaep, rsa_public_oaep):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -466,6 +473,7 @@ if _lib.RSA_ENABLED:
 
 
     @pytest.mark.skipif(not _lib.PKCS8_ENABLED, reason="PKCS#8 not enabled")
+    @needs_rng
     def test_rsa_pkcs8_encrypt_decrypt(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -483,6 +491,7 @@ if _lib.RSA_ENABLED:
         assert plaintext == rsa_private_pkcs8.decrypt(ciphertext)
 
 
+    @needs_rng
     def test_rsa_sign_verify(rsa_private, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -500,6 +509,7 @@ if _lib.RSA_ENABLED:
         assert plaintext == rsa_private.verify(signature)
 
     if _lib.RSA_PSS_ENABLED:
+        @needs_rng
         def test_rsa_pss_sign_verify(rsa_private_pss, rsa_public_pss):
             plaintext = t2b("Everyone gets Friday off.")
 
@@ -517,6 +527,7 @@ if _lib.RSA_ENABLED:
             assert rsa_private_pss.verify_pss(plaintext, signature) is True
 
     @pytest.mark.skipif(not _lib.PEM_TO_DER_ENABLED, reason="PEM to DER not enabled")
+    @needs_rng
     def test_rsa_sign_verify_pem(rsa_private_pem, rsa_public_pem):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -534,6 +545,7 @@ if _lib.RSA_ENABLED:
         assert plaintext == rsa_private_pem.verify(signature)
 
     @pytest.mark.skipif(not _lib.PEM_TO_DER_ENABLED, reason="PEM to DER not enabled")
+    @needs_rng
     def test_rsa_sign_verify_pem_rng(rsa_private_pem_rng, rsa_public_pem_rng):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -551,6 +563,7 @@ if _lib.RSA_ENABLED:
         assert plaintext == rsa_private_pem_rng.verify(signature)
 
     @pytest.mark.skipif(not _lib.PKCS8_ENABLED, reason="PKCS#8 not enabled")
+    @needs_rng
     def test_rsa_pkcs8_sign_verify(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -834,8 +847,9 @@ if _lib.ED25519_ENABLED:
         with pytest.raises(WolfCryptError):
             Ed25519Public(vectors[Ed25519Public].key[:-1])    # invalid key length
 
-        with pytest.raises(WolfCryptError):           # invalid key size
-            Ed25519Private.make_key(1024)
+        if _lib.RNG_ENABLED:
+            with pytest.raises(WolfCryptError):           # invalid key size
+                Ed25519Private.make_key(1024)
 
 
     def test_ed25519_key_encoding(vectors):
@@ -885,8 +899,9 @@ if _lib.ED448_ENABLED:
         with pytest.raises(WolfCryptError):
             Ed448Public(vectors[Ed448Public].key[:-1])    # invalid key length
 
-        with pytest.raises(WolfCryptError):           # invalid key size
-            Ed448Private.make_key(1024)
+        if _lib.RNG_ENABLED:
+            with pytest.raises(WolfCryptError):           # invalid key size
+                Ed448Private.make_key(1024)
 
 
     def test_ed448_key_encoding(vectors):
@@ -1233,11 +1248,13 @@ if _lib.CHACHA_ENABLED:
 
 
 if _lib.RSA_ENABLED:
+    @needs_rng
     def test_encrypt_oaep_requires_hash_type(vectors):
         rsa = RsaPublic(vectors[RsaPublic].key)
         with pytest.raises(WolfCryptError, match="Hash type not set"):
             rsa.encrypt_oaep(b"plaintext")
 
+    @needs_rng
     def test_decrypt_oaep_requires_hash_type(vectors):
         rsa = RsaPrivate(vectors[RsaPrivate].key)
         with pytest.raises(WolfCryptError, match="Hash type not set"):
@@ -1256,6 +1273,7 @@ if _lib.RSA_ENABLED:
         for cls in (module.RsaPublic, module.RsaPrivate):
             assert not hasattr(cls, "from_pem"), cls
 
+    @needs_rng
     def test_rsa_private_without_pkcs8_offset(monkeypatch, vectors):
         """F-12234: RsaPrivate must not need wc_GetPkcs8TraditionalOffset without PKCS#8."""
         class LibWithoutPkcs8:

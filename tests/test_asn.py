@@ -83,7 +83,8 @@ def signature_vectors():
     # Signature computed with:
     # echo -n "wolfcrypt is the best crypto around" | \
     # openssl dgst -hex -sha256 -sign tests/certs/server-key.pem
-    if _lib.PEM_TO_DER_ENABLED and _lib.SHA256_ENABLED and _lib.RSA_ENABLED:
+    # RSA key objects always create a Random.
+    if _lib.PEM_TO_DER_ENABLED and _lib.SHA256_ENABLED and _lib.RSA_ENABLED and _lib.RNG_ENABLED:
         vectors.append(TestVector(
             data="wolfcrypt is the best crypto around",
             signature=h2b("1d65f21df8fdc9f3c2351792840423481c6b0f2332105abd9248"
