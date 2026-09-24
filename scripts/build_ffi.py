@@ -1155,6 +1155,7 @@ def build_ffi(local_wolfssl, features):
 
         int wc_EccPrivateKeyDecode(const byte*, word32*, ecc_key*, word32);
         int wc_EccKeyToDer(ecc_key*, byte* output, word32 inLen);
+        int wc_EccKeyDerSize(ecc_key*, int pub);
 
         int wc_EccPublicKeyDecode(const byte*, word32*, ecc_key*, word32);
         int wc_EccPublicKeyToDer(ecc_key*, byte* output,
