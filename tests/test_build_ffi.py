@@ -72,6 +72,9 @@ SUBCAPABILITIES = {
     "ED448_VERIFY": "ED448",
     "ED448_KEY_IMPORT": "ED448",
     "ED448_KEY_EXPORT": "ED448",
+    "ML_KEM_MAKE_KEY": "ML_KEM",
+    "ML_KEM_ENCAPSULATE": "ML_KEM",
+    "ML_KEM_DECAPSULATE": "ML_KEM",
 }
 
 
@@ -577,5 +580,55 @@ def test_ed448_subsets_need_ed448(bf):
         assert features[name] == 0, name
     cdef = cdef_for(bf, features)
     for names in ED448_OPS.values():
+        for name in names:
+            assert name not in cdef, name
+
+
+ML_KEM_SUBSETS = ("ML_KEM_MAKE_KEY", "ML_KEM_ENCAPSULATE", "ML_KEM_DECAPSULATE")
+ML_KEM_OPS = {
+    "ML_KEM_MAKE_KEY": ("wc_KyberKey_MakeKey(", "wc_KyberKey_MakeKeyWithRandom("),
+    "ML_KEM_ENCAPSULATE": ("wc_KyberKey_Encapsulate(", "wc_KyberKey_EncapsulateWithRandom("),
+    "ML_KEM_DECAPSULATE": ("wc_KyberKey_Decapsulate(",),
+}
+# wolfSSL builds key setup, sizes and encoding for every operation subset.
+ML_KEM_COMMON = ("KyberKey;", "wc_KyberKey_Init(", "wc_KyberKey_Free(", "wc_KyberKey_CipherTextSize(",
+                 "wc_KyberKey_SharedSecretSize(", "wc_KyberKey_PrivateKeySize(", "wc_KyberKey_PublicKeySize(",
+                 "wc_KyberKey_EncodePublicKey(", "wc_KyberKey_DecodePublicKey(", "wc_KyberKey_EncodePrivateKey(",
+                 "wc_KyberKey_DecodePrivateKey(")
+
+
+@pytest.mark.parametrize(("defines", "disabled"), [
+    ((), ()),
+    (("#define WOLFSSL_MLKEM_NO_MAKE_KEY",), ("ML_KEM_MAKE_KEY",)),
+    (("  #define WOLFSSL_MLKEM_NO_MAKE_KEY 1",), ("ML_KEM_MAKE_KEY",)),
+    (("#define WOLFSSL_MLKEM_NO_ENCAPSULATE",), ("ML_KEM_ENCAPSULATE",)),
+    (("#define WOLFSSL_MLKEM_NO_DECAPSULATE",), ("ML_KEM_DECAPSULATE",)),
+    (("#define WOLFSSL_KYBER_NO_MAKE_KEY",), ("ML_KEM_MAKE_KEY",)),
+    (("#define WOLFSSL_KYBER_NO_ENCAPSULATE",), ("ML_KEM_ENCAPSULATE",)),
+    (("#define WOLFSSL_KYBER_NO_DECAPSULATE",), ("ML_KEM_DECAPSULATE",)),
+    (("#define WOLFSSL_MLKEM_NO_MAKE_KEY", "#define WOLFSSL_MLKEM_NO_DECAPSULATE"),
+     ("ML_KEM_MAKE_KEY", "ML_KEM_DECAPSULATE")),
+], ids=["default", "no-make-key", "no-make-key-indented", "no-encapsulate", "no-decapsulate",
+        "legacy-no-make-key", "legacy-no-encapsulate", "legacy-no-decapsulate", "encapsulate-only"])
+def test_ml_kem_operations_follow_subset_macros(bf, defines, disabled):
+    features = detect(bf, "#define WOLFSSL_HAVE_MLKEM", *defines)
+    assert features["ML_KEM"] == 1
+    for name in ML_KEM_SUBSETS:
+        assert features[name] == (name not in disabled), name
+    cdef = cdef_for(bf, features)
+    for subset, names in ML_KEM_OPS.items():
+        for name in names:
+            assert (name in cdef) == (subset not in disabled), name
+    for name in ML_KEM_COMMON:
+        assert name in cdef, name
+
+
+def test_ml_kem_subsets_need_ml_kem(bf):
+    features = detect(bf)
+    assert features["ML_KEM"] == 0
+    for name in ML_KEM_SUBSETS:
+        assert features[name] == 0, name
+    cdef = cdef_for(bf, features)
+    for names in ML_KEM_OPS.values():
         for name in names:
             assert name not in cdef, name

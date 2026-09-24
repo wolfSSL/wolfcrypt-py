@@ -549,7 +549,16 @@ if _lib.ML_KEM_ENABLED:
         (MlKemType.ML_KEM_1024),
     ]
 
+    needs_make_key = pytest.mark.skipif(not _lib.ML_KEM_MAKE_KEY_ENABLED,
+                                        reason="ML-KEM key generation not enabled")
+    needs_encapsulate = pytest.mark.skipif(not _lib.ML_KEM_ENCAPSULATE_ENABLED,
+                                           reason="ML-KEM encapsulation not enabled")
+    needs_decapsulate = pytest.mark.skipif(not _lib.ML_KEM_DECAPSULATE_ENABLED,
+                                           reason="ML-KEM decapsulation not enabled")
+
     @pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
+    @needs_encapsulate
+    @needs_decapsulate
     @pytest.mark.parametrize("mlkem_type", mlkem_types)
     def test_init_pattern_1(mlkem_type):
         mlkem_priv = MlKemPrivate(mlkem_type)
@@ -575,6 +584,9 @@ if _lib.ML_KEM_ENABLED:
         assert ss_send == ss_recv
 
     @pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
+    @needs_make_key
+    @needs_encapsulate
+    @needs_decapsulate
     @pytest.mark.parametrize("mlkem_type", mlkem_types)
     def test_init_pattern_2(mlkem_type):
         mlkem_priv = MlKemPrivate.make_key_with_random(
@@ -601,6 +613,9 @@ if _lib.ML_KEM_ENABLED:
         assert ss_send == ss_recv
 
     @pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
+    @needs_make_key
+    @needs_encapsulate
+    @needs_decapsulate
     @pytest.mark.parametrize("mlkem_type", mlkem_types)
     def test_init_pattern_3(mlkem_type):
         mlkem_priv = MlKemPrivate.make_key(mlkem_type)
@@ -620,12 +635,14 @@ if _lib.ML_KEM_ENABLED:
         ss_recv = mlkem_priv.decapsulate(ct)
         assert ss_send == ss_recv
 
+    @needs_make_key
     @pytest.mark.parametrize("mlkem_type", mlkem_types)
     @pytest.mark.parametrize("rand", [0, "rand"])
     def test_make_key_with_random_bad_random_type(mlkem_type, rand: int | str):
         with pytest.raises(TypeError):
             MlKemPrivate.make_key_with_random(mlkem_type, rand)
 
+    @needs_encapsulate
     @pytest.mark.parametrize("mlkem_type", mlkem_types)
     @pytest.mark.parametrize("rand", [0, "rand"])
     def test_encapsulate_with_random_bad_random_type(mlkem_type, rand: int | str):
