@@ -58,6 +58,11 @@ SUBCAPABILITIES = {
     "RSA_SIGN": "RSA",
     "RSA_VERIFY": "RSA",
     "RSA_OAEP": "RSA",
+    "ECC_SIGN": "ECC",
+    "ECC_VERIFY": "ECC",
+    "ECC_DHE": "ECC",
+    "ECC_KEY_IMPORT": "ECC",
+    "ECC_KEY_EXPORT": "ECC",
 }
 
 
@@ -410,3 +415,58 @@ def test_rsa_subsets_need_rsa(bf):
     cdef = cdef_for(bf, features)
     for name in RSA_OPS:
         assert name not in cdef, name
+
+
+ECC_SUBSETS = ("ECC_SIGN", "ECC_VERIFY", "ECC_DHE", "ECC_KEY_IMPORT", "ECC_KEY_EXPORT")
+ECC_OPS = {
+    "ECC_SIGN": ("wc_ecc_sign_hash(", "wc_ecc_sign_hash_ex("),
+    "ECC_VERIFY": ("wc_ecc_verify_hash(", "wc_ecc_verify_hash_ex("),
+    "ECC_DHE": ("wc_ecc_shared_secret(",),
+    "ECC_KEY_IMPORT": ("wc_EccPrivateKeyDecode(", "wc_EccPublicKeyDecode(", "wc_ecc_import_x963(",
+                       "wc_ecc_import_unsigned("),
+    "ECC_KEY_EXPORT": ("wc_EccKeyToDer(", "wc_EccKeyDerSize(", "wc_EccPublicKeyToDer(",
+                       "wc_ecc_export_x963(", "wc_ecc_export_private_raw(", "wc_ecc_export_public_raw("),
+}
+ECC_COMMON = ("ecc_key;", "wc_ecc_init(", "wc_ecc_free(", "wc_ecc_make_key(", "wc_ecc_size(",
+              "wc_ecc_sig_size(", "wc_ecc_get_curve_size_from_id(", "wc_ecc_check_key(")
+
+
+@pytest.mark.parametrize(("defines", "disabled"), [
+    ((), ()),
+    (("#define NO_ECC_SIGN",), ("ECC_SIGN",)),
+    (("  #define NO_ECC_SIGN 1",), ("ECC_SIGN",)),
+    (("#define NO_ECC_VERIFY",), ("ECC_VERIFY",)),
+    (("#define NO_ECC_DHE",), ("ECC_DHE",)),
+    (("#define NO_ECC_KEY_IMPORT",), ("ECC_KEY_IMPORT",)),
+    (("#define NO_ECC_KEY_EXPORT",), ("ECC_KEY_EXPORT",)),
+    # settings.h: key export needs WOLFSSL_SP_MATH or big integer math.
+    (("#define NO_BIG_INT",), ("ECC_KEY_EXPORT",)),
+    (("#define NO_BIG_INT", "#define WOLFSSL_SP_MATH"), ()),
+    # settings.h: DHE and timing resistant signing need the RNG.
+    (("#define WC_NO_RNG",), ("ECC_DHE",)),
+    (("#define WC_NO_RNG", "#define ECC_TIMING_RESISTANT"), ("ECC_SIGN", "ECC_DHE")),
+    (("#define NO_ECC_SIGN", "#define NO_ECC_DHE"), ("ECC_SIGN", "ECC_DHE")),
+], ids=["default", "no-sign", "no-sign-indented", "no-verify", "no-dhe", "no-import", "no-export",
+        "no-big-int", "no-big-int-sp-math", "no-rng", "no-rng-timing-resistant", "no-sign-no-dhe"])
+def test_ecc_operations_follow_subset_macros(bf, defines, disabled):
+    features = detect(bf, "#define HAVE_ECC", "#define WOLFSSL_PUBLIC_MP", *defines)
+    assert features["ECC"] == 1
+    for name in ECC_SUBSETS:
+        assert features[name] == (name not in disabled), name
+    cdef = cdef_for(bf, features)
+    for subset, names in ECC_OPS.items():
+        for name in names:
+            assert (name in cdef) == (subset not in disabled), name
+    for name in ECC_COMMON:
+        assert name in cdef, name
+
+
+def test_ecc_subsets_need_ecc(bf):
+    features = detect(bf, "#define WOLFSSL_PUBLIC_MP")
+    assert features["ECC"] == 0
+    for name in ECC_SUBSETS:
+        assert features[name] == 0, name
+    cdef = cdef_for(bf, features)
+    for names in ECC_OPS.values():
+        for name in names:
+            assert name not in cdef, name

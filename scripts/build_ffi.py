@@ -484,6 +484,17 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     features["RSA_SIGN"] = 1 if features["RSA_PRIVATE"] and not rsa_verify_only else 0
     features["RSA_VERIFY"] = 1 if features["RSA"] and not defined("WOLFSSL_RSA_VERIFY_INLINE") else 0
     features["RSA_OAEP"] = 1 if features["RSA"] and not defined("WC_NO_RSA_OAEP") else 0
+    # settings.h derives the ECC operations unless NO_ECC_<op>. Timing
+    # resistant signing and DHE need the RNG. Key export needs SP or big
+    # integer math.
+    ecc = features["ECC"]
+    features["ECC_SIGN"] = 1 if ecc and not defined("NO_ECC_SIGN") and (
+        features["RNG"] or not defined("ECC_TIMING_RESISTANT")) else 0
+    features["ECC_VERIFY"] = 1 if ecc and not defined("NO_ECC_VERIFY") else 0
+    features["ECC_DHE"] = 1 if ecc and not defined("NO_ECC_DHE") and features["RNG"] else 0
+    features["ECC_KEY_IMPORT"] = 1 if ecc and not defined("NO_ECC_KEY_IMPORT") else 0
+    features["ECC_KEY_EXPORT"] = 1 if ecc and not defined("NO_ECC_KEY_EXPORT") and (
+        defined("WOLFSSL_SP_MATH") or not defined("NO_BIG_INT")) else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -639,6 +650,11 @@ def make_source(features):
         int RSA_SIGN_ENABLED = {features["RSA_SIGN"]};
         int RSA_VERIFY_ENABLED = {features["RSA_VERIFY"]};
         int RSA_OAEP_ENABLED = {features["RSA_OAEP"]};
+        int ECC_SIGN_ENABLED = {features["ECC_SIGN"]};
+        int ECC_VERIFY_ENABLED = {features["ECC_VERIFY"]};
+        int ECC_DHE_ENABLED = {features["ECC_DHE"]};
+        int ECC_KEY_IMPORT_ENABLED = {features["ECC_KEY_IMPORT"]};
+        int ECC_KEY_EXPORT_ENABLED = {features["ECC_KEY_EXPORT"]};
     """
 
     return init_source_string
@@ -708,6 +724,11 @@ def make_cdef(features):
         extern int RSA_SIGN_ENABLED;
         extern int RSA_VERIFY_ENABLED;
         extern int RSA_OAEP_ENABLED;
+        extern int ECC_SIGN_ENABLED;
+        extern int ECC_VERIFY_ENABLED;
+        extern int ECC_DHE_ENABLED;
+        extern int ECC_KEY_IMPORT_ENABLED;
+        extern int ECC_KEY_EXPORT_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1293,45 +1314,61 @@ def make_cdef(features):
         int wc_ecc_make_key(WC_RNG* rng, int keysize, ecc_key* key);
         int wc_ecc_size(ecc_key* key);
         int wc_ecc_sig_size(ecc_key* key);
-
-        int wc_EccPrivateKeyDecode(const byte*, word32*, ecc_key*, word32);
-        int wc_EccKeyToDer(ecc_key*, byte* output, word32 inLen);
-        int wc_EccKeyDerSize(ecc_key*, int pub);
-
-        int wc_EccPublicKeyDecode(const byte*, word32*, ecc_key*, word32);
-        int wc_EccPublicKeyToDer(ecc_key*, byte* output,
-                                 word32 inLen, int with_AlgCurve);
-
-        int wc_ecc_export_x963(ecc_key*, byte* out, word32* outLen);
-        int wc_ecc_import_x963(const byte* in, word32 inLen, ecc_key* key);
-        int wc_ecc_export_private_raw(ecc_key* key, byte* qx, word32* qxLen,
-                                  byte* qy, word32* qyLen, byte* d, word32* dLen);
-        int wc_ecc_import_unsigned(ecc_key* key, const byte* qx, const byte* qy,
-                       const byte* d, int curve_id);
-        int wc_ecc_export_public_raw(ecc_key* key, byte* qx, word32* qxLen,
-                                 byte* qy, word32* qyLen);
         int wc_ecc_get_curve_size_from_id(int curve_id);
         int wc_ecc_check_key(ecc_key* key);
-
-
-        int wc_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
-                                 byte* out, word32* outlen);
-
-        int wc_ecc_sign_hash(const byte* in, word32 inlen,
-                             byte* out, word32 *outlen,
-                             WC_RNG* rng, ecc_key* key);
-        int wc_ecc_verify_hash(const byte* sig, word32 siglen,
-                               const byte* hash, word32 hashlen,
-                               int* stat, ecc_key* key);
         """
 
-        if features["MPAPI"]:
+        if features["ECC_KEY_IMPORT"]:
             cdef += """
-            int wc_ecc_sign_hash_ex(const byte* in, word32 inlen, WC_RNG* rng,
-                                 ecc_key* key, mp_int *r, mp_int *s);
-            int wc_ecc_verify_hash_ex(mp_int *r, mp_int *s, const byte* hash,
-                            word32 hashlen, int* res, ecc_key* key);
+            int wc_EccPrivateKeyDecode(const byte*, word32*, ecc_key*, word32);
+            int wc_EccPublicKeyDecode(const byte*, word32*, ecc_key*, word32);
+            int wc_ecc_import_x963(const byte* in, word32 inLen, ecc_key* key);
+            int wc_ecc_import_unsigned(ecc_key* key, const byte* qx, const byte* qy,
+                           const byte* d, int curve_id);
             """
+
+        if features["ECC_KEY_EXPORT"]:
+            cdef += """
+            int wc_EccKeyToDer(ecc_key*, byte* output, word32 inLen);
+            int wc_EccKeyDerSize(ecc_key*, int pub);
+            int wc_EccPublicKeyToDer(ecc_key*, byte* output,
+                                     word32 inLen, int with_AlgCurve);
+            int wc_ecc_export_x963(ecc_key*, byte* out, word32* outLen);
+            int wc_ecc_export_private_raw(ecc_key* key, byte* qx, word32* qxLen,
+                                      byte* qy, word32* qyLen, byte* d, word32* dLen);
+            int wc_ecc_export_public_raw(ecc_key* key, byte* qx, word32* qxLen,
+                                     byte* qy, word32* qyLen);
+            """
+
+        if features["ECC_DHE"]:
+            cdef += """
+            int wc_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
+                                     byte* out, word32* outlen);
+            """
+
+        if features["ECC_SIGN"]:
+            cdef += """
+            int wc_ecc_sign_hash(const byte* in, word32 inlen,
+                                 byte* out, word32 *outlen,
+                                 WC_RNG* rng, ecc_key* key);
+            """
+            if features["MPAPI"]:
+                cdef += """
+                int wc_ecc_sign_hash_ex(const byte* in, word32 inlen, WC_RNG* rng,
+                                     ecc_key* key, mp_int *r, mp_int *s);
+                """
+
+        if features["ECC_VERIFY"]:
+            cdef += """
+            int wc_ecc_verify_hash(const byte* sig, word32 siglen,
+                                   const byte* hash, word32 hashlen,
+                                   int* stat, ecc_key* key);
+            """
+            if features["MPAPI"]:
+                cdef += """
+                int wc_ecc_verify_hash_ex(mp_int *r, mp_int *s, const byte* hash,
+                                word32 hashlen, int* res, ecc_key* key);
+                """
 
         if features["ECC_TIMING_RESISTANCE"] and (not features["FIPS"] or
            features["FIPS_VERSION"] > 2):
@@ -1760,6 +1797,11 @@ def default_features():
         "RSA_SIGN": 1,
         "RSA_VERIFY": 1,
         "RSA_OAEP": 1,
+        "ECC_SIGN": 1,
+        "ECC_VERIFY": 1,
+        "ECC_DHE": 1,
+        "ECC_KEY_IMPORT": 1,
+        "ECC_KEY_EXPORT": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
