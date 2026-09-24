@@ -21,6 +21,7 @@
 # pylint: disable=redefined-outer-name
 # ty: ignore[possibly-missing-import]
 
+import hashlib
 import importlib.util
 import os
 import random
@@ -610,6 +611,7 @@ if _lib.ECC_ENABLED:
     needs_ecc_export = pytest.mark.skipif(not _lib.ECC_KEY_EXPORT_ENABLED, reason="ECC key export not enabled")
     needs_ecc_sign_verify = pytest.mark.skipif(not (_lib.ECC_SIGN_ENABLED and _lib.ECC_VERIFY_ENABLED),
                                                reason="ECC signing or verification not enabled")
+    needs_ecc_verify = pytest.mark.skipif(not _lib.ECC_VERIFY_ENABLED, reason="ECC verification not enabled")
     needs_ecc_dhe = pytest.mark.skipif(not _lib.ECC_DHE_ENABLED, reason="ECDH not enabled")
 
     @pytest.fixture
@@ -833,29 +835,29 @@ if _lib.ECC_ENABLED:
     @needs_ecc_export
     @needs_ecc_sign_verify
     def test_ecc_sign_verify(ecc_private, ecc_public):
-        plaintext = "Everyone gets Friday off."
+        digest = hashlib.sha256(b"Everyone gets Friday off.").digest()
 
         # normal usage, sign with private, verify with public
-        signature = ecc_private.sign(plaintext)
+        signature = ecc_private.sign(digest)
 
         assert len(signature) <= ecc_private.max_signature_size
-        assert ecc_public.verify(signature, plaintext)
+        assert ecc_public.verify(signature, digest)
 
         # invalid signature
         with pytest.raises(WolfCryptError):
-            ecc_public.verify(signature[:-1], plaintext)
+            ecc_public.verify(signature[:-1], digest)
 
         # private object holds both private and public info, so it can also verify
         # using the known public key.
-        assert ecc_private.verify(signature, plaintext)
+        assert ecc_private.verify(signature, digest)
 
         ecc_x963 = EccPublic()
         ecc_x963.import_x963(ecc_public.export_x963())
-        assert ecc_x963.verify(signature, plaintext)
+        assert ecc_x963.verify(signature, digest)
 
         ecc_x963 = EccPublic()
         ecc_x963.import_x963(ecc_private.export_x963())
-        assert ecc_x963.verify(signature, plaintext)
+        assert ecc_x963.verify(signature, digest)
 
         ecc_x963 = EccPublic()
         with pytest.raises(WolfCryptError):
@@ -880,6 +882,54 @@ if _lib.ECC_ENABLED:
             # private object holds both private and public info, so it can also verify
             # using the known public key.
             assert ecc_private.verify_raw(r, s, plaintext)
+
+
+    # Made with `openssl dgst -sha256 -sign` and the vectors[EccPrivate] key.
+    ECC_OPENSSL_MESSAGE = b"Everyone gets Friday off. This message is longer than one digest."
+    ECC_OPENSSL_SHA256_SIGNATURE = h2b(
+        "3045022100b2314357b468577038b0eb8fc7e051e40eb729e6e3319d5bfd3b4cbc78be73cb"
+        "022076c30495ee4e21edf2ac2086d4fb426e413ee26f009f09c3daa312ba7065c35f")
+
+
+    @needs_ecc_import
+    @needs_ecc_verify
+    def test_ecc_verify_openssl_signature(ecc_public):
+        """
+        F-8279: verify() takes the digest of the message, as signed by
+        `openssl dgst -sha256 -sign`.
+        """
+        digest = hashlib.sha256(ECC_OPENSSL_MESSAGE).digest()
+        other = hashlib.sha256(ECC_OPENSSL_MESSAGE[:-1]).digest()
+        assert ecc_public.verify(ECC_OPENSSL_SHA256_SIGNATURE, digest)
+        assert not ecc_public.verify(ECC_OPENSSL_SHA256_SIGNATURE, other)
+
+
+    @pytest.mark.parametrize("length", [0, 16, 25, 33, 65, 100])
+    @needs_ecc_import
+    @needs_ecc_sign_verify
+    def test_ecc_sign_rejects_non_digest_length(ecc_private, ecc_public, length):
+        """
+        F-8279: sign() and verify() take a digest, so an input that is not
+        the size of a SHA-1 or SHA-2 digest raises ValueError.
+        """
+        signature = ecc_private.sign(hashlib.sha256(b"message").digest())
+        with pytest.raises(ValueError, match="digest"):
+            ecc_private.sign(b"\x01" * length)
+        with pytest.raises(ValueError, match="digest"):
+            ecc_public.verify(signature, b"\x01" * length)
+
+
+    @pytest.mark.parametrize("hash_name", ["sha1", "sha224", "sha256", "sha384", "sha512"])
+    @needs_ecc_import
+    @needs_ecc_sign_verify
+    def test_ecc_sign_digest_sizes(ecc_private, ecc_public, hash_name):
+        """
+        F-8279: SHA-1 and SHA-2 digest sizes are accepted.
+        """
+        digest = hashlib.new(hash_name, b"message").digest()
+        if not _lib.WC_MIN_DIGEST_SIZE <= len(digest) <= _lib.WC_MAX_DIGEST_SIZE:
+            pytest.skip("digest size not accepted by this wolfSSL build")
+        assert ecc_public.verify(ecc_private.sign(digest), digest)
 
 
     @needs_ecc_import

@@ -1185,6 +1185,17 @@ if _lib.ECC_ENABLED:
         def max_signature_size(self) -> int:
             return _lib.wc_ecc_sig_size(self.native_object)
 
+        # SHA-1 and SHA-2 digest sizes that this wolfSSL build accepts.
+        _DIGEST_SIZES = tuple(size for size in (20, 28, 32, 48, 64)
+                              if _lib.WC_MIN_DIGEST_SIZE <= size <= _lib.WC_MAX_DIGEST_SIZE)
+
+        @classmethod
+        def _check_digest(cls, digest: BytesOrStr) -> bytes:
+            digest = t2b(digest)
+            if len(digest) not in cls._DIGEST_SIZES:
+                raise ValueError(f"digest must be one of {cls._DIGEST_SIZES} bytes, got {len(digest)}")
+            return digest
+
 
     class EccPublic(_Ecc):
         def __init__(self, key: BytesOrStr | None = None) -> None:
@@ -1307,10 +1318,11 @@ if _lib.ECC_ENABLED:
             def verify(self, signature: bytes, data: BytesOrStr) -> bool:
                 """
                 Verifies **signature**, using the public key data in the object.
+                **data** is the message digest, as in EccPrivate.sign().
 
                 Returns **True** in case of a valid signature, otherwise **False**.
                 """
-                data = t2b(data)
+                data = self._check_digest(data)
                 status = _ffi.new("int[1]")
 
                 ret = _lib.wc_ecc_verify_hash(signature, len(signature),
@@ -1509,12 +1521,14 @@ if _lib.ECC_ENABLED:
             def sign(self, plaintext: BytesOrStr, rng: Random | None = None) -> bytes:
                 """
                 Signs **plaintext**, using the private key data in the object.
+                **plaintext** is the message digest: a SHA-1 or SHA-2 hash of
+                the message, computed by the caller.
 
                 Returns the signature.
                 """
                 if rng is None:
                     rng = Random()
-                plaintext = t2b(plaintext)
+                plaintext = self._check_digest(plaintext)
                 signature = _ffi.new(f"byte[{self.max_signature_size}]")
 
                 signature_size = _ffi.new("word32[1]")

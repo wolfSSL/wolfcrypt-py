@@ -1245,6 +1245,11 @@ def make_cdef(features):
             int wc_HmacCopy(Hmac* src, Hmac* dst);
             """
 
+    cdef += """
+        #define WC_MIN_DIGEST_SIZE ...
+        #define WC_MAX_DIGEST_SIZE ...
+        """
+
     if features["RSA"]:
         cdef += """
         static const int WC_RSA_PKCSV15_PAD;
