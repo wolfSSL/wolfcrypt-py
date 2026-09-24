@@ -491,6 +491,11 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     # settings.h derives the Ed448 operations unless NO_ED448_<op>.
     for op in ("SIGN", "VERIFY", "KEY_IMPORT", "KEY_EXPORT"):
         features[f"ED448_{op}"] = 1 if features["ED448"] and not defined(f"NO_ED448_{op}") else 0
+    # wc_mlkem.c builds each ML-KEM operation unless WOLFSSL_MLKEM_NO_<op>.
+    # wc_mlkem.h maps the legacy WOLFSSL_KYBER_NO_<op> names to these.
+    for op in ("MAKE_KEY", "ENCAPSULATE", "DECAPSULATE"):
+        features[f"ML_KEM_{op}"] = 1 if features["ML_KEM"] and not (
+            defined(f"WOLFSSL_MLKEM_NO_{op}") or defined(f"WOLFSSL_KYBER_NO_{op}")) else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -658,6 +663,9 @@ def make_source(features):
         int ED448_VERIFY_ENABLED = {features["ED448_VERIFY"]};
         int ED448_KEY_IMPORT_ENABLED = {features["ED448_KEY_IMPORT"]};
         int ED448_KEY_EXPORT_ENABLED = {features["ED448_KEY_EXPORT"]};
+        int ML_KEM_MAKE_KEY_ENABLED = {features["ML_KEM_MAKE_KEY"]};
+        int ML_KEM_ENCAPSULATE_ENABLED = {features["ML_KEM_ENCAPSULATE"]};
+        int ML_KEM_DECAPSULATE_ENABLED = {features["ML_KEM_DECAPSULATE"]};
     """
 
     return init_source_string
@@ -740,6 +748,9 @@ def make_cdef(features):
         extern int ED448_VERIFY_ENABLED;
         extern int ED448_KEY_IMPORT_ENABLED;
         extern int ED448_KEY_EXPORT_ENABLED;
+        extern int ML_KEM_MAKE_KEY_ENABLED;
+        extern int ML_KEM_ENCAPSULATE_ENABLED;
+        extern int ML_KEM_DECAPSULATE_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1592,16 +1603,28 @@ def make_cdef(features):
         int wc_KyberKey_PublicKeySize(KyberKey* key, word32* len);
         int wc_KyberKey_Init(int type, KyberKey* key, void* heap, int devId);
         void wc_KyberKey_Free(KyberKey* key);
-        int wc_KyberKey_MakeKey(KyberKey* key, WC_RNG* rng);
-        int wc_KyberKey_MakeKeyWithRandom(KyberKey* key, const unsigned char* rand, int len);
         int wc_KyberKey_EncodePublicKey(KyberKey* key, unsigned char* out, word32 len);
         int wc_KyberKey_DecodePublicKey(KyberKey* key, const unsigned char* in, word32 len);
-        int wc_KyberKey_Encapsulate(KyberKey* key, unsigned char* ct, unsigned char* ss, WC_RNG* rng);
-        int wc_KyberKey_EncapsulateWithRandom(KyberKey* key, unsigned char* ct, unsigned char* ss, const unsigned char* rand, int len);
-        int wc_KyberKey_Decapsulate(KyberKey* key, unsigned char* ss, const unsigned char* ct, word32 len);
         int wc_KyberKey_EncodePrivateKey(KyberKey* key, unsigned char* out, word32 len);
         int wc_KyberKey_DecodePrivateKey(KyberKey* key, const unsigned char* in, word32 len);
         """
+
+        if features["ML_KEM_MAKE_KEY"]:
+            cdef += """
+            int wc_KyberKey_MakeKey(KyberKey* key, WC_RNG* rng);
+            int wc_KyberKey_MakeKeyWithRandom(KyberKey* key, const unsigned char* rand, int len);
+            """
+
+        if features["ML_KEM_ENCAPSULATE"]:
+            cdef += """
+            int wc_KyberKey_Encapsulate(KyberKey* key, unsigned char* ct, unsigned char* ss, WC_RNG* rng);
+            int wc_KyberKey_EncapsulateWithRandom(KyberKey* key, unsigned char* ct, unsigned char* ss, const unsigned char* rand, int len);
+            """
+
+        if features["ML_KEM_DECAPSULATE"]:
+            cdef += """
+            int wc_KyberKey_Decapsulate(KyberKey* key, unsigned char* ss, const unsigned char* ct, word32 len);
+            """
 
     if features["ML_DSA"]:
         cdef += """
@@ -1856,6 +1879,9 @@ def default_features():
         "ED448_VERIFY": 1,
         "ED448_KEY_IMPORT": 1,
         "ED448_KEY_EXPORT": 1,
+        "ML_KEM_MAKE_KEY": 1,
+        "ML_KEM_ENCAPSULATE": 1,
+        "ML_KEM_DECAPSULATE": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.

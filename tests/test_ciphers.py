@@ -1569,3 +1569,35 @@ if _lib.ED448_ENABLED:
             cls()
         with pytest.raises(NotImplementedError, match="Ed448 key import is not supported"):
             Ed448Private(vectors[Ed448Private].key, vectors[Ed448Public].key)
+
+if _lib.ML_KEM_ENABLED:
+    # Method -> flag of the wolfSSL operation it needs.
+    ML_KEM_GATED_METHODS = {
+        ("MlKemPublic", "encapsulate"): "ML_KEM_ENCAPSULATE_ENABLED",
+        ("MlKemPublic", "encapsulate_with_random"): "ML_KEM_ENCAPSULATE_ENABLED",
+        ("MlKemPrivate", "make_key"): "ML_KEM_MAKE_KEY_ENABLED",
+        ("MlKemPrivate", "make_key_with_random"): "ML_KEM_MAKE_KEY_ENABLED",
+        ("MlKemPrivate", "decapsulate"): "ML_KEM_DECAPSULATE_ENABLED",
+    }
+    ML_KEM_COMMON_METHODS = (
+        ("MlKemPublic", "decode_key"),
+        ("MlKemPublic", "encode_key"),
+        ("MlKemPrivate", "decode_key"),
+        ("MlKemPrivate", "encode_priv_key"),
+        ("MlKemPrivate", "encode_pub_key"),
+    )
+
+    def test_ml_kem_methods_defined_only_when_enabled(monkeypatch):
+        """F-12231: each ML-KEM method needs its wolfSSL operation to be compiled in."""
+        for (cls, name), flag in ML_KEM_GATED_METHODS.items():
+            assert hasattr(getattr(ciphers, cls), name) == bool(getattr(_lib, flag)), (cls, name)
+
+        # Load fresh copies of the module as if one operation were not compiled in.
+        for disabled in set(ML_KEM_GATED_METHODS.values()):
+            with monkeypatch.context() as m:
+                m.setattr(_lib, disabled, 0)
+                module = load_fresh_ciphers()
+                for (cls, name), flag in ML_KEM_GATED_METHODS.items():
+                    assert hasattr(getattr(module, cls), name) == bool(getattr(_lib, flag)), (disabled, cls, name)
+                for cls, name in ML_KEM_COMMON_METHODS:
+                    assert hasattr(getattr(module, cls), name), (disabled, cls, name)

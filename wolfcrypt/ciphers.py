@@ -2140,105 +2140,107 @@ if _lib.ML_KEM_ENABLED:
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("wc_KyberKey_DecodePublicKey() error", ret)
 
-        def encapsulate(self, rng: Random | None = None) -> tuple[bytes, bytes]:
-            """
-            :param rng: random number generator for an encupsulation
-            :type rng: Random
-            :return: tuple of a shared secret (first element) and the cipher text (second element)
-            :rtype: tuple[bytes, bytes]
-            """
-            if rng is None:
-                rng = Random()
-            ct_size = self.ct_size
-            ss_size = self.ss_size
-            ct = _ffi.new(f"unsigned char[{ct_size}]")
-            ss = _ffi.new(f"unsigned char[{ss_size}]")
-            ret = _lib.wc_KyberKey_Encapsulate(
-                self.native_object, ct, ss, rng.native_object
-            )
+        if _lib.ML_KEM_ENCAPSULATE_ENABLED:
+            def encapsulate(self, rng: Random | None = None) -> tuple[bytes, bytes]:
+                """
+                :param rng: random number generator for an encupsulation
+                :type rng: Random
+                :return: tuple of a shared secret (first element) and the cipher text (second element)
+                :rtype: tuple[bytes, bytes]
+                """
+                if rng is None:
+                    rng = Random()
+                ct_size = self.ct_size
+                ss_size = self.ss_size
+                ct = _ffi.new(f"unsigned char[{ct_size}]")
+                ss = _ffi.new(f"unsigned char[{ss_size}]")
+                ret = _lib.wc_KyberKey_Encapsulate(
+                    self.native_object, ct, ss, rng.native_object
+                )
 
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_KyberKey_Encapsulate() error", ret)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_KyberKey_Encapsulate() error", ret)
 
-            return _ffi.buffer(ss, ss_size)[:], _ffi.buffer(ct, ct_size)[:]
+                return _ffi.buffer(ss, ss_size)[:], _ffi.buffer(ct, ct_size)[:]
 
-        def encapsulate_with_random(self, rand: bytes) -> tuple[bytes, bytes]:
-            """
-            :param rand: random number for an encapsulation
-            :type rand: bytes
-            :return: tuple of a shared secret (first element) and the cipher text (second element)
-            :rtype: tuple[bytes, bytes]
-            """
+            def encapsulate_with_random(self, rand: bytes) -> tuple[bytes, bytes]:
+                """
+                :param rand: random number for an encapsulation
+                :type rand: bytes
+                :return: tuple of a shared secret (first element) and the cipher text (second element)
+                :rtype: tuple[bytes, bytes]
+                """
 
-            try:
-                memoryview(rand)
-            except TypeError as exception:
-                raise TypeError("rand must support the buffer protocol, such as `bytes` or `bytearray`") from exception
+                try:
+                    memoryview(rand)
+                except TypeError as exception:
+                    raise TypeError("rand must support the buffer protocol, such as `bytes` or `bytearray`") from exception
 
-            rand = bytes(rand)
+                rand = bytes(rand)
 
-            ct_size = self.ct_size
-            ss_size = self.ss_size
-            ct = _ffi.new(f"unsigned char[{ct_size}]")
-            ss = _ffi.new(f"unsigned char[{ss_size}]")
-            ret = _lib.wc_KyberKey_EncapsulateWithRandom(
-                self.native_object, ct, ss, rand, len(rand)
-            )
+                ct_size = self.ct_size
+                ss_size = self.ss_size
+                ct = _ffi.new(f"unsigned char[{ct_size}]")
+                ss = _ffi.new(f"unsigned char[{ss_size}]")
+                ret = _lib.wc_KyberKey_EncapsulateWithRandom(
+                    self.native_object, ct, ss, rand, len(rand)
+                )
 
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_KyberKey_EncapsulateWithRandom() error", ret)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_KyberKey_EncapsulateWithRandom() error", ret)
 
-            return _ffi.buffer(ss, ss_size)[:], _ffi.buffer(ct, ct_size)[:]
+                return _ffi.buffer(ss, ss_size)[:], _ffi.buffer(ct, ct_size)[:]
 
     class MlKemPrivate(_MlKemBase):
-        @classmethod
-        def make_key(cls, mlkem_type: MlKemType, rng: Random | None = None) -> MlKemPrivate:
-            """
-            :param mlkem_type: ML-KEM type
-            :type mlkem_type: MlKemType
-            :param rng: random number generator for a key generation
-            :type rng: Random
-            :return: `MlKemPrivate` object
-            :rtype: MlKemPrivate
-            """
-            if rng is None:
-                rng = Random()
-            mlkem_priv = cls(mlkem_type)
-            ret = _lib.wc_KyberKey_MakeKey(mlkem_priv.native_object, rng.native_object)
+        if _lib.ML_KEM_MAKE_KEY_ENABLED:
+            @classmethod
+            def make_key(cls, mlkem_type: MlKemType, rng: Random | None = None) -> MlKemPrivate:
+                """
+                :param mlkem_type: ML-KEM type
+                :type mlkem_type: MlKemType
+                :param rng: random number generator for a key generation
+                :type rng: Random
+                :return: `MlKemPrivate` object
+                :rtype: MlKemPrivate
+                """
+                if rng is None:
+                    rng = Random()
+                mlkem_priv = cls(mlkem_type)
+                ret = _lib.wc_KyberKey_MakeKey(mlkem_priv.native_object, rng.native_object)
 
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_KyberKey_MakeKey() error", ret)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_KyberKey_MakeKey() error", ret)
 
-            # Retain RNG reference defensively.
-            mlkem_priv._rng = rng
+                # Retain RNG reference defensively.
+                mlkem_priv._rng = rng
 
-            return mlkem_priv
+                return mlkem_priv
 
-        @classmethod
-        def make_key_with_random(cls, mlkem_type: MlKemType, rand: bytes) -> MlKemPrivate:
-            """
-            :param mlkem_type: ML-KEM type
-            :type mlkem_type: MlKemType
-            :param rand: random number for a key generation
-            :type rand: bytes
-            :return: `MlKemPrivate` object
-            :rtype: MlKemPrivate
-            """
-            mlkem_priv = cls(mlkem_type)
+            @classmethod
+            def make_key_with_random(cls, mlkem_type: MlKemType, rand: bytes) -> MlKemPrivate:
+                """
+                :param mlkem_type: ML-KEM type
+                :type mlkem_type: MlKemType
+                :param rand: random number for a key generation
+                :type rand: bytes
+                :return: `MlKemPrivate` object
+                :rtype: MlKemPrivate
+                """
+                mlkem_priv = cls(mlkem_type)
 
-            try:
-                memoryview(rand)
-            except TypeError as exception:
-                raise TypeError("rand must support the buffer protocol, such as `bytes` or `bytearray`") from exception
+                try:
+                    memoryview(rand)
+                except TypeError as exception:
+                    raise TypeError("rand must support the buffer protocol, such as `bytes` or `bytearray`") from exception
 
-            rand = bytes(rand)
+                rand = bytes(rand)
 
-            ret = _lib.wc_KyberKey_MakeKeyWithRandom(mlkem_priv.native_object, rand, len(rand))
+                ret = _lib.wc_KyberKey_MakeKeyWithRandom(mlkem_priv.native_object, rand, len(rand))
 
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_KyberKey_MakeKeyWithRandom() error", ret)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_KyberKey_MakeKeyWithRandom() error", ret)
 
-            return mlkem_priv
+                return mlkem_priv
 
         @property
         def pub_key_size(self) -> int:
@@ -2300,27 +2302,28 @@ if _lib.ML_KEM_ENABLED:
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("wc_KyberKey_DecodePrivateKey() error", ret)
 
-        def decapsulate(self, ct: BytesOrStr) -> bytes:
-            """
-            :param ct: cipher text
-            :type ct: bytes or str
-            :return: shared secret
-            :rtype: bytes
-            """
-            ss_size = self.ss_size
-            ss = _ffi.new(f"unsigned char[{ss_size}]")
-            ct_bytestype = t2b(ct)
-            ret = _lib.wc_KyberKey_Decapsulate(
-                self.native_object,
-                ss,
-                ct_bytestype,
-                len(ct_bytestype),
-            )
+        if _lib.ML_KEM_DECAPSULATE_ENABLED:
+            def decapsulate(self, ct: BytesOrStr) -> bytes:
+                """
+                :param ct: cipher text
+                :type ct: bytes or str
+                :return: shared secret
+                :rtype: bytes
+                """
+                ss_size = self.ss_size
+                ss = _ffi.new(f"unsigned char[{ss_size}]")
+                ct_bytestype = t2b(ct)
+                ret = _lib.wc_KyberKey_Decapsulate(
+                    self.native_object,
+                    ss,
+                    ct_bytestype,
+                    len(ct_bytestype),
+                )
 
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_KyberKey_Decapsulate() error", ret)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_KyberKey_Decapsulate() error", ret)
 
-            return _ffi.buffer(ss, ss_size)[:]
+                return _ffi.buffer(ss, ss_size)[:]
 
 
 if _lib.ML_DSA_ENABLED:
