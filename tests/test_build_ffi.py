@@ -53,6 +53,11 @@ SUBCAPABILITIES = {
     "PEM_TO_DER": "ASN",
     "DER_TO_PEM": "ASN",
     "PKCS8": "ASN",
+    "RSA_ENCRYPT": "RSA",
+    "RSA_PRIVATE": "RSA",
+    "RSA_SIGN": "RSA",
+    "RSA_VERIFY": "RSA",
+    "RSA_OAEP": "RSA",
 }
 
 
@@ -361,3 +366,47 @@ def test_rng_api_needs_rng(bf):
         assert "WC_RNG;" in cdef, define
         for name in RNG_DECLS:
             assert name not in cdef, (define, name)
+
+
+RSA_OPS = ("wc_RsaPublicEncrypt(", "wc_RsaPublicEncrypt_ex(", "wc_RsaPrivateDecrypt(",
+           "wc_RsaPrivateDecrypt_ex(", "wc_RsaSSL_Sign(", "wc_RsaSSL_Verify(", "wc_RsaPSS_Sign(",
+           "wc_MakeRsaKey(")
+RSA_SUBSETS = ("RSA_ENCRYPT", "RSA_PRIVATE", "RSA_SIGN", "RSA_VERIFY", "RSA_OAEP")
+
+
+@pytest.mark.parametrize(("defines", "disabled", "absent"), [
+    ((), (), ()),
+    # --enable-rsapub
+    (("#define WOLFSSL_RSA_PUBLIC_ONLY",), ("RSA_PRIVATE", "RSA_SIGN"),
+     ("wc_RsaPrivateDecrypt(", "wc_RsaPrivateDecrypt_ex(", "wc_RsaSSL_Sign(", "wc_RsaPSS_Sign(",
+      "wc_MakeRsaKey(")),
+    (("#define WOLFSSL_RSA_VERIFY_ONLY",), ("RSA_ENCRYPT", "RSA_SIGN"),
+     ("wc_RsaPublicEncrypt(", "wc_RsaPublicEncrypt_ex(", "wc_RsaSSL_Sign(", "wc_RsaPSS_Sign(")),
+    (("#define WOLFSSL_RSA_VERIFY_INLINE",), ("RSA_VERIFY",), ("wc_RsaSSL_Verify(",)),
+    # --enable-rsavfy
+    (("#define WOLFSSL_RSA_PUBLIC_ONLY", "#define WOLFSSL_RSA_VERIFY_ONLY", "#define WOLFSSL_RSA_VERIFY_INLINE"),
+     ("RSA_ENCRYPT", "RSA_PRIVATE", "RSA_SIGN", "RSA_VERIFY"), RSA_OPS),
+    # --disable-oaep
+    (("#define WC_NO_RSA_OAEP",), ("RSA_OAEP",), ("wc_RsaPublicEncrypt_ex(", "wc_RsaPrivateDecrypt_ex(")),
+    (("  #define WC_NO_RSA_OAEP 1",), ("RSA_OAEP",), ("wc_RsaPublicEncrypt_ex(", "wc_RsaPrivateDecrypt_ex(")),
+], ids=["default", "public-only", "verify-only", "verify-inline", "rsavfy", "no-oaep", "no-oaep-indented"])
+def test_rsa_operations_follow_subset_macros(bf, defines, disabled, absent):
+    features = detect(bf, "#define WOLFSSL_KEY_GEN", "#define WC_RSA_PSS", *defines)
+    for name in RSA_SUBSETS:
+        assert features[name] == (name not in disabled), name
+    cdef = cdef_for(bf, features)
+    for name in RSA_OPS:
+        assert (name in cdef) == (name not in absent), name
+    # Key decoding and encoding and PSS verification stay available.
+    for name in ("wc_RsaPublicKeyDecode(", "wc_RsaPrivateKeyDecode(", "wc_RsaKeyToDer(",
+                 "wc_RsaKeyToPublicDer(", "wc_RsaPSS_Verify(", "wc_RsaPSS_CheckPadding("):
+        assert name in cdef, name
+
+
+def test_rsa_subsets_need_rsa(bf):
+    features = detect(bf, "#define NO_RSA")
+    for name in RSA_SUBSETS:
+        assert features[name] == 0, name
+    cdef = cdef_for(bf, features)
+    for name in RSA_OPS:
+        assert name not in cdef, name
