@@ -284,7 +284,15 @@ if _lib.AES_ENABLED:
         def __init__(self, key: BytesOrStr, mode: int, IV: BytesOrStr | None = None) -> None:
             if mode == MODE_CTR and not _lib.AES_CTR_ENABLED:
                 raise NotImplementedError("AES-CTR is not supported by this wolfSSL build")
+            if mode == MODE_CBC and not _lib.AES_CBC_ENABLED:
+                raise NotImplementedError("AES-CBC is not supported by this wolfSSL build")
             super().__init__(key, mode, IV)
+
+        @override
+        def decrypt(self, string: BytesOrStr) -> bytes:
+            if self.mode == MODE_CBC and not _lib.AES_DECRYPT_ENABLED:
+                raise NotImplementedError("AES-CBC decryption is not supported by this wolfSSL build")
+            return super().decrypt(string)
 
         @override
         def _set_key(self, direction: int) -> int:

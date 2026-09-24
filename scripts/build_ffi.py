@@ -427,6 +427,9 @@ def detect_features(defines, features, fips=False, include_dirs=()):
                         features["HMAC_COPY"] = 1
     # aes.h declares wc_AesCtrEncrypt only with WOLFSSL_AES_COUNTER.
     features["AES_CTR"] = 1 if features["AES"] and defined("WOLFSSL_AES_COUNTER") else 0
+    # settings.h derives HAVE_AES_CBC and HAVE_AES_DECRYPT unless NO_AES_CBC/NO_AES_DECRYPT.
+    features["AES_CBC"] = 1 if features["AES"] and not defined("NO_AES_CBC") else 0
+    features["AES_DECRYPT"] = 1 if features["AES"] and not defined("NO_AES_DECRYPT") else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -563,6 +566,8 @@ def make_source(features):
         int CRYPTO_CB_FREE_ENABLED = {features["CRYPTO_CB_FREE"]};
         int HMAC_COPY_ENABLED = {features["HMAC_COPY"]};
         int AES_CTR_ENABLED = {features["AES_CTR"]};
+        int AES_CBC_ENABLED = {features["AES_CBC"]};
+        int AES_DECRYPT_ENABLED = {features["AES_DECRYPT"]};
     """
 
     return init_source_string
@@ -614,6 +619,8 @@ def make_cdef(features):
         static const int WC_HW_E;
         static const int CRYPTOCB_UNAVAILABLE;
         extern int AES_CTR_ENABLED;
+        extern int AES_CBC_ENABLED;
+        extern int AES_DECRYPT_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -991,9 +998,15 @@ def make_cdef(features):
         typedef struct { ...; } Aes;
 
         int wc_AesSetKey(Aes*, const byte*, word32, const byte*, int);
-        int wc_AesCbcEncrypt(Aes*, byte*, const byte*, word32);
-        int wc_AesCbcDecrypt(Aes*, byte*, const byte*, word32);
         """
+        if features["AES_CBC"]:
+            cdef += """
+            int wc_AesCbcEncrypt(Aes*, byte*, const byte*, word32);
+            """
+        if features["AES_CBC"] and features["AES_DECRYPT"]:
+            cdef += """
+            int wc_AesCbcDecrypt(Aes*, byte*, const byte*, word32);
+            """
         if features["AES_CTR"]:
             cdef += """
             int wc_AesCtrEncrypt(Aes*, byte*, const byte*, word32);
@@ -1614,6 +1627,8 @@ def default_features():
         "CRYPTO_CB_FREE": 1,
         "HMAC_COPY": 1,
         "AES_CTR": 1,
+        "AES_CBC": 1,
+        "AES_DECRYPT": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.

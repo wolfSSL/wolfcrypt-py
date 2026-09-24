@@ -245,9 +245,13 @@ def test_block_cipher(cipher_cls, vectors):
     plaintext = vectors[cipher_cls].plaintext
     ciphertext = vectors[cipher_cls].ciphertext
     ciphertext_ctr = vectors[cipher_cls].ciphertext_ctr
+    is_aes = _lib.AES_ENABLED and cipher_cls is Aes
+    # Without AES-CBC, MODE_CBC is rejected before its arguments are checked.
+    cbc = not (is_aes and not _lib.AES_CBC_ENABLED)
 
-    with pytest.raises(ValueError):
-        cipher_cls.new(key[:-1], MODE_CBC, iv)  # invalid key length
+    if cbc:
+        with pytest.raises(ValueError):
+            cipher_cls.new(key[:-1], MODE_CBC, iv)  # invalid key length
 
     with pytest.raises(ValueError):
         cipher_cls.new(key, -1, iv)             # invalid mode
@@ -255,11 +259,12 @@ def test_block_cipher(cipher_cls, vectors):
     with pytest.raises(ValueError):
         cipher_cls.new(key, MODE_ECB, iv)       # unsuported mode
 
-    with pytest.raises(ValueError):
-        cipher_cls.new(key, MODE_CBC, None)     # invalid iv
+    if cbc:
+        with pytest.raises(ValueError):
+            cipher_cls.new(key, MODE_CBC, None)     # invalid iv
 
-    with pytest.raises(ValueError):
-        cipher_cls.new(key, MODE_CBC, iv[:-1])  # invalid iv length
+        with pytest.raises(ValueError):
+            cipher_cls.new(key, MODE_CBC, iv[:-1])  # invalid iv length
 
 
     # Test AES in counter mode
@@ -269,6 +274,9 @@ def test_block_cipher(cipher_cls, vectors):
         assert res == ciphertext_ctr
         cipher_obj = cipher_cls.new(key, MODE_CTR, iv)
         assert plaintext == cipher_obj.decrypt(res)
+
+    if not cbc:
+        return
 
     # single encryption
     cipher_obj = cipher_new(cipher_cls, vectors)
@@ -287,6 +295,9 @@ def test_block_cipher(cipher_cls, vectors):
         result += cipher_obj.encrypt(segment)
 
     assert result == ciphertext
+
+    if is_aes and not _lib.AES_DECRYPT_ENABLED:
+        return
 
     # single decryption
     cipher_obj = cipher_new(cipher_cls, vectors)
@@ -1096,7 +1107,28 @@ if _lib.AES_ENABLED:
         monkeypatch.setattr(_lib, "AES_CTR_ENABLED", 0)
         with pytest.raises(NotImplementedError, match="AES-CTR"):
             Aes.new(b"0" * 16, MODE_CTR, b"0" * 16)
-        assert Aes.new(b"0" * 16, MODE_CBC, b"0" * 16).encrypt(b"0" * 16)
+        if _lib.AES_CBC_ENABLED:
+            assert Aes.new(b"0" * 16, MODE_CBC, b"0" * 16).encrypt(b"0" * 16)
+
+    def test_aes_cbc_rejected_when_not_compiled_in(monkeypatch):
+        """F-12224: MODE_CBC needs AES-CBC support in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "AES_CBC_ENABLED", 0)
+        with pytest.raises(NotImplementedError, match="AES-CBC"):
+            Aes.new(b"0" * 16, MODE_CBC, b"0" * 16)
+
+    def test_aes_cbc_decrypt_rejected_when_not_compiled_in(monkeypatch, vectors):
+        """F-12224: CBC decryption needs AES decryption in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "AES_DECRYPT_ENABLED", 0)
+        vector = vectors[Aes]
+        if _lib.AES_CBC_ENABLED:
+            cipher_obj = Aes.new(vector.key, MODE_CBC, vector.iv)
+            assert cipher_obj.encrypt(vector.plaintext) == vector.ciphertext
+            with pytest.raises(NotImplementedError, match="AES-CBC decryption"):
+                cipher_obj.decrypt(vector.ciphertext)
+        # CTR decryption only uses the encryption key schedule.
+        if _lib.AES_CTR_ENABLED:
+            cipher_obj = Aes.new(vector.key, MODE_CTR, vector.iv)
+            assert cipher_obj.decrypt(vector.ciphertext_ctr) == vector.plaintext
 
 
 if _lib.CHACHA_ENABLED:
