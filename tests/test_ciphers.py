@@ -606,6 +606,12 @@ if _lib.RSA_ENABLED:
 
 
 if _lib.ECC_ENABLED:
+    needs_ecc_import = pytest.mark.skipif(not _lib.ECC_KEY_IMPORT_ENABLED, reason="ECC key import not enabled")
+    needs_ecc_export = pytest.mark.skipif(not _lib.ECC_KEY_EXPORT_ENABLED, reason="ECC key export not enabled")
+    needs_ecc_sign_verify = pytest.mark.skipif(not (_lib.ECC_SIGN_ENABLED and _lib.ECC_VERIFY_ENABLED),
+                                               reason="ECC signing or verification not enabled")
+    needs_ecc_dhe = pytest.mark.skipif(not _lib.ECC_DHE_ENABLED, reason="ECDH not enabled")
+
     @pytest.fixture
     def ecc_private(vectors):
         return EccPrivate(vectors[EccPrivate].key)
@@ -616,6 +622,7 @@ if _lib.ECC_ENABLED:
         return EccPublic(vectors[EccPublic].key)
 
 
+    @needs_ecc_import
     def test_new_ecc_raises(vectors):
         with pytest.raises(WolfCryptError):
             EccPrivate(vectors[EccPrivate].key[:-1])  # invalid key length
@@ -630,6 +637,8 @@ if _lib.ECC_ENABLED:
             EccPrivate.make_key(1024)
 
 
+    @needs_ecc_import
+    @needs_ecc_export
     def test_key_encoding(vectors):
         priv = EccPrivate()
         pub = EccPublic()
@@ -668,6 +677,8 @@ if _lib.ECC_ENABLED:
         assert qy[0:32] == vectors[EccPublic].raw_key[32:64]
 
 
+    @needs_ecc_import
+    @needs_ecc_export
     def test_ecc_encode_key_buffer_not_from_field_size(vectors, monkeypatch):
         """
         F-10070: the private key DER is larger than four times the field
@@ -679,6 +690,8 @@ if _lib.ECC_ENABLED:
 
 
     @pytest.mark.parametrize("curve_id", [ECC_SECP112R1, ECC_SECP128R1, ECC_SECP160R1, ECC_SECP192R1])
+    @needs_ecc_import
+    @needs_ecc_export
     def test_ecc_encode_key_small_curves(curve_id):
         """
         F-10070: private key DER encoding round-trips on small curves.
@@ -694,6 +707,8 @@ if _lib.ECC_ENABLED:
         assert EccPrivate(der).encode_key() == der
 
 
+    @needs_ecc_import
+    @needs_ecc_export
     def test_ecc_encode_key_p192_vector():
         """
         F-10070: an imported P-192 private key re-encodes to the same DER.
@@ -710,6 +725,7 @@ if _lib.ECC_ENABLED:
         assert EccPrivate(der).encode_key() == der
 
 
+    @needs_ecc_import
     def test_ecc_decode_key_raw_rejects_wrong_length(vectors):
         """
         wc_ecc_import_unsigned reads exactly curve_size bytes from each
@@ -748,6 +764,7 @@ if _lib.ECC_ENABLED:
 
 
     @pytest.mark.parametrize("bad", ["off_curve", "x_not_below_p"])
+    @needs_ecc_import
     def test_ecc_decode_key_raw_rejects_invalid_point(vectors, bad):
         """
         F-8277: wc_ecc_import_unsigned does not validate the point, so
@@ -764,6 +781,7 @@ if _lib.ECC_ENABLED:
             EccPublic().decode_key_raw(qx, qy)
 
 
+    @needs_ecc_import
     def test_ecc_import_rejects_off_curve_point(vectors):
         """
         F-8277: import_x963 and decode_key reject a point that is not on
@@ -780,10 +798,15 @@ if _lib.ECC_ENABLED:
 
 
 
+    @needs_ecc_import
+    @needs_ecc_export
     def test_x963(ecc_private, ecc_public):
         assert ecc_private.export_x963() == ecc_public.export_x963()
 
 
+    @needs_ecc_import
+    @needs_ecc_export
+    @needs_ecc_sign_verify
     def test_ecc_sign_verify(ecc_private, ecc_public):
         plaintext = "Everyone gets Friday off."
 
@@ -814,6 +837,8 @@ if _lib.ECC_ENABLED:
             ecc_x963.import_x963(ecc_public.export_x963()[:-1])
 
     if _lib.MPAPI_ENABLED:
+        @needs_ecc_import
+        @needs_ecc_sign_verify
         def test_ecc_sign_verify_raw(ecc_private, ecc_public):
             plaintext = "Everyone gets Friday off."
 
@@ -832,6 +857,9 @@ if _lib.ECC_ENABLED:
             assert ecc_private.verify_raw(r, s, plaintext)
 
 
+    @needs_ecc_import
+    @needs_ecc_export
+    @needs_ecc_dhe
     def test_ecc_make_shared_secret():
         a = EccPrivate.make_key(32, rng=Random())
         a_pub = EccPublic()
@@ -846,6 +874,9 @@ if _lib.ECC_ENABLED:
             == a.shared_secret(b_pub) \
             == b.shared_secret(a_pub)
 
+    @needs_ecc_import
+    @needs_ecc_export
+    @needs_ecc_dhe
     def test_ecc_make_key_no_rng():
         key = EccPrivate.make_key(32)
         pub_key = EccPublic()
@@ -1361,3 +1392,48 @@ if _lib.RSA_ENABLED:
         monkeypatch.setattr(_lib, "RSA_VERIFY_ENABLED", 0)
         with pytest.raises(NotImplementedError, match="RSA verification is not supported"):
             rsa.verify(signature)
+
+if _lib.ECC_ENABLED:
+    # Method -> flags of the wolfSSL operations it needs.
+    ECC_GATED_METHODS = {
+        ("EccPublic", "decode_key"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPublic", "decode_key_raw"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPublic", "import_x963"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPublic", "encode_key"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPublic", "encode_key_raw"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPublic", "export_x963"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPublic", "verify"): ("ECC_VERIFY_ENABLED",),
+        ("EccPublic", "verify_raw"): ("ECC_VERIFY_ENABLED", "MPAPI_ENABLED"),
+        ("EccPrivate", "decode_key"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPrivate", "decode_key_raw"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPrivate", "encode_key"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPrivate", "encode_key_raw"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPrivate", "shared_secret"): ("ECC_DHE_ENABLED",),
+        ("EccPrivate", "sign"): ("ECC_SIGN_ENABLED",),
+        ("EccPrivate", "sign_raw"): ("ECC_SIGN_ENABLED", "MPAPI_ENABLED"),
+    }
+
+    def test_ecc_methods_defined_only_when_enabled(monkeypatch):
+        """F-12228: each ECC method needs its wolfSSL operation to be compiled in."""
+        for (cls, name), flags in ECC_GATED_METHODS.items():
+            enabled = all(getattr(_lib, flag) for flag in flags)
+            assert hasattr(getattr(ciphers, cls), name) == enabled, (cls, name)
+
+        # Load fresh copies of the module as if one operation were not compiled in.
+        for disabled in ("ECC_KEY_IMPORT_ENABLED", "ECC_KEY_EXPORT_ENABLED", "ECC_DHE_ENABLED",
+                         "ECC_SIGN_ENABLED", "ECC_VERIFY_ENABLED"):
+            with monkeypatch.context() as m:
+                m.setattr(_lib, disabled, 0)
+                module = load_fresh_ciphers()
+                for (cls, name), flags in ECC_GATED_METHODS.items():
+                    enabled = all(getattr(_lib, flag) for flag in flags)
+                    assert hasattr(getattr(module, cls), name) == enabled, (disabled, cls, name)
+            assert hasattr(module.EccPrivate, "make_key"), disabled
+
+    def test_ecc_key_rejected_without_key_import(monkeypatch, vectors):
+        """F-12228: loading a key needs ECC key import in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "ECC_KEY_IMPORT_ENABLED", 0)
+        for cls in (EccPublic, EccPrivate):
+            with pytest.raises(NotImplementedError, match="ECC key import is not supported"):
+                cls(vectors[cls].key)
+            assert cls().size == 0, cls

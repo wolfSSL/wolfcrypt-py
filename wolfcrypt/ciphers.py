@@ -1191,6 +1191,8 @@ if _lib.ECC_ENABLED:
             _Ecc.__init__(self)
 
             if key:
+                if not _lib.ECC_KEY_IMPORT_ENABLED:
+                    raise NotImplementedError("ECC key import is not supported by this wolfSSL build")
                 self.decode_key(key)
 
         def _check_key(self) -> None:
@@ -1198,124 +1200,129 @@ if _lib.ECC_ENABLED:
             if ret != 0:
                 raise WolfCryptApiError("Key check error", ret)
 
-        def decode_key(self, key: BytesOrStr) -> None:
-            """
-            Decodes an ECC public key from an ASN sequence.
-            """
-            key = t2b(key)
+        if _lib.ECC_KEY_IMPORT_ENABLED:
+            def decode_key(self, key: BytesOrStr) -> None:
+                """
+                Decodes an ECC public key from an ASN sequence.
+                """
+                key = t2b(key)
 
-            idx = _ffi.new("word32*")
-            idx[0] = 0
+                idx = _ffi.new("word32*")
+                idx[0] = 0
 
-            ret = _lib.wc_EccPublicKeyDecode(key, idx,
-                                             self.native_object, len(key))
-            if ret < 0:
-                raise WolfCryptApiError("Key decode error", ret)
-            if self.size <= 0:  # pragma: no cover
-                raise WolfCryptError(f"Key decode error ({self.size})")
-            if self.max_signature_size <= 0:  # pragma: no cover
-                raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
-            self._check_key()
+                ret = _lib.wc_EccPublicKeyDecode(key, idx,
+                                                 self.native_object, len(key))
+                if ret < 0:
+                    raise WolfCryptApiError("Key decode error", ret)
+                if self.size <= 0:  # pragma: no cover
+                    raise WolfCryptError(f"Key decode error ({self.size})")
+                if self.max_signature_size <= 0:  # pragma: no cover
+                    raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
+                self._check_key()
 
-        def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
-            """
-            Decodes an ECC public key from its raw elements: (Qx,Qy)
-            """
-            qx = t2b(qx)
-            qy = t2b(qy)
-            curve_size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
-            if curve_size <= 0:
-                raise ValueError(f"Unknown ECC curve_id {curve_id}")
-            if len(qx) != curve_size or len(qy) != curve_size:
-                raise ValueError(
-                    f"qx and qy must each be {curve_size} bytes for curve_id {curve_id}, got "
-                    f"qx={len(qx)} qy={len(qy)}")
-            ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy,
-                    _ffi.NULL, curve_id)
-            if ret != 0:
-                raise WolfCryptApiError("Key decode error", ret)
-            self._check_key()
+            def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
+                """
+                Decodes an ECC public key from its raw elements: (Qx,Qy)
+                """
+                qx = t2b(qx)
+                qy = t2b(qy)
+                curve_size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
+                if curve_size <= 0:
+                    raise ValueError(f"Unknown ECC curve_id {curve_id}")
+                if len(qx) != curve_size or len(qy) != curve_size:
+                    raise ValueError(
+                        f"qx and qy must each be {curve_size} bytes for curve_id {curve_id}, got "
+                        f"qx={len(qx)} qy={len(qy)}")
+                ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy,
+                        _ffi.NULL, curve_id)
+                if ret != 0:
+                    raise WolfCryptApiError("Key decode error", ret)
+                self._check_key()
 
-        def encode_key(self, with_curve: bool = True) -> bytes:
-            """
-            Encodes the ECC public key in an ASN sequence.
+        if _lib.ECC_KEY_EXPORT_ENABLED:
+            def encode_key(self, with_curve: bool = True) -> bytes:
+                """
+                Encodes the ECC public key in an ASN sequence.
 
-            Returns the encoded key.
-            """
-            key = _ffi.new(f"byte[{self.size * 4}]")
+                Returns the encoded key.
+                """
+                key = _ffi.new(f"byte[{self.size * 4}]")
 
-            ret = _lib.wc_EccPublicKeyToDer(self.native_object, key, len(key),
-                                            with_curve)
-            if ret <= 0:  # pragma: no cover
-                raise WolfCryptApiError("Key encode error", ret)
+                ret = _lib.wc_EccPublicKeyToDer(self.native_object, key, len(key),
+                                                with_curve)
+                if ret <= 0:  # pragma: no cover
+                    raise WolfCryptApiError("Key encode error", ret)
 
-            return _ffi.buffer(key, ret)[:]
+                return _ffi.buffer(key, ret)[:]
 
-        def encode_key_raw(self) -> tuple[bytes, bytes]:
-            """
-            Encodes the ECC public key in its two raw elements
+            def encode_key_raw(self) -> tuple[bytes, bytes]:
+                """
+                Encodes the ECC public key in its two raw elements
 
-            Returns (Qx, Qy)
-            """
-            Qx = _ffi.new(f"byte[{self.size}]")
-            Qy = _ffi.new(f"byte[{self.size}]")
-            qx_size = _ffi.new("word32[1]")
-            qy_size = _ffi.new("word32[1]")
-            qx_size[0] = self.size
-            qy_size[0] = self.size
+                Returns (Qx, Qy)
+                """
+                Qx = _ffi.new(f"byte[{self.size}]")
+                Qy = _ffi.new(f"byte[{self.size}]")
+                qx_size = _ffi.new("word32[1]")
+                qy_size = _ffi.new("word32[1]")
+                qx_size[0] = self.size
+                qy_size[0] = self.size
 
-            ret = _lib.wc_ecc_export_public_raw(self.native_object, Qx,
-                    qx_size, Qy, qy_size)
-            if ret != 0:  # pragma: no cover
-                raise WolfCryptApiError("Key encode error", ret)
+                ret = _lib.wc_ecc_export_public_raw(self.native_object, Qx,
+                        qx_size, Qy, qy_size)
+                if ret != 0:  # pragma: no cover
+                    raise WolfCryptApiError("Key encode error", ret)
 
-            return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy,
-                    qy_size[0])[:]
+                return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy,
+                        qy_size[0])[:]
 
-        def import_x963(self, x963: bytes) -> None:
-            """
-            Imports an ECC public key in ANSI X9.63 format.
-            """
-            ret = _lib.wc_ecc_import_x963(x963, len(x963), self.native_object)
-            if ret != 0:
-                raise WolfCryptApiError("x963 import error", ret)
-            self._check_key()
+        if _lib.ECC_KEY_IMPORT_ENABLED:
+            def import_x963(self, x963: bytes) -> None:
+                """
+                Imports an ECC public key in ANSI X9.63 format.
+                """
+                ret = _lib.wc_ecc_import_x963(x963, len(x963), self.native_object)
+                if ret != 0:
+                    raise WolfCryptApiError("x963 import error", ret)
+                self._check_key()
 
-        def export_x963(self) -> bytes:
-            """
-            Exports the public key data of the object in ANSI X9.63 format.
+        if _lib.ECC_KEY_EXPORT_ENABLED:
+            def export_x963(self) -> bytes:
+                """
+                Exports the public key data of the object in ANSI X9.63 format.
 
-            Returns the exported key.
-            """
-            x963 = _ffi.new(f"byte[{self.size * 4}]")
-            x963_size = _ffi.new("word32[1]")
-            x963_size[0] = self.size * 4
+                Returns the exported key.
+                """
+                x963 = _ffi.new(f"byte[{self.size * 4}]")
+                x963_size = _ffi.new("word32[1]")
+                x963_size[0] = self.size * 4
 
-            ret = _lib.wc_ecc_export_x963(self.native_object, x963, x963_size)
-            if ret != 0:  # pragma: no cover
-                raise WolfCryptApiError("x963 export error", ret)
+                ret = _lib.wc_ecc_export_x963(self.native_object, x963, x963_size)
+                if ret != 0:  # pragma: no cover
+                    raise WolfCryptApiError("x963 export error", ret)
 
-            return _ffi.buffer(x963, x963_size[0])[:]
+                return _ffi.buffer(x963, x963_size[0])[:]
 
-        def verify(self, signature: bytes, data: BytesOrStr) -> bool:
-            """
-            Verifies **signature**, using the public key data in the object.
+        if _lib.ECC_VERIFY_ENABLED:
+            def verify(self, signature: bytes, data: BytesOrStr) -> bool:
+                """
+                Verifies **signature**, using the public key data in the object.
 
-            Returns **True** in case of a valid signature, otherwise **False**.
-            """
-            data = t2b(data)
-            status = _ffi.new("int[1]")
+                Returns **True** in case of a valid signature, otherwise **False**.
+                """
+                data = t2b(data)
+                status = _ffi.new("int[1]")
 
-            ret = _lib.wc_ecc_verify_hash(signature, len(signature),
-                                          data, len(data),
-                                          status, self.native_object)
+                ret = _lib.wc_ecc_verify_hash(signature, len(signature),
+                                              data, len(data),
+                                              status, self.native_object)
 
-            if ret < 0:
-                raise WolfCryptApiError("Verify error", ret)
+                if ret < 0:
+                    raise WolfCryptApiError("Verify error", ret)
 
-            return status[0] == 1
+                return status[0] == 1
 
-        if _lib.MPAPI_ENABLED:
+        if _lib.ECC_VERIFY_ENABLED and _lib.MPAPI_ENABLED:
             def verify_raw(self, R: bytes, S: bytes, data: BytesOrStr) -> bool:
                 """
                 Verifies signature from its raw elements **R** and **S**, using
@@ -1387,135 +1394,139 @@ if _lib.ECC_ENABLED:
 
             return ecc
 
-        @override
-        def decode_key(self, key: BytesOrStr) -> None:
-            """
-            Decodes an ECC private key from an ASN sequence.
-            """
-            key = t2b(key)
+        if _lib.ECC_KEY_IMPORT_ENABLED:
+            @override
+            def decode_key(self, key: BytesOrStr) -> None:
+                """
+                Decodes an ECC private key from an ASN sequence.
+                """
+                key = t2b(key)
 
-            idx = _ffi.new("word32*")
-            idx[0] = 0
+                idx = _ffi.new("word32*")
+                idx[0] = 0
 
-            ret = _lib.wc_EccPrivateKeyDecode(key, idx,
-                                              self.native_object, len(key))
-            if ret < 0:
-                raise WolfCryptApiError("Key decode error", ret)
-            if self.size <= 0:  # pragma: no cover
-                raise WolfCryptError(f"Key decode error {self.size}")
-            if self.max_signature_size <= 0:  # pragma: no cover
-                raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
+                ret = _lib.wc_EccPrivateKeyDecode(key, idx,
+                                                  self.native_object, len(key))
+                if ret < 0:
+                    raise WolfCryptApiError("Key decode error", ret)
+                if self.size <= 0:  # pragma: no cover
+                    raise WolfCryptError(f"Key decode error {self.size}")
+                if self.max_signature_size <= 0:  # pragma: no cover
+                    raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
-        @override
-        def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, d: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
-            """
-            Decodes an ECC private key from its raw elements: public (Qx,Qy)
-            and private(d)
-            """
-            qx = t2b(qx)
-            qy = t2b(qy)
-            d = t2b(d)
-            curve_size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
-            if curve_size <= 0:
-                raise ValueError(f"Unknown ECC curve_id {curve_id}")
-            if (len(qx) != curve_size or len(qy) != curve_size
-                    or len(d) != curve_size):
-                raise ValueError(
-                    f"qx, qy and d must each be {curve_size} bytes for curve_id {curve_id}, got "
-                    f"qx={len(qx)} qy={len(qy)} d={len(d)}")
-            ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy, d,
-                    curve_id)
-            if ret != 0:
-                raise WolfCryptApiError("Key decode error", ret)
+            @override
+            def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, d: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
+                """
+                Decodes an ECC private key from its raw elements: public (Qx,Qy)
+                and private(d)
+                """
+                qx = t2b(qx)
+                qy = t2b(qy)
+                d = t2b(d)
+                curve_size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
+                if curve_size <= 0:
+                    raise ValueError(f"Unknown ECC curve_id {curve_id}")
+                if (len(qx) != curve_size or len(qy) != curve_size
+                        or len(d) != curve_size):
+                    raise ValueError(
+                        f"qx, qy and d must each be {curve_size} bytes for curve_id {curve_id}, got "
+                        f"qx={len(qx)} qy={len(qy)} d={len(d)}")
+                ret = _lib.wc_ecc_import_unsigned(self.native_object, qx, qy, d,
+                        curve_id)
+                if ret != 0:
+                    raise WolfCryptApiError("Key decode error", ret)
 
-        @override
-        def encode_key(self) -> bytes:
-            """
-            Encodes the ECC private key in an ASN sequence.
+        if _lib.ECC_KEY_EXPORT_ENABLED:
+            @override
+            def encode_key(self) -> bytes:
+                """
+                Encodes the ECC private key in an ASN sequence.
 
-            Returns the encoded key.
-            """
-            size = _lib.wc_EccKeyDerSize(self.native_object, 1)
-            if size <= 0:  # pragma: no cover
-                raise WolfCryptApiError("Key encode error", size)
-            key = _ffi.new(f"byte[{size}]")
+                Returns the encoded key.
+                """
+                size = _lib.wc_EccKeyDerSize(self.native_object, 1)
+                if size <= 0:  # pragma: no cover
+                    raise WolfCryptApiError("Key encode error", size)
+                key = _ffi.new(f"byte[{size}]")
 
-            ret = _lib.wc_EccKeyToDer(self.native_object, key, size)
-            if ret <= 0:  # pragma: no cover
-                raise WolfCryptApiError("Key encode error", ret)
+                ret = _lib.wc_EccKeyToDer(self.native_object, key, size)
+                if ret <= 0:  # pragma: no cover
+                    raise WolfCryptApiError("Key encode error", ret)
 
-            return _ffi.buffer(key, ret)[:]
+                return _ffi.buffer(key, ret)[:]
 
-        @override
-        def encode_key_raw(self) -> tuple[bytes, bytes, bytes]:
-            """
-            Encodes the ECC private key in its three raw elements
+            @override
+            def encode_key_raw(self) -> tuple[bytes, bytes, bytes]:
+                """
+                Encodes the ECC private key in its three raw elements
 
-            Returns (Qx, Qy, d)
-            """
-            Qx = _ffi.new(f"byte[{self.size}]")
-            Qy = _ffi.new(f"byte[{self.size}]")
-            d = _ffi.new(f"byte[{self.size}]")
-            qx_size = _ffi.new("word32[1]")
-            qy_size = _ffi.new("word32[1]")
-            d_size = _ffi.new("word32[1]")
-            qx_size[0] = self.size
-            qy_size[0] = self.size
-            d_size[0] = self.size
+                Returns (Qx, Qy, d)
+                """
+                Qx = _ffi.new(f"byte[{self.size}]")
+                Qy = _ffi.new(f"byte[{self.size}]")
+                d = _ffi.new(f"byte[{self.size}]")
+                qx_size = _ffi.new("word32[1]")
+                qy_size = _ffi.new("word32[1]")
+                d_size = _ffi.new("word32[1]")
+                qx_size[0] = self.size
+                qy_size[0] = self.size
+                d_size[0] = self.size
 
-            ret = _lib.wc_ecc_export_private_raw(self.native_object, Qx,
-                    qx_size, Qy, qy_size, d, d_size)
-            if ret != 0:  # pragma: no cover
-                raise WolfCryptApiError("Key encode error", ret)
+                ret = _lib.wc_ecc_export_private_raw(self.native_object, Qx,
+                        qx_size, Qy, qy_size, d, d_size)
+                if ret != 0:  # pragma: no cover
+                    raise WolfCryptApiError("Key encode error", ret)
 
-            return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy,
-                    qy_size[0])[:], _ffi.buffer(d, d_size[0])[:]
+                return _ffi.buffer(Qx, qx_size[0])[:], _ffi.buffer(Qy,
+                        qy_size[0])[:], _ffi.buffer(d, d_size[0])[:]
 
-        def shared_secret(self, peer: EccPublic) -> bytes:
-            """
-            Generates a new secret key using the private key data in the object
-            and the peer's public key.
+        if _lib.ECC_DHE_ENABLED:
+            def shared_secret(self, peer: EccPublic) -> bytes:
+                """
+                Generates a new secret key using the private key data in the object
+                and the peer's public key.
 
-            Returns the shared secret.
-            """
-            shared_secret = _ffi.new(f"byte[{self.max_signature_size}]")
-            secret_size = _ffi.new("word32[1]")
-            secret_size[0] = self.max_signature_size
+                Returns the shared secret.
+                """
+                shared_secret = _ffi.new(f"byte[{self.max_signature_size}]")
+                secret_size = _ffi.new("word32[1]")
+                secret_size[0] = self.max_signature_size
 
-            ret = _lib.wc_ecc_shared_secret(self.native_object,
-                                            peer.native_object,
-                                            shared_secret, secret_size)
+                ret = _lib.wc_ecc_shared_secret(self.native_object,
+                                                peer.native_object,
+                                                shared_secret, secret_size)
 
-            if ret != 0:  # pragma: no cover
-                raise WolfCryptApiError("Shared secret error", ret)
+                if ret != 0:  # pragma: no cover
+                    raise WolfCryptApiError("Shared secret error", ret)
 
-            return _ffi.buffer(shared_secret, secret_size[0])[:]
+                return _ffi.buffer(shared_secret, secret_size[0])[:]
 
-        def sign(self, plaintext: BytesOrStr, rng: Random | None = None) -> bytes:
-            """
-            Signs **plaintext**, using the private key data in the object.
+        if _lib.ECC_SIGN_ENABLED:
+            def sign(self, plaintext: BytesOrStr, rng: Random | None = None) -> bytes:
+                """
+                Signs **plaintext**, using the private key data in the object.
 
-            Returns the signature.
-            """
-            if rng is None:
-                rng = Random()
-            plaintext = t2b(plaintext)
-            signature = _ffi.new(f"byte[{self.max_signature_size}]")
+                Returns the signature.
+                """
+                if rng is None:
+                    rng = Random()
+                plaintext = t2b(plaintext)
+                signature = _ffi.new(f"byte[{self.max_signature_size}]")
 
-            signature_size = _ffi.new("word32[1]")
-            signature_size[0] = self.max_signature_size
+                signature_size = _ffi.new("word32[1]")
+                signature_size[0] = self.max_signature_size
 
-            ret = _lib.wc_ecc_sign_hash(plaintext, len(plaintext),
-                                        signature, signature_size,
-                                        rng.native_object,
-                                        self.native_object)
+                ret = _lib.wc_ecc_sign_hash(plaintext, len(plaintext),
+                                            signature, signature_size,
+                                            rng.native_object,
+                                            self.native_object)
 
-            if ret != 0:  # pragma: no cover
-                raise WolfCryptApiError("Signature error", ret)
+                if ret != 0:  # pragma: no cover
+                    raise WolfCryptApiError("Signature error", ret)
 
-            return _ffi.buffer(signature, signature_size[0])[:]
+                return _ffi.buffer(signature, signature_size[0])[:]
 
-        if _lib.MPAPI_ENABLED:
+        if _lib.ECC_SIGN_ENABLED and _lib.MPAPI_ENABLED:
             def sign_raw(self, plaintext: BytesOrStr, rng: Random | None = None) -> tuple[bytes, bytes]:
                 """
                 Signs **plaintext**, using the private key data in the object.
