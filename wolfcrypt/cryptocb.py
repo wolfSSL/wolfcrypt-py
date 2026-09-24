@@ -95,9 +95,11 @@ if _lib.CRYPTO_CB_ENABLED:
         NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA384] = ("wc_Sha384 *", _lib.wc_Sha384Copy)
     if _lib.SHA512_ENABLED:
         NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA512] = ("wc_Sha512 *", _lib.wc_Sha512Copy)
-    if _lib.SHA3_ENABLED:
+    if _lib.SHA3_ENABLED and _lib.SHA3_256_ENABLED:
         NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA3_256] = ("wc_Sha3 *", _lib.wc_Sha3_256_Copy)
+    if _lib.SHA3_ENABLED and _lib.SHA3_384_ENABLED:
         NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA3_384] = ("wc_Sha3 *", _lib.wc_Sha3_384_Copy)
+    if _lib.SHA3_ENABLED and _lib.SHA3_512_ENABLED:
         NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA3_512] = ("wc_Sha3 *", _lib.wc_Sha3_512_Copy)
 
 
