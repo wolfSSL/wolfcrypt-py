@@ -41,6 +41,8 @@ pytestmark = pytest.mark.filterwarnings("ignore:The distutils package is depreca
 # must enable every sub-capability whenever its parent is enabled.
 SUBCAPABILITIES = {
     "AES_CTR": "AES",
+    "AES_CBC": "AES",
+    "AES_DECRYPT": "AES",
 }
 
 
@@ -110,3 +112,32 @@ def test_aes_ctr_needs_aes_counter(bf):
     features = detect(bf, "#define NO_AES", "#define WOLFSSL_AES_COUNTER")
     assert features["AES_CTR"] == 0
     assert "wc_AesCtrEncrypt" not in cdef_for(bf, features)
+
+
+def test_aes_cbc_needs_cbc_support(bf):
+    features = detect(bf)
+    assert features["AES_CBC"] == 1
+    cdef = cdef_for(bf, features)
+    assert "wc_AesCbcEncrypt" in cdef
+    assert "wc_AesCbcDecrypt" in cdef
+
+    for define in ("#define NO_AES_CBC", "    #define NO_AES_CBC 1", "#define NO_AES"):
+        features = detect(bf, define)
+        assert features["AES_CBC"] == 0, define
+        cdef = cdef_for(bf, features)
+        assert "wc_AesCbcEncrypt" not in cdef, define
+        assert "wc_AesCbcDecrypt" not in cdef, define
+
+
+def test_aes_cbc_decrypt_needs_aes_decrypt(bf):
+    features = detect(bf)
+    assert features["AES_DECRYPT"] == 1
+
+    features = detect(bf, "#define NO_AES_DECRYPT")
+    assert features["AES_DECRYPT"] == 0
+    assert features["AES_CBC"] == 1
+    cdef = cdef_for(bf, features)
+    assert "wc_AesCbcEncrypt" in cdef
+    assert "wc_AesCbcDecrypt" not in cdef
+
+    assert detect(bf, "#define NO_AES")["AES_DECRYPT"] == 0
