@@ -867,21 +867,21 @@ if _lib.ECC_ENABLED:
         @needs_ecc_import
         @needs_ecc_sign_verify
         def test_ecc_sign_verify_raw(ecc_private, ecc_public):
-            plaintext = "Everyone gets Friday off."
+            digest = hashlib.sha256(b"Everyone gets Friday off.").digest()
 
             # normal usage, sign with private, verify with public
-            r,s = ecc_private.sign_raw(plaintext)
+            r,s = ecc_private.sign_raw(digest)
 
             assert len(r) + len(s) <= 2 * ecc_private.size
-            assert ecc_public.verify_raw(r, s, plaintext)
+            assert ecc_public.verify_raw(r, s, digest)
 
             # invalid signature
-            ret = ecc_public.verify_raw(r, s[:-1], plaintext)
+            ret = ecc_public.verify_raw(r, s[:-1], digest)
             assert not ret
 
             # private object holds both private and public info, so it can also verify
             # using the known public key.
-            assert ecc_private.verify_raw(r, s, plaintext)
+            assert ecc_private.verify_raw(r, s, digest)
 
 
     # Made with `openssl dgst -sha256 -sign` and the vectors[EccPrivate] key.
@@ -930,6 +930,55 @@ if _lib.ECC_ENABLED:
         if not _lib.WC_MIN_DIGEST_SIZE <= len(digest) <= _lib.WC_MAX_DIGEST_SIZE:
             pytest.skip("digest size not accepted by this wolfSSL build")
         assert ecc_public.verify(ecc_private.sign(digest), digest)
+
+
+    if _lib.MPAPI_ENABLED:
+        # r and s of ECC_OPENSSL_SHA256_SIGNATURE.
+        ECC_OPENSSL_SHA256_R = h2b("b2314357b468577038b0eb8fc7e051e40eb729e6e3319d5bfd3b4cbc78be73cb")
+        ECC_OPENSSL_SHA256_S = h2b("76c30495ee4e21edf2ac2086d4fb426e413ee26f009f09c3daa312ba7065c35f")
+
+
+        @needs_ecc_import
+        @needs_ecc_verify
+        def test_ecc_verify_raw_openssl_signature(ecc_public):
+            """
+            F-8280: verify_raw() takes the digest of the message, as signed by
+            `openssl dgst -sha256 -sign`.
+            """
+            r, s = ECC_OPENSSL_SHA256_R, ECC_OPENSSL_SHA256_S
+            digest = hashlib.sha256(ECC_OPENSSL_MESSAGE).digest()
+            other = hashlib.sha256(ECC_OPENSSL_MESSAGE[:-1]).digest()
+            assert ecc_public.verify_raw(r, s, digest)
+            assert not ecc_public.verify_raw(r, s, other)
+
+
+        @pytest.mark.parametrize("length", [0, 16, 25, 33, 65, 100])
+        @needs_ecc_import
+        @needs_ecc_sign_verify
+        def test_ecc_sign_raw_rejects_non_digest_length(ecc_private, ecc_public, length):
+            """
+            F-8280: sign_raw() and verify_raw() take a digest, so an input that
+            is not the size of a SHA-1 or SHA-2 digest raises ValueError.
+            """
+            r, s = ecc_private.sign_raw(hashlib.sha256(b"message").digest())
+            with pytest.raises(ValueError, match="digest"):
+                ecc_private.sign_raw(b"\x01" * length)
+            with pytest.raises(ValueError, match="digest"):
+                ecc_public.verify_raw(r, s, b"\x01" * length)
+
+
+        @pytest.mark.parametrize("hash_name", ["sha1", "sha224", "sha256", "sha384", "sha512"])
+        @needs_ecc_import
+        @needs_ecc_sign_verify
+        def test_ecc_sign_raw_digest_sizes(ecc_private, ecc_public, hash_name):
+            """
+            F-8280: SHA-1 and SHA-2 digest sizes are accepted.
+            """
+            digest = hashlib.new(hash_name, b"message").digest()
+            if not _lib.WC_MIN_DIGEST_SIZE <= len(digest) <= _lib.WC_MAX_DIGEST_SIZE:
+                pytest.skip("digest size not accepted by this wolfSSL build")
+            r, s = ecc_private.sign_raw(digest)
+            assert ecc_public.verify_raw(r, s, digest)
 
 
     @needs_ecc_import

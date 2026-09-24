@@ -1338,12 +1338,13 @@ if _lib.ECC_ENABLED:
             def verify_raw(self, R: bytes, S: bytes, data: BytesOrStr) -> bool:
                 """
                 Verifies signature from its raw elements **R** and **S**, using
-                the public key data in the object.
+                the public key data in the object. **data** is the message
+                digest, as in EccPrivate.sign().
 
                 Returns **True** in case of a valid signature, otherwise
                 **False**.
                 """
-                data = t2b(data)
+                data = self._check_digest(data)
                 status = _ffi.new("int[1]")
                 mpR = _ffi.new("mp_int[1]")
                 mpS = _ffi.new("mp_int[1]")
@@ -1548,12 +1549,13 @@ if _lib.ECC_ENABLED:
             def sign_raw(self, plaintext: BytesOrStr, rng: Random | None = None) -> tuple[bytes, bytes]:
                 """
                 Signs **plaintext**, using the private key data in the object.
+                **plaintext** is the message digest, as in sign().
 
                 Returns the signature in its two raw components r, s
                 """
                 if rng is None:
                     rng = Random()
-                plaintext = t2b(plaintext)
+                plaintext = self._check_digest(plaintext)
                 R = _ffi.new("mp_int[1]")
                 S = _ffi.new("mp_int[1]")
 
