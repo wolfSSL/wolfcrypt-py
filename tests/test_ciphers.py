@@ -29,6 +29,7 @@ import pytest
 
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.ciphers import MODE_CBC, MODE_CTR, MODE_ECB, WolfCryptError
+from wolfcrypt.exceptions import WolfCryptApiError
 from wolfcrypt.random import Random
 from wolfcrypt.utils import h2b, t2b
 
@@ -644,6 +645,42 @@ if _lib.ECC_ENABLED:
         # Happy path still works after validation
         raw_pub.decode_key_raw(qx_good, qy_good)
         raw_priv.decode_key_raw(qx_good, qy_good, d_good)
+
+
+    P256_PRIME = h2b(
+        "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff")
+
+
+    @pytest.mark.parametrize("bad", ["off_curve", "x_not_below_p"])
+    def test_ecc_decode_key_raw_rejects_invalid_point(vectors, bad):
+        """
+        F-8277: wc_ecc_import_unsigned does not validate the point, so
+        decode_key_raw must reject points that are not on the curve.
+        """
+        key = vectors[EccPublic].raw_key
+        qx, qy = key[0:32], key[32:64]
+        if bad == "off_curve":
+            qy = qy[:-1] + bytes([qy[-1] ^ 1])
+        else:
+            qx = P256_PRIME
+
+        with pytest.raises(WolfCryptApiError):
+            EccPublic().decode_key_raw(qx, qy)
+
+
+    def test_ecc_import_rejects_off_curve_point(vectors):
+        """
+        F-8277: import_x963 and decode_key reject a point that is not on
+        the curve.
+        """
+        key = vectors[EccPublic].raw_key
+        bad_qy = key[32:63] + bytes([key[63] ^ 1])
+        with pytest.raises(WolfCryptApiError):
+            EccPublic().import_x963(b"\x04" + key[0:32] + bad_qy)
+
+        der = vectors[EccPublic].key
+        with pytest.raises(WolfCryptApiError):
+            EccPublic(der[:-1] + bytes([der[-1] ^ 1]))
 
 
 
