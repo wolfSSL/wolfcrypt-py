@@ -263,7 +263,7 @@ def test_block_cipher(cipher_cls, vectors):
 
 
     # Test AES in counter mode
-    if ciphertext_ctr is not None:
+    if ciphertext_ctr is not None and _lib.AES_CTR_ENABLED:
         cipher_obj = cipher_cls.new(key, MODE_CTR, iv)
         res = cipher_obj.encrypt(plaintext)
         assert res == ciphertext_ctr
@@ -1088,6 +1088,15 @@ if _lib.DES3_ENABLED:
         iv = b"\xfe\xdc\xba\x98\x76\x54\x32\x10"
         with pytest.raises(ValueError, match="Des3 only supports MODE_CBC"):
             Des3.new(key, MODE_ECB, iv)
+
+
+if _lib.AES_ENABLED:
+    def test_aes_ctr_rejected_when_not_compiled_in(monkeypatch):
+        """F-11250: MODE_CTR needs AES-CTR support in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "AES_CTR_ENABLED", 0)
+        with pytest.raises(NotImplementedError, match="AES-CTR"):
+            Aes.new(b"0" * 16, MODE_CTR, b"0" * 16)
+        assert Aes.new(b"0" * 16, MODE_CBC, b"0" * 16).encrypt(b"0" * 16)
 
 
 if _lib.CHACHA_ENABLED:
