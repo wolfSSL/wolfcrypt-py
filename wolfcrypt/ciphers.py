@@ -993,6 +993,8 @@ if _lib.RSA_ENABLED:
                 ret = _lib.wc_RsaPrivateKeyDecode(key, idx,
                                               self.native_object, len(key))
                 if ret < 0:
+                    if not _lib.PKCS8_ENABLED:
+                        raise WolfCryptApiError("Invalid key error", ret)
                     idx[0] = 0
                     # wc_GetPkcs8TraditionalOffset takes byte* (non-const) per
                     # the wolfSSL public header, so route it through a CFFI-

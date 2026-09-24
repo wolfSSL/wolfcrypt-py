@@ -28,6 +28,7 @@ from collections import namedtuple
 
 import pytest
 
+from wolfcrypt import ciphers
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.ciphers import MODE_CBC, MODE_CTR, MODE_ECB, WolfCryptError
 from wolfcrypt.exceptions import WolfCryptApiError
@@ -464,6 +465,7 @@ if _lib.RSA_ENABLED:
         assert plaintext == rsa_private_oaep.decrypt_oaep(ciphertext)
 
 
+    @pytest.mark.skipif(not _lib.PKCS8_ENABLED, reason="PKCS#8 not enabled")
     def test_rsa_pkcs8_encrypt_decrypt(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -548,6 +550,7 @@ if _lib.RSA_ENABLED:
         assert 256 == len(signature) == rsa_private_pem_rng.output_size
         assert plaintext == rsa_private_pem_rng.verify(signature)
 
+    @pytest.mark.skipif(not _lib.PKCS8_ENABLED, reason="PKCS#8 not enabled")
     def test_rsa_pkcs8_sign_verify(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -1252,3 +1255,21 @@ if _lib.RSA_ENABLED:
         spec.loader.exec_module(module)
         for cls in (module.RsaPublic, module.RsaPrivate):
             assert not hasattr(cls, "from_pem"), cls
+
+    def test_rsa_private_without_pkcs8_offset(monkeypatch, vectors):
+        """F-12234: RsaPrivate must not need wc_GetPkcs8TraditionalOffset without PKCS#8."""
+        class LibWithoutPkcs8:
+            PKCS8_ENABLED = 0
+
+            def __getattr__(self, name):
+                if name == "wc_GetPkcs8TraditionalOffset":
+                    raise AttributeError(name)
+                return getattr(_lib, name)
+
+        monkeypatch.setattr(ciphers, "_lib", LibWithoutPkcs8())
+        with pytest.raises(WolfCryptApiError):
+            RsaPrivate(vectors[RsaPrivate].key[:-1])
+        assert RsaPrivate(vectors[RsaPrivate].key).output_size == 128
+        if _lib.PKCS8_ENABLED:
+            # wc_RsaPrivateKeyDecode skips a PKCS#8 header by itself.
+            assert RsaPrivate(vectors[RsaPrivate].pkcs8_key).output_size == 128
