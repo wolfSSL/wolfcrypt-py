@@ -440,6 +440,9 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     # settings.h derives HAVE_AES_CBC and HAVE_AES_DECRYPT unless NO_AES_CBC/NO_AES_DECRYPT.
     features["AES_CBC"] = 1 if features["AES"] and not defined("NO_AES_CBC") else 0
     features["AES_DECRYPT"] = 1 if features["AES"] and not defined("NO_AES_DECRYPT") else 0
+    # aes.c builds streaming GCM decryption only with HAVE_AES_DECRYPT or HAVE_AESGCM_DECRYPT.
+    features["AESGCM_STREAM_DECRYPT"] = 1 if features["AES"] and features["AESGCM_STREAM"] and (
+        features["AES_DECRYPT"] or defined("HAVE_AESGCM_DECRYPT")) else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -580,6 +583,7 @@ def make_source(features):
         int AES_CTR_ENABLED = {features["AES_CTR"]};
         int AES_CBC_ENABLED = {features["AES_CBC"]};
         int AES_DECRYPT_ENABLED = {features["AES_DECRYPT"]};
+        int AESGCM_STREAM_DECRYPT_ENABLED = {features["AESGCM_STREAM_DECRYPT"]};
     """
 
     return init_source_string
@@ -634,6 +638,7 @@ def make_cdef(features):
         extern int AES_CTR_ENABLED;
         extern int AES_CBC_ENABLED;
         extern int AES_DECRYPT_ENABLED;
+        extern int AESGCM_STREAM_DECRYPT_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1038,14 +1043,17 @@ def make_cdef(features):
             word32 sz, const byte* authIn, word32 authInSz);
         int wc_AesGcmEncryptFinal(Aes* aes, byte* authTag,
             word32 authTagSz);
-        int wc_AesGcmDecryptInit(Aes* aes, const byte* key, word32 len,
-            const byte* iv, word32 ivSz);
-        int wc_AesGcmDecryptUpdate(Aes* aes, byte* out, const byte* in,
-            word32 sz, const byte* authIn, word32 authInSz);
-        int wc_AesGcmDecryptFinal(Aes* aes, const byte* authTag,
-            word32 authTagSz);
         void wc_AesFree(Aes* aes);
         """
+        if features["AESGCM_STREAM_DECRYPT"]:
+            cdef += """
+            int wc_AesGcmDecryptInit(Aes* aes, const byte* key, word32 len,
+                const byte* iv, word32 ivSz);
+            int wc_AesGcmDecryptUpdate(Aes* aes, byte* out, const byte* in,
+                word32 sz, const byte* authIn, word32 authInSz);
+            int wc_AesGcmDecryptFinal(Aes* aes, const byte* authTag,
+                word32 authTagSz);
+            """
 
     if features["AES"] and features["AES_SIV"]:
         cdef += """
@@ -1641,6 +1649,7 @@ def default_features():
         "AES_CTR": 1,
         "AES_CBC": 1,
         "AES_DECRYPT": 1,
+        "AESGCM_STREAM_DECRYPT": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.

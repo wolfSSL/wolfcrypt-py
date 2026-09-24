@@ -43,6 +43,7 @@ SUBCAPABILITIES = {
     "AES_CTR": "AES",
     "AES_CBC": "AES",
     "AES_DECRYPT": "AES",
+    "AESGCM_STREAM_DECRYPT": "AESGCM_STREAM",
 }
 
 
@@ -141,3 +142,30 @@ def test_aes_cbc_decrypt_needs_aes_decrypt(bf):
     assert "wc_AesCbcDecrypt" not in cdef
 
     assert detect(bf, "#define NO_AES")["AES_DECRYPT"] == 0
+
+
+def test_aesgcm_stream_decrypt_needs_decrypt_support(bf):
+    stream = "#define WOLFSSL_AESGCM_STREAM"
+    decrypt_funcs = ("wc_AesGcmDecryptInit", "wc_AesGcmDecryptUpdate", "wc_AesGcmDecryptFinal")
+
+    features = detect(bf, stream)
+    assert features["AESGCM_STREAM_DECRYPT"] == 1
+    cdef = cdef_for(bf, features)
+    for name in decrypt_funcs:
+        assert name in cdef, name
+
+    features = detect(bf, stream, "#define NO_AES_DECRYPT")
+    assert features["AESGCM_STREAM_DECRYPT"] == 0
+    cdef = cdef_for(bf, features)
+    assert "wc_AesGcmEncryptUpdate" in cdef
+    assert "wc_AesFree" in cdef
+    for name in decrypt_funcs:
+        assert name not in cdef, name
+
+    # aes.c also builds GCM decryption with HAVE_AESGCM_DECRYPT.
+    features = detect(bf, stream, "#define NO_AES_DECRYPT", "#define HAVE_AESGCM_DECRYPT")
+    assert features["AESGCM_STREAM_DECRYPT"] == 1
+    assert "wc_AesGcmDecryptUpdate" in cdef_for(bf, features)
+
+    assert detect(bf, "#define NO_AES", stream, "#define HAVE_AESGCM_DECRYPT")["AESGCM_STREAM_DECRYPT"] == 0
+    assert detect(bf)["AESGCM_STREAM_DECRYPT"] == 0

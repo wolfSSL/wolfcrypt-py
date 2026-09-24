@@ -519,6 +519,8 @@ if _lib.AESGCM_STREAM_ENABLED:
             """
             Add more data to the decryption stream
             """
+            if not _lib.AESGCM_STREAM_DECRYPT_ENABLED:
+                raise NotImplementedError("AES-GCM streaming decryption is not supported by this wolfSSL build")
             aad = b""
             data = t2b(data)
             if self._mode is None:
