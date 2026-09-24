@@ -978,6 +978,13 @@ if _lib.ED25519_ENABLED:
         assert ed25519_private.verify(signature, plaintext)
 
 if _lib.ED448_ENABLED:
+    needs_ed448_import = pytest.mark.skipif(not _lib.ED448_KEY_IMPORT_ENABLED,
+                                            reason="Ed448 key import not enabled")
+    needs_ed448_export = pytest.mark.skipif(not _lib.ED448_KEY_EXPORT_ENABLED,
+                                            reason="Ed448 key export not enabled")
+    needs_ed448_sign_verify = pytest.mark.skipif(not (_lib.ED448_SIGN_ENABLED and _lib.ED448_VERIFY_ENABLED),
+                                                 reason="Ed448 signing or verification not enabled")
+
     @pytest.fixture
     def ed448_private(vectors):
         return Ed448Private(vectors[Ed448Private].key, vectors[Ed448Public].key)
@@ -988,6 +995,7 @@ if _lib.ED448_ENABLED:
         return Ed448Public(vectors[Ed448Public].key)
 
 
+    @needs_ed448_import
     def test_new_ed448_raises(vectors):
         with pytest.raises(WolfCryptError):
             Ed448Private(vectors[Ed448Private].key[:-1])  # invalid key length
@@ -1000,6 +1008,8 @@ if _lib.ED448_ENABLED:
                 Ed448Private.make_key(1024)
 
 
+    @needs_ed448_import
+    @needs_ed448_export
     def test_ed448_key_encoding(vectors):
         priv = Ed448Private()
         pub = Ed448Public()
@@ -1012,6 +1022,8 @@ if _lib.ED448_ENABLED:
         assert pub.encode_key() == vectors[Ed448Public].key
 
 
+    @needs_ed448_import
+    @needs_ed448_sign_verify
     def test_ed448_sign_verify(ed448_private, ed448_public):
         plaintext = "Everyone gets Friday off."
 
@@ -1521,3 +1533,39 @@ if _lib.ED25519_ENABLED:
         with pytest.raises(NotImplementedError, match="Deriving the Ed25519 public key is not supported"):
             Ed25519Private(vectors[Ed25519Private].key)
         Ed25519Private(vectors[Ed25519Private].key, vectors[Ed25519Public].key)
+
+if _lib.ED448_ENABLED:
+    # Method -> flag of the wolfSSL operation it needs.
+    ED448_GATED_METHODS = {
+        ("Ed448Public", "decode_key"): "ED448_KEY_IMPORT_ENABLED",
+        ("Ed448Public", "encode_key"): "ED448_KEY_EXPORT_ENABLED",
+        ("Ed448Public", "verify"): "ED448_VERIFY_ENABLED",
+        ("Ed448Private", "decode_key"): "ED448_KEY_IMPORT_ENABLED",
+        ("Ed448Private", "encode_key"): "ED448_KEY_EXPORT_ENABLED",
+        ("Ed448Private", "sign"): "ED448_SIGN_ENABLED",
+    }
+
+    def test_ed448_methods_defined_only_when_enabled(monkeypatch):
+        """F-12230: each Ed448 method needs its wolfSSL operation to be compiled in."""
+        for (cls, name), flag in ED448_GATED_METHODS.items():
+            assert hasattr(getattr(ciphers, cls), name) == bool(getattr(_lib, flag)), (cls, name)
+        assert hasattr(ciphers.Ed448Private, "make_key")
+
+        # Load fresh copies of the module as if one operation were not compiled in.
+        for disabled in set(ED448_GATED_METHODS.values()):
+            with monkeypatch.context() as m:
+                m.setattr(_lib, disabled, 0)
+                module = load_fresh_ciphers()
+                for (cls, name), flag in ED448_GATED_METHODS.items():
+                    assert hasattr(getattr(module, cls), name) == bool(getattr(_lib, flag)), (disabled, cls, name)
+                assert hasattr(module.Ed448Private, "make_key"), disabled
+
+    def test_ed448_key_rejected_without_key_import(monkeypatch, vectors):
+        """F-12230: loading a key needs Ed448 key import in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "ED448_KEY_IMPORT_ENABLED", 0)
+        for cls in (Ed448Public, Ed448Private):
+            with pytest.raises(NotImplementedError, match="Ed448 key import is not supported"):
+                cls(vectors[cls].key)
+            cls()
+        with pytest.raises(NotImplementedError, match="Ed448 key import is not supported"):
+            Ed448Private(vectors[Ed448Private].key, vectors[Ed448Public].key)

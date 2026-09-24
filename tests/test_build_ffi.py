@@ -68,6 +68,10 @@ SUBCAPABILITIES = {
     "ED25519_VERIFY": "ED25519",
     "ED25519_KEY_IMPORT": "ED25519",
     "ED25519_KEY_EXPORT": "ED25519",
+    "ED448_SIGN": "ED448",
+    "ED448_VERIFY": "ED448",
+    "ED448_KEY_IMPORT": "ED448",
+    "ED448_KEY_EXPORT": "ED448",
 }
 
 
@@ -525,5 +529,53 @@ def test_ed25519_subsets_need_ed25519(bf):
         assert features[name] == 0, name
     cdef = cdef_for(bf, features)
     for names in ED25519_OPS.values():
+        for name in names:
+            assert name not in cdef, name
+
+
+ED448_SUBSETS = ("ED448_SIGN", "ED448_VERIFY", "ED448_KEY_IMPORT", "ED448_KEY_EXPORT")
+ED448_OPS = {
+    "ED448_SIGN": ("wc_ed448_sign_msg(",),
+    "ED448_VERIFY": ("wc_ed448_verify_msg(",),
+    "ED448_KEY_IMPORT": ("wc_Ed448PrivateKeyDecode(", "wc_Ed448PublicKeyDecode(", "wc_ed448_import_public(",
+                         "wc_ed448_import_private_only(", "wc_ed448_import_private_key("),
+    "ED448_KEY_EXPORT": ("wc_Ed448KeyToDer(", "wc_Ed448PublicKeyToDer(", "wc_ed448_export_public(",
+                         "wc_ed448_export_private_only(", "wc_ed448_export_private(", "wc_ed448_export_key("),
+}
+# wolfSSL builds Ed448 key generation unconditionally.
+ED448_COMMON = ("ed448_key;", "wc_ed448_init(", "wc_ed448_free(", "wc_ed448_make_key(", "wc_ed448_make_public(",
+                "wc_ed448_size(", "wc_ed448_sig_size(", "wc_ed448_check_key(", "wc_ed448_pub_size(",
+                "wc_ed448_priv_size(")
+
+
+@pytest.mark.parametrize(("defines", "disabled"), [
+    ((), ()),
+    (("#define NO_ED448_SIGN",), ("ED448_SIGN",)),
+    (("  #define NO_ED448_SIGN 1",), ("ED448_SIGN",)),
+    (("#define NO_ED448_VERIFY",), ("ED448_VERIFY",)),
+    (("#define NO_ED448_KEY_IMPORT",), ("ED448_KEY_IMPORT",)),
+    (("#define NO_ED448_KEY_EXPORT",), ("ED448_KEY_EXPORT",)),
+    (("#define NO_ED448_SIGN", "#define NO_ED448_KEY_EXPORT"), ("ED448_SIGN", "ED448_KEY_EXPORT")),
+], ids=["default", "no-sign", "no-sign-indented", "no-verify", "no-import", "no-export", "no-sign-no-export"])
+def test_ed448_operations_follow_subset_macros(bf, defines, disabled):
+    features = detect(bf, "#define HAVE_ED448", *defines)
+    assert features["ED448"] == 1
+    for name in ED448_SUBSETS:
+        assert features[name] == (name not in disabled), name
+    cdef = cdef_for(bf, features)
+    for subset, names in ED448_OPS.items():
+        for name in names:
+            assert (name in cdef) == (subset not in disabled), name
+    for name in ED448_COMMON:
+        assert name in cdef, name
+
+
+def test_ed448_subsets_need_ed448(bf):
+    features = detect(bf)
+    assert features["ED448"] == 0
+    for name in ED448_SUBSETS:
+        assert features[name] == 0, name
+    cdef = cdef_for(bf, features)
+    for names in ED448_OPS.values():
         for name in names:
             assert name not in cdef, name

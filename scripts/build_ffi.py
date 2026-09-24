@@ -488,6 +488,9 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     # settings.h derives the Ed25519 operations unless NO_ED25519_<op>.
     for op in ("MAKE_KEY", "SIGN", "VERIFY", "KEY_IMPORT", "KEY_EXPORT"):
         features[f"ED25519_{op}"] = 1 if features["ED25519"] and not defined(f"NO_ED25519_{op}") else 0
+    # settings.h derives the Ed448 operations unless NO_ED448_<op>.
+    for op in ("SIGN", "VERIFY", "KEY_IMPORT", "KEY_EXPORT"):
+        features[f"ED448_{op}"] = 1 if features["ED448"] and not defined(f"NO_ED448_{op}") else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -651,6 +654,10 @@ def make_source(features):
         int ED25519_VERIFY_ENABLED = {features["ED25519_VERIFY"]};
         int ED25519_KEY_IMPORT_ENABLED = {features["ED25519_KEY_IMPORT"]};
         int ED25519_KEY_EXPORT_ENABLED = {features["ED25519_KEY_EXPORT"]};
+        int ED448_SIGN_ENABLED = {features["ED448_SIGN"]};
+        int ED448_VERIFY_ENABLED = {features["ED448_VERIFY"]};
+        int ED448_KEY_IMPORT_ENABLED = {features["ED448_KEY_IMPORT"]};
+        int ED448_KEY_EXPORT_ENABLED = {features["ED448_KEY_EXPORT"]};
     """
 
     return init_source_string
@@ -729,6 +736,10 @@ def make_cdef(features):
         extern int ED25519_VERIFY_ENABLED;
         extern int ED25519_KEY_IMPORT_ENABLED;
         extern int ED25519_KEY_EXPORT_ENABLED;
+        extern int ED448_SIGN_ENABLED;
+        extern int ED448_VERIFY_ENABLED;
+        extern int ED448_KEY_IMPORT_ENABLED;
+        extern int ED448_KEY_EXPORT_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1443,30 +1454,44 @@ def make_cdef(features):
                                word32 pubKeySz);
         int wc_ed448_size(ed448_key* key);
         int wc_ed448_sig_size(ed448_key* key);
-        int wc_ed448_sign_msg(const byte* in, word32 inlen, byte* out,
-                            word32 *outlen, ed448_key* key, const byte* ctx,
-                            byte ctx_len);
-        int wc_ed448_verify_msg(const byte* sig, word32 siglen, const byte* msg,
-                              word32 msglen, int* stat, ed448_key* key, const byte *ctx,
-                              byte ctx_len);
-        int wc_Ed448PrivateKeyDecode(const byte*, word32*, ed448_key*, word32);
-        int wc_Ed448KeyToDer(ed448_key*, byte* output, word32 inLen);
-
-        int wc_Ed448PublicKeyDecode(const byte*, word32*, ed448_key*, word32);
-        int wc_Ed448PublicKeyToDer(ed448_key*, byte* output,
-                                 word32 inLen, int with_AlgCurve);
-
-        int wc_ed448_import_public(const byte* in, word32 inLen, ed448_key* key);
-        int wc_ed448_import_private_only(const byte* priv, word32 privSz, ed448_key* key);
-        int wc_ed448_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed448_key* key);
-        int wc_ed448_export_public(ed448_key*, byte* out, word32* outLen);
-        int wc_ed448_export_private_only(ed448_key* key, byte* out, word32* outLen);
-        int wc_ed448_export_private(ed448_key* key, byte* out, word32* outLen);
-        int wc_ed448_export_key(ed448_key* key, byte* priv, word32 *privSz, byte* pub, word32 *pubSz);
         int wc_ed448_check_key(ed448_key* key);
         int wc_ed448_pub_size(ed448_key* key);
         int wc_ed448_priv_size(ed448_key* key);
         """
+
+        if features["ED448_SIGN"]:
+            cdef += """
+            int wc_ed448_sign_msg(const byte* in, word32 inlen, byte* out,
+                                word32 *outlen, ed448_key* key, const byte* ctx,
+                                byte ctx_len);
+            """
+
+        if features["ED448_VERIFY"]:
+            cdef += """
+            int wc_ed448_verify_msg(const byte* sig, word32 siglen, const byte* msg,
+                                  word32 msglen, int* stat, ed448_key* key, const byte *ctx,
+                                  byte ctx_len);
+            """
+
+        if features["ED448_KEY_IMPORT"]:
+            cdef += """
+            int wc_Ed448PrivateKeyDecode(const byte*, word32*, ed448_key*, word32);
+            int wc_Ed448PublicKeyDecode(const byte*, word32*, ed448_key*, word32);
+            int wc_ed448_import_public(const byte* in, word32 inLen, ed448_key* key);
+            int wc_ed448_import_private_only(const byte* priv, word32 privSz, ed448_key* key);
+            int wc_ed448_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed448_key* key);
+            """
+
+        if features["ED448_KEY_EXPORT"]:
+            cdef += """
+            int wc_Ed448KeyToDer(ed448_key*, byte* output, word32 inLen);
+            int wc_Ed448PublicKeyToDer(ed448_key*, byte* output,
+                                     word32 inLen, int with_AlgCurve);
+            int wc_ed448_export_public(ed448_key*, byte* out, word32* outLen);
+            int wc_ed448_export_private_only(ed448_key* key, byte* out, word32* outLen);
+            int wc_ed448_export_private(ed448_key* key, byte* out, word32* outLen);
+            int wc_ed448_export_key(ed448_key* key, byte* priv, word32 *privSz, byte* pub, word32 *pubSz);
+            """
 
     if features["HKDF"]:
         cdef += """
@@ -1827,6 +1852,10 @@ def default_features():
         "ED25519_VERIFY": 1,
         "ED25519_KEY_IMPORT": 1,
         "ED25519_KEY_EXPORT": 1,
+        "ED448_SIGN": 1,
+        "ED448_VERIFY": 1,
+        "ED448_KEY_IMPORT": 1,
+        "ED448_KEY_EXPORT": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
