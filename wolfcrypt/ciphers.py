@@ -635,11 +635,12 @@ if _lib.CHACHA_ENABLED:
         _NONCE_SIZE = 12
 
         def set_iv(self, nonce: BytesOrStr, counter: int = 0) -> None:
-            self._IV_nonce = t2b(nonce)
-            if len(self._IV_nonce) != self._NONCE_SIZE:
-                raise ValueError(f"nonce must be {self._NONCE_SIZE} bytes, got {len(self._IV_nonce)}")
-            self._IV_counter = counter
             self._iv_set = False
+            nonce = t2b(nonce)
+            if len(nonce) != self._NONCE_SIZE:
+                raise ValueError(f"nonce must be {self._NONCE_SIZE} bytes, got {len(nonce)}")
+            self._IV_nonce = nonce
+            self._IV_counter = counter
             ret = self._set_key(self._REKEY_BOTH)
             if ret < 0:
                 raise WolfCryptApiError("ChaCha set_iv error", ret)
