@@ -31,6 +31,8 @@ if _lib.ML_DSA_ENABLED:
 
     @pytest.fixture
     def rng():
+        if not _lib.RNG_ENABLED:
+            pytest.skip("RNG not enabled")
         return Random()
 
     @pytest.fixture(

@@ -549,6 +549,7 @@ if _lib.ML_KEM_ENABLED:
         (MlKemType.ML_KEM_1024),
     ]
 
+    @pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
     @pytest.mark.parametrize("mlkem_type", mlkem_types)
     def test_init_pattern_1(mlkem_type):
         mlkem_priv = MlKemPrivate(mlkem_type)
@@ -573,6 +574,7 @@ if _lib.ML_KEM_ENABLED:
         assert ss_send == ref_ss[mlkem_type]
         assert ss_send == ss_recv
 
+    @pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
     @pytest.mark.parametrize("mlkem_type", mlkem_types)
     def test_init_pattern_2(mlkem_type):
         mlkem_priv = MlKemPrivate.make_key_with_random(
@@ -598,6 +600,7 @@ if _lib.ML_KEM_ENABLED:
         assert ss_send == ref_ss[mlkem_type]
         assert ss_send == ss_recv
 
+    @pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
     @pytest.mark.parametrize("mlkem_type", mlkem_types)
     def test_init_pattern_3(mlkem_type):
         mlkem_priv = MlKemPrivate.make_key(mlkem_type)

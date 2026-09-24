@@ -102,6 +102,7 @@ def test_reference_configs_enable_all_subcapabilities(bf, config):
         features = detect(bf, *f.read().splitlines(), fips=config == "fips_ready")
     for sub, parent in SUBCAPABILITIES.items():
         assert features[sub] == features[parent], sub
+    assert features["RNG"] == 1
 
 
 def test_detection_matches_indented_defines_with_values(bf):
@@ -334,3 +335,29 @@ def test_pkcs8_offset_needs_pkcs8(bf):
     assert features["RSA"] == 1
     assert features["PKCS8"] == 0
     assert helper not in cdef_for(bf, features)
+
+
+RNG_DECLS = ("wc_InitRng(", "wc_InitRngNonce(", "wc_InitRngNonce_ex(", "wc_RNG_GenerateBlock(",
+             "wc_RNG_GenerateByte(", "wc_FreeRng(", "wc_RNG_DRBG_Reseed(", "wc_GenerateSeed(",
+             "wc_SetSeed_Cb(", "wc_RsaSetRNG(")
+
+
+def test_rng_api_needs_rng(bf):
+    optional = ("#define WC_RNG_SEED_CB", "#define WC_RSA_BLINDING")
+
+    features = detect(bf, *optional)
+    assert features["RNG"] == 1
+    cdef = cdef_for(bf, features)
+    for name in RNG_DECLS:
+        assert name in cdef, name
+
+    # random.h replaces the RNG API with macros under WC_NO_RNG. random.c and
+    # rsa.c then build no RNG, DRBG, seed or RSA blinding functions.
+    for define in ("#define WC_NO_RNG", "  #define WC_NO_RNG 1"):
+        features = detect(bf, define, *optional)
+        for name in ("RNG", "HASHDRBG", "WC_RNG_SEED_CB", "RSA_BLINDING"):
+            assert features[name] == 0, (define, name)
+        cdef = cdef_for(bf, features)
+        assert "WC_RNG;" in cdef, define
+        for name in RNG_DECLS:
+            assert name not in cdef, (define, name)
