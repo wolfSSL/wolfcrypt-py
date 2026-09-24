@@ -51,7 +51,7 @@ if _lib.RSA_ENABLED:
     from wolfcrypt.ciphers import HASH_TYPE_SHA, HASH_TYPE_SHA256, RsaPrivate, RsaPublic
 
 if _lib.ECC_ENABLED:
-    from wolfcrypt.ciphers import EccPrivate, EccPublic
+    from wolfcrypt.ciphers import ECC_SECP112R1, ECC_SECP128R1, ECC_SECP160R1, ECC_SECP192R1, EccPrivate, EccPublic
 
 if _lib.ED25519_ENABLED:
     from wolfcrypt.ciphers import Ed25519Private, Ed25519Public
@@ -612,6 +612,48 @@ if _lib.ECC_ENABLED:
         qx, qy = pub.encode_key_raw()
         assert qx[0:32] == vectors[EccPublic].raw_key[0:32]
         assert qy[0:32] == vectors[EccPublic].raw_key[32:64]
+
+
+    def test_ecc_encode_key_buffer_not_from_field_size(vectors, monkeypatch):
+        """
+        F-10070: the private key DER is larger than four times the field
+        size on small curves, so the output buffer must not be sized from it.
+        """
+        monkeypatch.setattr(EccPrivate, "size", property(lambda self: 14))
+        priv = EccPrivate(vectors[EccPrivate].key)
+        assert priv.encode_key() == vectors[EccPrivate].key
+
+
+    @pytest.mark.parametrize("curve_id", [ECC_SECP112R1, ECC_SECP128R1, ECC_SECP160R1, ECC_SECP192R1])
+    def test_ecc_encode_key_small_curves(curve_id):
+        """
+        F-10070: private key DER encoding round-trips on small curves.
+        """
+        size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
+        if size <= 0:
+            pytest.skip("curve not enabled")
+        if _lib.FIPS_ENABLED and _lib.FIPS_VERSION >= 6 and size < 28:
+            pytest.skip("FIPS 140-3 does not generate keys under 224 bits")
+        key = EccPrivate.make_key(size)
+        assert key.size == size
+        der = key.encode_key()
+        assert EccPrivate(der).encode_key() == der
+
+
+    def test_ecc_encode_key_p192_vector():
+        """
+        F-10070: an imported P-192 private key re-encodes to the same DER.
+        FIPS 140-3 builds can import P-192 keys but not generate them.
+        """
+        if _lib.wc_ecc_get_curve_size_from_id(ECC_SECP192R1) <= 0:
+            pytest.skip("curve not enabled")
+        der = h2b(
+            "305f02010104189611a7935930fa834b7de535a371d3461d1ff4a309d15cb8a0"
+            "0a06082a8648ce3d030101a13403320004a9afcfd908947032399677a3ae1d9d"
+            "5ec75906e27f7d3ddeec030107d246b3550a48208cbcb9b1f15978f938b652ff"
+            "0b"
+        )
+        assert EccPrivate(der).encode_key() == der
 
 
     def test_ecc_decode_key_raw_rejects_wrong_length(vectors):

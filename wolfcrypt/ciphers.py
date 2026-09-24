@@ -1409,9 +1409,12 @@ if _lib.ECC_ENABLED:
 
             Returns the encoded key.
             """
-            key = _ffi.new(f"byte[{self.size * 4}]")
+            size = _lib.wc_EccKeyDerSize(self.native_object, 1)
+            if size <= 0:  # pragma: no cover
+                raise WolfCryptApiError("Key encode error", size)
+            key = _ffi.new(f"byte[{size}]")
 
-            ret = _lib.wc_EccKeyToDer(self.native_object, key, len(key))
+            ret = _lib.wc_EccKeyToDer(self.native_object, key, size)
             if ret <= 0:  # pragma: no cover
                 raise WolfCryptApiError("Key encode error", ret)
 
