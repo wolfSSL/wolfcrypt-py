@@ -41,6 +41,15 @@ if _lib.ML_DSA_ENABLED:
     def mldsa_type(request):
         return request.param
 
+    needs_make_key = pytest.mark.skipif(not _lib.ML_DSA_MAKE_KEY_ENABLED,
+                                        reason="ML-DSA key generation not enabled")
+    needs_sign = pytest.mark.skipif(not _lib.ML_DSA_SIGN_ENABLED, reason="ML-DSA signing not enabled")
+    needs_verify = pytest.mark.skipif(not _lib.ML_DSA_VERIFY_ENABLED, reason="ML-DSA verification not enabled")
+    needs_sizes = pytest.mark.skipif(
+        not (_lib.ML_DSA_PUBLIC_KEY_ENABLED and _lib.ML_DSA_PRIVATE_KEY_ENABLED
+             and (_lib.ML_DSA_SIGN_ENABLED or _lib.ML_DSA_VERIFY_ENABLED)),
+        reason="ML-DSA key or signature sizes not available")
+
     def test_init_base(mldsa_type):
         mldsa_priv = MlDsaPrivate(mldsa_type)
         assert isinstance(mldsa_priv, MlDsaPrivate)
@@ -48,6 +57,7 @@ if _lib.ML_DSA_ENABLED:
         mldsa_pub = MlDsaPublic(mldsa_type)
         assert isinstance(mldsa_pub, MlDsaPublic)
 
+    @needs_sizes
     def test_size_properties(mldsa_type):
         refvals = {
             MlDsaType.ML_DSA_44: {
@@ -76,6 +86,7 @@ if _lib.ML_DSA_ENABLED:
         assert mldsa_priv.pub_key_size == refvals[mldsa_type]["pub_key_size"]
         assert mldsa_priv.priv_key_size == refvals[mldsa_type]["priv_key_size"]
 
+    @needs_make_key
     def test_initializations(mldsa_type, rng):
         mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
         assert type(mldsa_priv) is MlDsaPrivate
@@ -86,6 +97,7 @@ if _lib.ML_DSA_ENABLED:
         mldsa_pub = MlDsaPublic(mldsa_type)
         assert type(mldsa_pub) is MlDsaPublic
 
+    @needs_make_key
     def test_key_import_export(mldsa_type, rng):
         # Generate key pair and export keys
         mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
@@ -114,6 +126,9 @@ if _lib.ML_DSA_ENABLED:
         pub_key3 = mldsa_pub.encode_key()
         assert pub_key == pub_key3
 
+    @needs_make_key
+    @needs_sign
+    @needs_verify
     def test_sign_verify(mldsa_type, rng):
         # Generate a key pair and export public key
         mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
@@ -178,6 +193,9 @@ if _lib.ML_DSA_ENABLED:
         assert mldsa_pub.verify(signature, message, ctx=b"")
 
     @pytest.mark.skipif(not _lib.ML_DSA_NO_CTX_ENABLED, reason="Requires support for signing without context")
+    @needs_make_key
+    @needs_sign
+    @needs_verify
     def test_sign_with_seed(mldsa_type, rng):
         signature_seed = rng.bytes(ML_DSA_SIGNATURE_SEED_LENGTH)
         mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
@@ -207,6 +225,8 @@ if _lib.ML_DSA_ENABLED:
         with pytest.raises(TypeError):
             _ = mldsa_priv.sign_with_seed(message, "")  # ty: ignore[invalid-argument-type]
 
+    @needs_make_key
+    @needs_sign
     def test_sign_with_seed_and_context(mldsa_type, rng):
         signature_seed = rng.bytes(ML_DSA_SIGNATURE_SEED_LENGTH)
         mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
@@ -228,6 +248,8 @@ if _lib.ML_DSA_ENABLED:
         signature_from_same_seed = mldsa_priv.sign_with_seed(message, signature_seed, ctx=context)
         assert signature == signature_from_same_seed
 
+    @needs_make_key
+    @needs_sign
     @pytest.mark.parametrize("seed", [0, "seed"])
     def test_sign_with_seed_bad_type(mldsa_type, rng, seed: int | str):
         mldsa_priv = MlDsaPrivate.make_key(mldsa_type, rng)
@@ -236,10 +258,12 @@ if _lib.ML_DSA_ENABLED:
         with pytest.raises(TypeError):
             mldsa_priv.sign_with_seed(message, seed, ctx=context)
 
+    @needs_make_key
     def test_make_key_from_seed(mldsa_type):
         seed = bytes(MlDsaPrivate.ML_DSA_KEYGEN_SEED_LENGTH)
         assert MlDsaPrivate.make_key_from_seed(mldsa_type, seed)
 
+    @needs_make_key
     @pytest.mark.parametrize(
         "seed_length", [MlDsaPrivate.ML_DSA_KEYGEN_SEED_LENGTH - 1, MlDsaPrivate.ML_DSA_KEYGEN_SEED_LENGTH + 1]
     )
@@ -248,6 +272,7 @@ if _lib.ML_DSA_ENABLED:
         with pytest.raises(ValueError):
             MlDsaPrivate.make_key_from_seed(mldsa_type, seed)
 
+    @needs_make_key
     @pytest.mark.parametrize("seed", [0, "seed"])
     def test_make_key_from_seed_bad_type(mldsa_type, seed: int | str):
         with pytest.raises(TypeError):

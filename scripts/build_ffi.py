@@ -506,6 +506,23 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     for op in ("MAKE_KEY", "ENCAPSULATE", "DECAPSULATE"):
         features[f"ML_KEM_{op}"] = 1 if features["ML_KEM"] and not (
             defined(f"WOLFSSL_MLKEM_NO_{op}") or defined(f"WOLFSSL_KYBER_NO_{op}")) else 0
+    # dilithium.h derives the ML-DSA operations and key parts from
+    # WOLFSSL_MLDSA_<gate> or the legacy WOLFSSL_DILITHIUM_<gate> names.
+    def mldsa_defined(gate):
+        return defined(f"WOLFSSL_MLDSA_{gate}") or defined(f"WOLFSSL_DILITHIUM_{gate}")
+
+    mldsa_verify_only = mldsa_defined("VERIFY_ONLY")
+    mldsa_no_make_key = mldsa_verify_only or mldsa_defined("NO_MAKE_KEY")
+    mldsa_no_sign = mldsa_verify_only or mldsa_defined("NO_SIGN")
+    mldsa_no_verify = mldsa_defined("NO_VERIFY")
+    ml_dsa = features["ML_DSA"]
+    features["ML_DSA_MAKE_KEY"] = 1 if ml_dsa and not mldsa_no_make_key else 0
+    features["ML_DSA_SIGN"] = 1 if ml_dsa and not mldsa_no_sign else 0
+    features["ML_DSA_VERIFY"] = 1 if ml_dsa and not mldsa_no_verify else 0
+    features["ML_DSA_PUBLIC_KEY"] = 1 if ml_dsa and (not mldsa_no_make_key or not mldsa_no_verify
+        or mldsa_defined("PUBLIC_KEY")) else 0
+    features["ML_DSA_PRIVATE_KEY"] = 1 if ml_dsa and (not mldsa_no_make_key or not mldsa_no_sign
+        or mldsa_defined("PRIVATE_KEY")) else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -678,6 +695,11 @@ def make_source(features):
         int ML_KEM_MAKE_KEY_ENABLED = {features["ML_KEM_MAKE_KEY"]};
         int ML_KEM_ENCAPSULATE_ENABLED = {features["ML_KEM_ENCAPSULATE"]};
         int ML_KEM_DECAPSULATE_ENABLED = {features["ML_KEM_DECAPSULATE"]};
+        int ML_DSA_MAKE_KEY_ENABLED = {features["ML_DSA_MAKE_KEY"]};
+        int ML_DSA_SIGN_ENABLED = {features["ML_DSA_SIGN"]};
+        int ML_DSA_VERIFY_ENABLED = {features["ML_DSA_VERIFY"]};
+        int ML_DSA_PUBLIC_KEY_ENABLED = {features["ML_DSA_PUBLIC_KEY"]};
+        int ML_DSA_PRIVATE_KEY_ENABLED = {features["ML_DSA_PRIVATE_KEY"]};
     """
 
     return init_source_string
@@ -764,6 +786,11 @@ def make_cdef(features):
         extern int ML_KEM_MAKE_KEY_ENABLED;
         extern int ML_KEM_ENCAPSULATE_ENABLED;
         extern int ML_KEM_DECAPSULATE_ENABLED;
+        extern int ML_DSA_MAKE_KEY_ENABLED;
+        extern int ML_DSA_SIGN_ENABLED;
+        extern int ML_DSA_VERIFY_ENABLED;
+        extern int ML_DSA_PUBLIC_KEY_ENABLED;
+        extern int ML_DSA_PRIVATE_KEY_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1648,26 +1675,57 @@ def make_cdef(features):
         int wc_dilithium_init_ex(dilithium_key* key, void* heap, int devId);
         int wc_dilithium_set_level(dilithium_key* key, byte level);
         void wc_dilithium_free(dilithium_key* key);
-        int wc_dilithium_make_key(dilithium_key* key, WC_RNG* rng);
-        int wc_dilithium_make_key_from_seed(dilithium_key* key, const byte* seed);
-        int wc_dilithium_export_private(dilithium_key* key, byte* out, word32* outLen);
-        int wc_dilithium_import_private(const byte* priv, word32 privSz, dilithium_key* key);
-        int wc_dilithium_export_public(dilithium_key* key, byte* out, word32* outLen);
-        int wc_dilithium_import_public(const byte* in, word32 inLen, dilithium_key* key);
-        int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
-        int wc_dilithium_sign_ctx_msg_with_seed(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
-        int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
         typedef dilithium_key MlDsaKey;
-        int wc_MlDsaKey_GetPrivLen(MlDsaKey* key, int* len);
-        int wc_MlDsaKey_GetPubLen(MlDsaKey* key, int* len);
-        int wc_MlDsaKey_GetSigLen(MlDsaKey* key, int* len);
         """
-        if features["ML_DSA_NO_CTX"]:
+
+        if features["ML_DSA_MAKE_KEY"]:
             cdef += """
-            int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
-            int wc_dilithium_sign_msg_with_seed(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
-            int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
+            int wc_dilithium_make_key(dilithium_key* key, WC_RNG* rng);
+            int wc_dilithium_make_key_from_seed(dilithium_key* key, const byte* seed);
             """
+
+        if features["ML_DSA_PRIVATE_KEY"]:
+            cdef += """
+            int wc_dilithium_export_private(dilithium_key* key, byte* out, word32* outLen);
+            int wc_dilithium_import_private(const byte* priv, word32 privSz, dilithium_key* key);
+            """
+
+        if features["ML_DSA_PUBLIC_KEY"]:
+            cdef += """
+            int wc_dilithium_export_public(dilithium_key* key, byte* out, word32* outLen);
+            int wc_dilithium_import_public(const byte* in, word32 inLen, dilithium_key* key);
+            int wc_MlDsaKey_GetPubLen(MlDsaKey* key, int* len);
+            """
+
+        if features["ML_DSA_PRIVATE_KEY"] and features["ML_DSA_PUBLIC_KEY"]:
+            cdef += """
+            int wc_MlDsaKey_GetPrivLen(MlDsaKey* key, int* len);
+            """
+
+        if features["ML_DSA_SIGN"] or features["ML_DSA_VERIFY"]:
+            cdef += """
+            int wc_MlDsaKey_GetSigLen(MlDsaKey* key, int* len);
+            """
+
+        if features["ML_DSA_SIGN"]:
+            cdef += """
+            int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
+            int wc_dilithium_sign_ctx_msg_with_seed(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
+            """
+            if features["ML_DSA_NO_CTX"]:
+                cdef += """
+                int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
+                int wc_dilithium_sign_msg_with_seed(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
+                """
+
+        if features["ML_DSA_VERIFY"]:
+            cdef += """
+            int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
+            """
+            if features["ML_DSA_NO_CTX"]:
+                cdef += """
+                int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
+                """
 
     if features["CRYPTO_CB"]:
         cdef += """
@@ -1894,6 +1952,11 @@ def default_features():
         "ML_KEM_MAKE_KEY": 1,
         "ML_KEM_ENCAPSULATE": 1,
         "ML_KEM_DECAPSULATE": 1,
+        "ML_DSA_MAKE_KEY": 1,
+        "ML_DSA_SIGN": 1,
+        "ML_DSA_VERIFY": 1,
+        "ML_DSA_PUBLIC_KEY": 1,
+        "ML_DSA_PRIVATE_KEY": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
