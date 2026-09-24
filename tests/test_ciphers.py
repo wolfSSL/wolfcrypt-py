@@ -37,6 +37,15 @@ from wolfcrypt.utils import h2b, t2b
 
 certs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "certs")
 
+
+def load_fresh_ciphers():
+    """Load a fresh copy of wolfcrypt.ciphers, e.g. with _lib flags patched."""
+    spec = importlib.util.find_spec("wolfcrypt.ciphers")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 if _lib.DES3_ENABLED:
     from wolfcrypt.ciphers import Des3
 
@@ -342,6 +351,11 @@ if _lib.CHACHA_ENABLED:
 if _lib.RSA_ENABLED:
     # RSA key objects always create a Random.
     needs_rng = pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
+    needs_encrypt_decrypt = pytest.mark.skipif(not (_lib.RSA_ENCRYPT_ENABLED and _lib.RSA_PRIVATE_ENABLED),
+                                               reason="RSA encryption or decryption not enabled")
+    needs_oaep = pytest.mark.skipif(not _lib.RSA_OAEP_ENABLED, reason="RSA OAEP not enabled")
+    needs_sign_verify = pytest.mark.skipif(not (_lib.RSA_SIGN_ENABLED and _lib.RSA_VERIFY_ENABLED),
+                                           reason="RSA signing or verification not enabled")
 
     @pytest.fixture
     def rng():
@@ -415,12 +429,13 @@ if _lib.RSA_ENABLED:
         with pytest.raises(WolfCryptError):
             RsaPublic(vectors[RsaPublic].key[:-1])    # invalid key length
 
-        if _lib.KEYGEN_ENABLED:
+        if _lib.KEYGEN_ENABLED and _lib.RSA_PRIVATE_ENABLED:
             with pytest.raises(WolfCryptError):           # invalid key size
                 RsaPrivate.make_key(16384)   # ty: ignore[possibly-missing-attribute]
 
 
     @needs_rng
+    @needs_encrypt_decrypt
     def test_rsa_encrypt_decrypt(rsa_private, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -438,6 +453,7 @@ if _lib.RSA_ENABLED:
         assert plaintext == rsa_private.decrypt(ciphertext)
 
     @needs_rng
+    @needs_encrypt_decrypt
     def test_rsa_encrypt_decrypt_rng(rsa_private_rng, rsa_public_rng):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -455,6 +471,8 @@ if _lib.RSA_ENABLED:
         assert plaintext == rsa_private_rng.decrypt(ciphertext)
 
     @needs_rng
+    @needs_encrypt_decrypt
+    @needs_oaep
     def test_rsa_encrypt_decrypt_pad_oaep(rsa_private_oaep, rsa_public_oaep):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -474,6 +492,7 @@ if _lib.RSA_ENABLED:
 
     @pytest.mark.skipif(not _lib.PKCS8_ENABLED, reason="PKCS#8 not enabled")
     @needs_rng
+    @needs_encrypt_decrypt
     def test_rsa_pkcs8_encrypt_decrypt(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -492,6 +511,7 @@ if _lib.RSA_ENABLED:
 
 
     @needs_rng
+    @needs_sign_verify
     def test_rsa_sign_verify(rsa_private, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -510,6 +530,7 @@ if _lib.RSA_ENABLED:
 
     if _lib.RSA_PSS_ENABLED:
         @needs_rng
+        @pytest.mark.skipif(not _lib.RSA_SIGN_ENABLED, reason="RSA signing not enabled")
         def test_rsa_pss_sign_verify(rsa_private_pss, rsa_public_pss):
             plaintext = t2b("Everyone gets Friday off.")
 
@@ -528,6 +549,7 @@ if _lib.RSA_ENABLED:
 
     @pytest.mark.skipif(not _lib.PEM_TO_DER_ENABLED, reason="PEM to DER not enabled")
     @needs_rng
+    @needs_sign_verify
     def test_rsa_sign_verify_pem(rsa_private_pem, rsa_public_pem):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -546,6 +568,7 @@ if _lib.RSA_ENABLED:
 
     @pytest.mark.skipif(not _lib.PEM_TO_DER_ENABLED, reason="PEM to DER not enabled")
     @needs_rng
+    @needs_sign_verify
     def test_rsa_sign_verify_pem_rng(rsa_private_pem_rng, rsa_public_pem_rng):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -564,6 +587,7 @@ if _lib.RSA_ENABLED:
 
     @pytest.mark.skipif(not _lib.PKCS8_ENABLED, reason="PKCS#8 not enabled")
     @needs_rng
+    @needs_sign_verify
     def test_rsa_pkcs8_sign_verify(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -1249,12 +1273,14 @@ if _lib.CHACHA_ENABLED:
 
 if _lib.RSA_ENABLED:
     @needs_rng
+    @pytest.mark.skipif(not (_lib.RSA_ENCRYPT_ENABLED and _lib.RSA_OAEP_ENABLED), reason="RSA OAEP encryption not enabled")
     def test_encrypt_oaep_requires_hash_type(vectors):
         rsa = RsaPublic(vectors[RsaPublic].key)
         with pytest.raises(WolfCryptError, match="Hash type not set"):
             rsa.encrypt_oaep(b"plaintext")
 
     @needs_rng
+    @pytest.mark.skipif(not (_lib.RSA_PRIVATE_ENABLED and _lib.RSA_OAEP_ENABLED), reason="RSA OAEP decryption not enabled")
     def test_decrypt_oaep_requires_hash_type(vectors):
         rsa = RsaPrivate(vectors[RsaPrivate].key)
         with pytest.raises(WolfCryptError, match="Hash type not set"):
@@ -1267,9 +1293,7 @@ if _lib.RSA_ENABLED:
 
         # Load a fresh copy of the module as if wc_PemToDer were not compiled in.
         monkeypatch.setattr(_lib, "PEM_TO_DER_ENABLED", 0)
-        spec = importlib.util.find_spec("wolfcrypt.ciphers")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load_fresh_ciphers()
         for cls in (module.RsaPublic, module.RsaPrivate):
             assert not hasattr(cls, "from_pem"), cls
 
@@ -1291,3 +1315,49 @@ if _lib.RSA_ENABLED:
         if _lib.PKCS8_ENABLED:
             # wc_RsaPrivateKeyDecode skips a PKCS#8 header by itself.
             assert RsaPrivate(vectors[RsaPrivate].pkcs8_key).output_size == 128
+
+    # Method -> flags of the wolfSSL operations it needs.
+    RSA_GATED_METHODS = {
+        ("RsaPublic", "encrypt"): ("RSA_ENCRYPT_ENABLED",),
+        ("RsaPublic", "encrypt_oaep"): ("RSA_ENCRYPT_ENABLED", "RSA_OAEP_ENABLED"),
+        ("RsaPrivate", "decrypt"): ("RSA_PRIVATE_ENABLED",),
+        ("RsaPrivate", "decrypt_oaep"): ("RSA_PRIVATE_ENABLED", "RSA_OAEP_ENABLED"),
+        ("RsaPrivate", "make_key"): ("KEYGEN_ENABLED", "RSA_PRIVATE_ENABLED"),
+        ("RsaPrivate", "sign_pss"): ("RSA_PSS_ENABLED", "RSA_SIGN_ENABLED"),
+    }
+
+    def test_rsa_methods_defined_only_when_enabled(monkeypatch):
+        """F-12227: each RSA method needs its wolfSSL operation to be compiled in."""
+        for (cls, name), flags in RSA_GATED_METHODS.items():
+            enabled = all(getattr(_lib, flag) for flag in flags)
+            assert hasattr(getattr(ciphers, cls), name) == enabled, (cls, name)
+
+        # Load fresh copies of the module as if one operation were not compiled in.
+        for disabled in ("RSA_ENCRYPT_ENABLED", "RSA_PRIVATE_ENABLED", "RSA_SIGN_ENABLED", "RSA_OAEP_ENABLED"):
+            with monkeypatch.context() as m:
+                m.setattr(_lib, disabled, 0)
+                module = load_fresh_ciphers()
+            for (cls, name), flags in RSA_GATED_METHODS.items():
+                if disabled in flags:
+                    assert not hasattr(getattr(module, cls), name), (disabled, cls, name)
+            # sign() and verify() implement the RSA protocols, so they stay.
+            assert hasattr(module.RsaPrivate, "sign"), disabled
+            assert hasattr(module.RsaPublic, "verify"), disabled
+
+    @needs_rng
+    def test_rsa_sign_rejected_when_not_compiled_in(monkeypatch, vectors):
+        """F-12227: sign() needs RSA signing in the linked wolfSSL."""
+        rsa = RsaPrivate(vectors[RsaPrivate].key)
+        monkeypatch.setattr(_lib, "RSA_SIGN_ENABLED", 0)
+        with pytest.raises(NotImplementedError, match="RSA signing is not supported"):
+            rsa.sign(b"Everyone gets Friday off.")
+
+    @needs_rng
+    @pytest.mark.skipif(not _lib.RSA_SIGN_ENABLED, reason="RSA signing not enabled")
+    def test_rsa_verify_rejected_when_not_compiled_in(monkeypatch, vectors):
+        """F-12227: verify() needs wc_RsaSSL_Verify in the linked wolfSSL."""
+        signature = RsaPrivate(vectors[RsaPrivate].key).sign(b"Everyone gets Friday off.")
+        rsa = RsaPublic(vectors[RsaPublic].key)
+        monkeypatch.setattr(_lib, "RSA_VERIFY_ENABLED", 0)
+        with pytest.raises(NotImplementedError, match="RSA verification is not supported"):
+            rsa.verify(signature)

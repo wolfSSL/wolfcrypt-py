@@ -465,6 +465,15 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     # settings.h defines HAVE_PKCS8 unless both NO_PKCS8 and NO_PKCS12.
     features["PKCS8"] = 1 if features["ASN"] and (not defined("NO_PKCS8") or not defined("NO_PKCS12")
         or defined("HAVE_PKCS8") or defined("HAVE_PKCS12")) else 0
+    # rsa.c leaves out RSA operations for the subset macros set by
+    # --enable-rsapub, --enable-rsavfy and --disable-oaep.
+    rsa_public_only = defined("WOLFSSL_RSA_PUBLIC_ONLY")
+    rsa_verify_only = defined("WOLFSSL_RSA_VERIFY_ONLY")
+    features["RSA_ENCRYPT"] = 1 if features["RSA"] and not rsa_verify_only else 0
+    features["RSA_PRIVATE"] = 1 if features["RSA"] and not rsa_public_only else 0
+    features["RSA_SIGN"] = 1 if features["RSA_PRIVATE"] and not rsa_verify_only else 0
+    features["RSA_VERIFY"] = 1 if features["RSA"] and not defined("WOLFSSL_RSA_VERIFY_INLINE") else 0
+    features["RSA_OAEP"] = 1 if features["RSA"] and not defined("WC_NO_RSA_OAEP") else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -613,6 +622,11 @@ def make_source(features):
         int DER_TO_PEM_ENABLED = {features["DER_TO_PEM"]};
         int PKCS8_ENABLED = {features["PKCS8"]};
         int RNG_ENABLED = {features["RNG"]};
+        int RSA_ENCRYPT_ENABLED = {features["RSA_ENCRYPT"]};
+        int RSA_PRIVATE_ENABLED = {features["RSA_PRIVATE"]};
+        int RSA_SIGN_ENABLED = {features["RSA_SIGN"]};
+        int RSA_VERIFY_ENABLED = {features["RSA_VERIFY"]};
+        int RSA_OAEP_ENABLED = {features["RSA_OAEP"]};
     """
 
     return init_source_string
@@ -676,6 +690,11 @@ def make_cdef(features):
         extern int DER_TO_PEM_ENABLED;
         extern int PKCS8_ENABLED;
         extern int RNG_ENABLED;
+        extern int RSA_ENCRYPT_ENABLED;
+        extern int RSA_PRIVATE_ENABLED;
+        extern int RSA_SIGN_ENABLED;
+        extern int RSA_VERIFY_ENABLED;
+        extern int RSA_OAEP_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1182,27 +1201,52 @@ def make_cdef(features):
         int wc_RsaPrivateKeyDecode(const byte*, word32*, RsaKey*, word32);
         int wc_RsaPublicKeyDecode(const byte*, word32*, RsaKey*, word32);
         int wc_RsaEncryptSize(RsaKey*);
-
-        int wc_RsaPrivateDecrypt(const byte*, word32, byte*, word32,
-                                RsaKey* key);
-        int wc_RsaPublicEncrypt(const byte*, word32, byte*, word32,
-                                RsaKey*, WC_RNG*);
-        int wc_RsaPublicEncrypt_ex(const byte* in, word32 inLen, byte* out,
-                   word32 outLen, RsaKey* key, WC_RNG* rng, int type,
-                   enum wc_HashType hash, int mgf, byte* label,
-                   word32 labelSz);
-        int wc_RsaPrivateDecrypt_ex(const byte* in, word32 inLen,
-                   byte* out, word32 outLen, RsaKey* key, int type,
-                   enum wc_HashType hash, int mgf, byte* label,
-                   word32 labelSz);
-        int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
-        int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
         """
 
-        if features["RSA_PSS"]:
+        if features["RSA_ENCRYPT"]:
+            cdef += """
+            int wc_RsaPublicEncrypt(const byte*, word32, byte*, word32,
+                                    RsaKey*, WC_RNG*);
+            """
+            if features["RSA_OAEP"]:
+                cdef += """
+                int wc_RsaPublicEncrypt_ex(const byte* in, word32 inLen, byte* out,
+                           word32 outLen, RsaKey* key, WC_RNG* rng, int type,
+                           enum wc_HashType hash, int mgf, byte* label,
+                           word32 labelSz);
+                """
+
+        if features["RSA_PRIVATE"]:
+            cdef += """
+            int wc_RsaPrivateDecrypt(const byte*, word32, byte*, word32,
+                                    RsaKey* key);
+            """
+            if features["RSA_OAEP"]:
+                cdef += """
+                int wc_RsaPrivateDecrypt_ex(const byte* in, word32 inLen,
+                           byte* out, word32 outLen, RsaKey* key, int type,
+                           enum wc_HashType hash, int mgf, byte* label,
+                           word32 labelSz);
+                """
+
+        if features["RSA_SIGN"]:
+            cdef += """
+            int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
+            """
+
+        if features["RSA_VERIFY"]:
+            cdef += """
+            int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
+            """
+
+        if features["RSA_PSS"] and features["RSA_SIGN"]:
             cdef += """
             int wc_RsaPSS_Sign(const byte* in, word32 inLen, byte* out, word32 outLen,
                                enum wc_HashType hash, int mgf, RsaKey* key, WC_RNG* rng);
+            """
+
+        if features["RSA_PSS"]:
+            cdef += """
             int wc_RsaPSS_Verify(const byte* in, word32 inLen, byte* out, word32 outLen,
                                    enum wc_HashType hash, int mgf, RsaKey* key);
             int wc_RsaPSS_CheckPadding(const byte* in, word32 inSz, byte* sig,
@@ -1214,9 +1258,13 @@ def make_cdef(features):
             int wc_RsaSetRNG(RsaKey* key, WC_RNG* rng);
             """
 
-        if features["KEYGEN"]:
+        if features["KEYGEN"] and features["RSA_PRIVATE"]:
             cdef += """
             int wc_MakeRsaKey(RsaKey* key, int size, long e, WC_RNG* rng);
+            """
+
+        if features["KEYGEN"]:
+            cdef += """
             int wc_RsaKeyToDer(RsaKey* key, byte* output, word32 inLen);
             int wc_RsaKeyToPublicDer(RsaKey* key, byte* output, word32 inLen);
 
@@ -1695,6 +1743,11 @@ def default_features():
         "DER_TO_PEM": 1,
         "PKCS8": 1,
         "RNG": 1,
+        "RSA_ENCRYPT": 1,
+        "RSA_PRIVATE": 1,
+        "RSA_SIGN": 1,
+        "RSA_VERIFY": 1,
+        "RSA_OAEP": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.

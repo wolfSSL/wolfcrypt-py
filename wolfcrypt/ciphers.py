@@ -850,49 +850,51 @@ if _lib.RSA_ENABLED:
                 der = pem_to_der(file, _lib.PUBLICKEY_TYPE)
                 return cls(key=der, hash_type=hash_type, rng=rng)
 
-        def encrypt(self, plaintext: BytesOrStr) -> bytes:
-            """
-            Encrypts **plaintext**, using the public key data in the
-            object. The plaintext's length must not be greater than:
+        if _lib.RSA_ENCRYPT_ENABLED:
+            def encrypt(self, plaintext: BytesOrStr) -> bytes:
+                """
+                Encrypts **plaintext**, using the public key data in the
+                object. The plaintext's length must not be greater than:
 
-                **self.output_size - self.RSA_MIN_PAD_SIZE**
+                    **self.output_size - self.RSA_MIN_PAD_SIZE**
 
-            Returns a string containing the ciphertext.
-            """
+                Returns a string containing the ciphertext.
+                """
 
-            plaintext = t2b(plaintext)
-            ciphertext = _ffi.new(f"byte[{self.output_size}]")
+                plaintext = t2b(plaintext)
+                ciphertext = _ffi.new(f"byte[{self.output_size}]")
 
-            ret = _lib.wc_RsaPublicEncrypt(plaintext, len(plaintext),
-                                           ciphertext, self.output_size,
-                                           self.native_object,
-                                           self._random.native_object)
+                ret = _lib.wc_RsaPublicEncrypt(plaintext, len(plaintext),
+                                               ciphertext, self.output_size,
+                                               self.native_object,
+                                               self._random.native_object)
 
-            if ret != self.output_size:  # pragma: no cover
-                raise WolfCryptApiError("Encryption error", ret)
+                if ret != self.output_size:  # pragma: no cover
+                    raise WolfCryptApiError("Encryption error", ret)
 
-            return _ffi.buffer(ciphertext)[:]
+                return _ffi.buffer(ciphertext)[:]
 
-        def encrypt_oaep(self, plaintext: BytesOrStr, label: BytesOrStr = "") -> bytes:
-            if not self._hash_type:
-                raise WolfCryptError("Hash type not set. Cannot use OAEP padding without a hash type.")
-            plaintext = t2b(plaintext)
-            label = t2b(label)
-            ciphertext = _ffi.new(f"byte[{self.output_size}]")
-            if self._mgf is None:
-                self._get_mgf()
-                assert self._mgf is not None
-            ret = _lib.wc_RsaPublicEncrypt_ex(plaintext, len(plaintext),
-                                              ciphertext, self.output_size,
-                                              self.native_object,
-                                              self._random.native_object,
-                                              _lib.WC_RSA_OAEP_PAD, self._hash_type,
-                                              self._mgf, label, len(label))
+        if _lib.RSA_ENCRYPT_ENABLED and _lib.RSA_OAEP_ENABLED:
+            def encrypt_oaep(self, plaintext: BytesOrStr, label: BytesOrStr = "") -> bytes:
+                if not self._hash_type:
+                    raise WolfCryptError("Hash type not set. Cannot use OAEP padding without a hash type.")
+                plaintext = t2b(plaintext)
+                label = t2b(label)
+                ciphertext = _ffi.new(f"byte[{self.output_size}]")
+                if self._mgf is None:
+                    self._get_mgf()
+                    assert self._mgf is not None
+                ret = _lib.wc_RsaPublicEncrypt_ex(plaintext, len(plaintext),
+                                                  ciphertext, self.output_size,
+                                                  self.native_object,
+                                                  self._random.native_object,
+                                                  _lib.WC_RSA_OAEP_PAD, self._hash_type,
+                                                  self._mgf, label, len(label))
 
-            if ret != self.output_size:  # pragma: no cover
-                raise WolfCryptApiError("Encryption error", ret)
+                if ret != self.output_size:  # pragma: no cover
+                    raise WolfCryptApiError("Encryption error", ret)
 
-            return _ffi.buffer(ciphertext)[:]
+                return _ffi.buffer(ciphertext)[:]
 
         @override
         def verify(self, signature: BytesOrStr) -> bytes:
@@ -904,6 +906,8 @@ if _lib.RSA_ENABLED:
 
             Returns a string containing the plaintext.
             """
+            if not _lib.RSA_VERIFY_ENABLED:
+                raise NotImplementedError("RSA verification is not supported by this wolfSSL build")
             signature = t2b(signature)
             plaintext = _ffi.new(f"byte[{self.output_size}]")
 
@@ -959,7 +963,7 @@ if _lib.RSA_ENABLED:
 
 
     class RsaPrivate(RsaPublic, SupportsRsaSign):
-        if _lib.KEYGEN_ENABLED:
+        if _lib.KEYGEN_ENABLED and _lib.RSA_PRIVATE_ENABLED:
             @classmethod
             def make_key(cls, size: int, rng: Random | None = None, hash_type: int | None = None) -> RsaPrivate:
                 """
@@ -1045,54 +1049,56 @@ if _lib.RSA_ENABLED:
                 return _ffi.buffer(priv, privlen)[:], _ffi.buffer(pub,
                         publen)[:]
 
-        def decrypt(self, ciphertext: BytesOrStr) -> bytes:
-            """
-            Decrypts **ciphertext**, using the private key data in the
-            object. The ciphertext's length must be equal to:
+        if _lib.RSA_PRIVATE_ENABLED:
+            def decrypt(self, ciphertext: BytesOrStr) -> bytes:
+                """
+                Decrypts **ciphertext**, using the private key data in the
+                object. The ciphertext's length must be equal to:
 
-                **self.output_size**
+                    **self.output_size**
 
-            Returns a string containing the plaintext.
-            """
-            ciphertext = t2b(ciphertext)
-            plaintext = _ffi.new(f"byte[{self.output_size}]")
+                Returns a string containing the plaintext.
+                """
+                ciphertext = t2b(ciphertext)
+                plaintext = _ffi.new(f"byte[{self.output_size}]")
 
-            ret = _lib.wc_RsaPrivateDecrypt(ciphertext, len(ciphertext),
-                                            plaintext, self.output_size,
-                                            self.native_object)
+                ret = _lib.wc_RsaPrivateDecrypt(ciphertext, len(ciphertext),
+                                                plaintext, self.output_size,
+                                                self.native_object)
 
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("Decryption error", ret)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("Decryption error", ret)
 
-            return _ffi.buffer(plaintext, ret)[:]
+                return _ffi.buffer(plaintext, ret)[:]
 
-        def decrypt_oaep(self, ciphertext: BytesOrStr, label: BytesOrStr = "") -> bytes:
-            """
-            Decrypts **ciphertext**, using the private key data in the
-            object. The ciphertext's length must be equal to:
+        if _lib.RSA_PRIVATE_ENABLED and _lib.RSA_OAEP_ENABLED:
+            def decrypt_oaep(self, ciphertext: BytesOrStr, label: BytesOrStr = "") -> bytes:
+                """
+                Decrypts **ciphertext**, using the private key data in the
+                object. The ciphertext's length must be equal to:
 
-                **self.output_size**
+                    **self.output_size**
 
-            Returns a string containing the plaintext.
-            """
-            if not self._hash_type:
-                raise WolfCryptError("Hash type not set. Cannot use OAEP padding without a hash type.")
-            ciphertext = t2b(ciphertext)
-            label = t2b(label)
-            plaintext = _ffi.new(f"byte[{self.output_size}]")
-            if self._mgf is None:
-                self._get_mgf()
-                assert self._mgf is not None
-            ret = _lib.wc_RsaPrivateDecrypt_ex(ciphertext, len(ciphertext),
-                                               plaintext, self.output_size,
-                                               self.native_object,
-                                               _lib.WC_RSA_OAEP_PAD, self._hash_type,
-                                               self._mgf, label, len(label))
+                Returns a string containing the plaintext.
+                """
+                if not self._hash_type:
+                    raise WolfCryptError("Hash type not set. Cannot use OAEP padding without a hash type.")
+                ciphertext = t2b(ciphertext)
+                label = t2b(label)
+                plaintext = _ffi.new(f"byte[{self.output_size}]")
+                if self._mgf is None:
+                    self._get_mgf()
+                    assert self._mgf is not None
+                ret = _lib.wc_RsaPrivateDecrypt_ex(ciphertext, len(ciphertext),
+                                                   plaintext, self.output_size,
+                                                   self.native_object,
+                                                   _lib.WC_RSA_OAEP_PAD, self._hash_type,
+                                                   self._mgf, label, len(label))
 
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("Decryption error", ret)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("Decryption error", ret)
 
-            return _ffi.buffer(plaintext, ret)[:]
+                return _ffi.buffer(plaintext, ret)[:]
 
         @override
         def sign(self, plaintext: BytesOrStr) -> bytes:
@@ -1104,6 +1110,8 @@ if _lib.RSA_ENABLED:
 
             Returns a string containing the signature.
             """
+            if not _lib.RSA_SIGN_ENABLED:
+                raise NotImplementedError("RSA signing is not supported by this wolfSSL build")
             plaintext = t2b(plaintext)
             signature = _ffi.new(f"byte[{self.output_size}]")
 
@@ -1117,7 +1125,7 @@ if _lib.RSA_ENABLED:
 
             return _ffi.buffer(signature, self.output_size)[:]
 
-        if _lib.RSA_PSS_ENABLED:
+        if _lib.RSA_PSS_ENABLED and _lib.RSA_SIGN_ENABLED:
             def sign_pss(self, plaintext: BytesOrStr) -> bytes:
                 """
                 Signs **plaintext**, using the private key data in the object.
