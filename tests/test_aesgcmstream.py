@@ -32,6 +32,10 @@ if _lib.AESGCM_STREAM_ENABLED:
     from binascii import hexlify as b2h
     from wolfcrypt.ciphers import AesGcmStream
 
+    def skip_without_decrypt():
+        if not _lib.AESGCM_STREAM_DECRYPT_ENABLED:
+            pytest.skip("AES-GCM streaming decryption is not compiled in")
+
     def test_encrypt():
         """Known answer encrypt-decrypt test with default authentication tag size of 16 bytes"""
         key = "fedcba9876543210"
@@ -42,6 +46,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         assert authTag is not None
         assert b2h(authTag) == bytes('ac8fcee96dc6ef8e5236da19b6197d2e', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
+        skip_without_decrypt()
         gcmdec = AesGcmStream(key, iv)
         bufdec = gcmdec.decrypt(buf)
         gcmdec.final(authTag)
@@ -58,6 +63,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         assert authTag is not None
         assert b2h(authTag) == bytes('ac8fcee96dc6ef8e5236da19', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
+        skip_without_decrypt()
         gcmdec = AesGcmStream(key, iv, 12)
         bufdec = gcmdec.decrypt(buf)
         gcmdec.final(authTag)
@@ -73,6 +79,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         assert authTag is not None
         assert b2h(authTag) == bytes('ac8fcee96dc6ef8e5236da19b6197d2e', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
+        skip_without_decrypt()
         gcmdec = AesGcmStream(key, iv)
         bufdec = gcmdec.decrypt(buf[:5])
         bufdec += gcmdec.decrypt(buf[5:])
@@ -91,6 +98,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         print(b2h(authTag))
         assert b2h(authTag) == bytes('8f85338aa0b13f48f8b17482dbb8acca', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
+        skip_without_decrypt()
         gcmdec = AesGcmStream(key, iv)
         gcmdec.set_aad(aad)
         bufdec = gcmdec.decrypt(buf)
@@ -109,6 +117,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         assert authTag is not None
         assert b2h(authTag) == bytes('8f85338aa0b13f48f8b17482dbb8acca', 'utf-8')
         assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
+        skip_without_decrypt()
         gcmdec = AesGcmStream(key, iv)
         gcmdec.set_aad(aad)
         bufdec = gcmdec.decrypt(buf[:5])
@@ -117,6 +126,7 @@ if _lib.AESGCM_STREAM_ENABLED:
         assert bufdec == t2b("hello world")
 
     def test_encrypt_aad_bad():
+        skip_without_decrypt()
         key = "fedcba9876543210"
         iv = "0123456789abcdef"
         aad = "aad data"
@@ -163,6 +173,7 @@ if _lib.AESGCM_STREAM_ENABLED:
                 assert len(tag) == good
 
     def test_decrypt_rejects_wrong_tag_length():
+        skip_without_decrypt()
         key = "fedcba9876543210"
         iv = "0123456789abcdef"
         gcm = AesGcmStream(key, iv, tag_bytes=16)
@@ -200,3 +211,15 @@ if _lib.AESGCM_STREAM_ENABLED:
             gcm.final()
             del gcm
         gc.collect()
+
+    def test_decrypt_rejected_when_not_compiled_in(monkeypatch):
+        """F-12225: streaming decryption needs AES-GCM decryption in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "AESGCM_STREAM_DECRYPT_ENABLED", 0)
+        key = "fedcba9876543210"
+        iv = "0123456789abcdef"
+        gcm = AesGcmStream(key, iv)
+        with pytest.raises(NotImplementedError, match="AES-GCM streaming decryption"):
+            gcm.decrypt(bytes.fromhex("5ba7d42e1bf01d7998e932"))
+        # The rejected call leaves the object usable for encryption.
+        assert gcm.encrypt("hello world") == bytes.fromhex("5ba7d42e1bf01d7998e932")
+        assert gcm.final() == bytes.fromhex("ac8fcee96dc6ef8e5236da19b6197d2e")
