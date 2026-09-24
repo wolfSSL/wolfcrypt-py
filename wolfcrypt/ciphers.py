@@ -2373,375 +2373,387 @@ if _lib.ML_DSA_ENABLED:
             if self._init_done:
                 _lib.wc_dilithium_free(self.native_object)
 
-        @property
-        def _pub_key_size(self) -> int:
-            size = _ffi.new("int *")
-            ret = _lib.wc_MlDsaKey_GetPubLen(self.native_object, size)
+        if _lib.ML_DSA_PUBLIC_KEY_ENABLED:
+            @property
+            def _pub_key_size(self) -> int:
+                size = _ffi.new("int *")
+                ret = _lib.wc_MlDsaKey_GetPubLen(self.native_object, size)
 
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_MlDsaKey_GetPubLen() error", ret)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_MlDsaKey_GetPubLen() error", ret)
 
-            return size[0]
+                return size[0]
 
-        @property
-        def sig_size(self) -> int:
-            """
-            :return: signature size in bytes
-            :rtype: int
-            """
-            size = _ffi.new("int *")
-            ret = _lib.wc_MlDsaKey_GetSigLen(self.native_object, size)
+            def _decode_pub_key(self, pub_key: BytesOrStr) -> None:
+                pub_key_bytestype = t2b(pub_key)
+                ret = _lib.wc_dilithium_import_public(
+                    pub_key_bytestype,
+                    len(pub_key_bytestype),
+                    self.native_object,
+                )
 
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_MlDsaKey_GetSigLen() error", ret)
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_dilithium_import_public() error", ret)
 
-            return size[0]
+            def _encode_pub_key(self) -> bytes:
+                in_size = self._pub_key_size
+                pub_key = _ffi.new(f"byte[{in_size}]")
+                out_size = _ffi.new("word32 *")
+                out_size[0] = in_size
+                ret = _lib.wc_dilithium_export_public(self.native_object, pub_key, out_size)
 
-        def _decode_pub_key(self, pub_key: BytesOrStr) -> None:
-            pub_key_bytestype = t2b(pub_key)
-            ret = _lib.wc_dilithium_import_public(
-                pub_key_bytestype,
-                len(pub_key_bytestype),
-                self.native_object,
-            )
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_dilithium_export_public() error", ret)
 
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_dilithium_import_public() error", ret)
+                if in_size != out_size[0]:
+                    raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
 
-        def _encode_pub_key(self) -> bytes:
-            in_size = self._pub_key_size
-            pub_key = _ffi.new(f"byte[{in_size}]")
-            out_size = _ffi.new("word32 *")
-            out_size[0] = in_size
-            ret = _lib.wc_dilithium_export_public(self.native_object, pub_key, out_size)
+                return _ffi.buffer(pub_key, out_size[0])[:]
 
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_dilithium_export_public() error", ret)
+        if _lib.ML_DSA_SIGN_ENABLED or _lib.ML_DSA_VERIFY_ENABLED:
+            @property
+            def sig_size(self) -> int:
+                """
+                :return: signature size in bytes
+                :rtype: int
+                """
+                size = _ffi.new("int *")
+                ret = _lib.wc_MlDsaKey_GetSigLen(self.native_object, size)
 
-            if in_size != out_size[0]:
-                raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_MlDsaKey_GetSigLen() error", ret)
 
-            return _ffi.buffer(pub_key, out_size[0])[:]
+                return size[0]
 
-        def verify(self, signature: BytesOrStr, message: BytesOrStr, ctx: BytesOrStr | None = None) -> bool:
-            """
-            :param signature: signature to be verified
-            :type signature: bytes or str
-            :param message: message to be verified
-            :type message: bytes or str
-            :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
-                signing/verification compiled in; pass empty string "" for FIPS-204 empty-context verification).
-            :type ctx: bytes or str. None for no-context verification.
-            :return: True if the verification is successful, False otherwise
-            :rtype: bool
-            """
-            if ctx is None and not _lib.ML_DSA_NO_CTX_ENABLED:
-                raise WolfCryptError("support for verifying without context is disabled")
+        if _lib.ML_DSA_VERIFY_ENABLED:
+            def verify(self, signature: BytesOrStr, message: BytesOrStr, ctx: BytesOrStr | None = None) -> bool:
+                """
+                :param signature: signature to be verified
+                :type signature: bytes or str
+                :param message: message to be verified
+                :type message: bytes or str
+                :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
+                    signing/verification compiled in; pass empty string "" for FIPS-204 empty-context verification).
+                :type ctx: bytes or str. None for no-context verification.
+                :return: True if the verification is successful, False otherwise
+                :rtype: bool
+                """
+                if ctx is None and not _lib.ML_DSA_NO_CTX_ENABLED:
+                    raise WolfCryptError("support for verifying without context is disabled")
 
-            sig_bytestype = t2b(signature)
-            msg_bytestype = t2b(message)
-            res = _ffi.new("int *")
+                sig_bytestype = t2b(signature)
+                msg_bytestype = t2b(message)
+                res = _ffi.new("int *")
 
-            if ctx is not None:
-                ctx_bytestype = t2b(ctx)
-                if len(ctx_bytestype) > 255:
-                    raise ValueError(
-                        f"context length {len(ctx_bytestype)} too large: must be 255 or less"
+                if ctx is not None:
+                    ctx_bytestype = t2b(ctx)
+                    if len(ctx_bytestype) > 255:
+                        raise ValueError(
+                            f"context length {len(ctx_bytestype)} too large: must be 255 or less"
+                        )
+                    ret = _lib.wc_dilithium_verify_ctx_msg(
+                        sig_bytestype,
+                        len(sig_bytestype),
+                        ctx_bytestype,
+                        len(ctx_bytestype),
+                        msg_bytestype,
+                        len(msg_bytestype),
+                        res,
+                        self.native_object,
                     )
-                ret = _lib.wc_dilithium_verify_ctx_msg(
-                    sig_bytestype,
-                    len(sig_bytestype),
-                    ctx_bytestype,
-                    len(ctx_bytestype),
-                    msg_bytestype,
-                    len(msg_bytestype),
-                    res,
-                    self.native_object,
-                )
-                if ret < 0:  # pragma: no cover
-                    raise WolfCryptApiError("wc_dilithium_verify_ctx_msg() error", ret)
-            else:
-                ret = _lib.wc_dilithium_verify_msg(
-                    sig_bytestype,
-                    len(sig_bytestype),
-                    msg_bytestype,
-                    len(msg_bytestype),
-                    res,
-                    self.native_object,
-                )
-                if ret < 0:  # pragma: no cover
-                    raise WolfCryptApiError("wc_dilithium_verify_msg() error", ret)
+                    if ret < 0:  # pragma: no cover
+                        raise WolfCryptApiError("wc_dilithium_verify_ctx_msg() error", ret)
+                else:
+                    ret = _lib.wc_dilithium_verify_msg(
+                        sig_bytestype,
+                        len(sig_bytestype),
+                        msg_bytestype,
+                        len(msg_bytestype),
+                        res,
+                        self.native_object,
+                    )
+                    if ret < 0:  # pragma: no cover
+                        raise WolfCryptApiError("wc_dilithium_verify_msg() error", ret)
 
-            return res[0] == 1
+                return res[0] == 1
 
     class MlDsaPrivate(_MlDsaBase):
 
-        @classmethod
-        def make_key(cls, mldsa_type: MlDsaType, rng: Random | None = None) -> MlDsaPrivate:
-            """
-            :param mldsa_type: ML-DSA type
-            :type mldsa_type: MlDsaType
-            :param rng: random number generator for a key generation
-            :type rng: Random
-            :return: `MlDsaPrivate` object
-            :rtype: MlDsaPrivate
-            """
-            if rng is None:
-                rng = Random()
-            mldsa_priv = cls(mldsa_type)
-            ret = _lib.wc_dilithium_make_key(
-                mldsa_priv.native_object, rng.native_object
-            )
-
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_dilithium_make_key() error", ret)
-
-            # Retain RNG reference defensively.
-            mldsa_priv._rng = rng
-
-            return mldsa_priv
-
-        @classmethod
-        def make_key_from_seed(cls, mldsa_type: MlDsaType, seed: bytes) -> MlDsaPrivate:
-            """
-            Deterministically generate the key from a seed.
-
-            :param mldsa_type: ML-DSA type
-            :type mldsa_type: MlDsaType
-            :param seed: the (32 byte) seed from which to deterministically create the key
-            :type seed: bytes
-            """
-            mldsa_priv = cls(mldsa_type)
-
-            try:
-                memoryview(seed)
-            except TypeError as exception:
-                raise TypeError("seed must support the buffer protocol, such as `bytes` or `bytearray`") from exception
-
-            seed = bytes(seed)
-
-            if len(seed) != cls.ML_DSA_KEYGEN_SEED_LENGTH:
-                raise ValueError(f"Seed for generating ML-DSA key must be {cls.ML_DSA_KEYGEN_SEED_LENGTH} bytes")
-
-            ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object, seed)
-
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_dilithium_make_key_from_seed() error", ret)
-
-            return mldsa_priv
-
-        @property
-        def pub_key_size(self) -> int:
-            """
-            :return: public key size in bytes
-            :rtype: int
-            """
-            return self._pub_key_size
-
-        @property
-        def priv_key_size(self) -> int:
-            """
-            :return: private key size in bytes
-            :rtype: int
-            """
-            size = _ffi.new("int *")
-            ret = _lib.wc_MlDsaKey_GetPrivLen(self.native_object, size)
-
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_MlDsaKey_GetPrivLen() error", ret)
-
-            return size[0] - self.pub_key_size
-
-        def encode_pub_key(self) -> bytes:
-            """
-            :return: exported public key
-            :rtype: bytes
-            """
-            return self._encode_pub_key()
-
-        def encode_priv_key(self) -> bytes:
-            """
-            :return: exported private key
-            :rtype: bytes
-            """
-            in_size = self.priv_key_size
-            priv_key = _ffi.new(f"byte[{in_size}]")
-            out_size = _ffi.new("word32 *")
-            out_size[0] = in_size
-            ret = _lib.wc_dilithium_export_private(
-                self.native_object, priv_key, out_size
-            )
-
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_dilithium_export_private() error", ret)
-
-            if in_size != out_size[0]:
-                raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
-
-            return _ffi.buffer(priv_key, out_size[0])[:]
-
-        def decode_key(self, priv_key: BytesOrStr, pub_key: BytesOrStr | None = None) -> None:
-            """
-            :param priv_key: private key to be imported
-            :type priv_key: bytes or str
-            :param pub_key: public key to be imported
-            :type pub_key: bytes or str or None
-            """
-            priv_key_bytestype = t2b(priv_key)
-            ret = _lib.wc_dilithium_import_private(
-                priv_key_bytestype,
-                len(priv_key_bytestype),
-                self.native_object,
-            )
-
-            if ret < 0:  # pragma: no cover
-                raise WolfCryptApiError("wc_dilithium_import_private() error", ret)
-
-            if pub_key is not None:
-                self._decode_pub_key(pub_key)
-
-        def sign(self, message: BytesOrStr, rng: Random | None = None, ctx: BytesOrStr | None = None) -> bytes:
-            """
-            :param message: message to be signed
-            :type message: bytes or str
-            :param rng: random number generator for sign
-            :type rng: Random
-            :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
-                signing/verification compiled in; pass empty string "" for FIPS-204 empty-context signing).
-            :type ctx: bytes or str. None for no-context signing.
-            :return: signature
-            :rtype: bytes
-            """
-            if ctx is None and not _lib.ML_DSA_NO_CTX_ENABLED:
-                raise WolfCryptError("support for signing without context is disabled")
-
-            if rng is None:
-                rng = Random()
-            msg_bytestype = t2b(message)
-            in_size = self.sig_size
-            signature = _ffi.new(f"byte[{in_size}]")
-            out_size = _ffi.new("word32 *")
-            out_size[0] = in_size
-
-            if ctx is not None:
-                ctx_bytestype = t2b(ctx)
-                if len(ctx_bytestype) > 255:
-                    raise ValueError(f"context length {len(ctx_bytestype)} too large: must be 255 bytes or less")
-                ret = _lib.wc_dilithium_sign_ctx_msg(
-                    ctx_bytestype,
-                    len(ctx_bytestype),  # length must be < 256 bytes
-                    msg_bytestype,
-                    len(msg_bytestype),
-                    signature,
-                    out_size,
-                    self.native_object,
-                    rng.native_object,
+        if _lib.ML_DSA_MAKE_KEY_ENABLED:
+            @classmethod
+            def make_key(cls, mldsa_type: MlDsaType, rng: Random | None = None) -> MlDsaPrivate:
+                """
+                :param mldsa_type: ML-DSA type
+                :type mldsa_type: MlDsaType
+                :param rng: random number generator for a key generation
+                :type rng: Random
+                :return: `MlDsaPrivate` object
+                :rtype: MlDsaPrivate
+                """
+                if rng is None:
+                    rng = Random()
+                mldsa_priv = cls(mldsa_type)
+                ret = _lib.wc_dilithium_make_key(
+                    mldsa_priv.native_object, rng.native_object
                 )
+
                 if ret < 0:  # pragma: no cover
-                    raise WolfCryptApiError("wc_dilithium_sign_ctx_msg() error", ret)
-            else:
-                ret = _lib.wc_dilithium_sign_msg(
-                    msg_bytestype,
-                    len(msg_bytestype),
-                    signature,
-                    out_size,
-                    self.native_object,
-                    rng.native_object,
+                    raise WolfCryptApiError("wc_dilithium_make_key() error", ret)
+
+                # Retain RNG reference defensively.
+                mldsa_priv._rng = rng
+
+                return mldsa_priv
+
+            @classmethod
+            def make_key_from_seed(cls, mldsa_type: MlDsaType, seed: bytes) -> MlDsaPrivate:
+                """
+                Deterministically generate the key from a seed.
+
+                :param mldsa_type: ML-DSA type
+                :type mldsa_type: MlDsaType
+                :param seed: the (32 byte) seed from which to deterministically create the key
+                :type seed: bytes
+                """
+                mldsa_priv = cls(mldsa_type)
+
+                try:
+                    memoryview(seed)
+                except TypeError as exception:
+                    raise TypeError("seed must support the buffer protocol, such as `bytes` or `bytearray`") from exception
+
+                seed = bytes(seed)
+
+                if len(seed) != cls.ML_DSA_KEYGEN_SEED_LENGTH:
+                    raise ValueError(f"Seed for generating ML-DSA key must be {cls.ML_DSA_KEYGEN_SEED_LENGTH} bytes")
+
+                ret = _lib.wc_dilithium_make_key_from_seed(mldsa_priv.native_object, seed)
+
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_dilithium_make_key_from_seed() error", ret)
+
+                return mldsa_priv
+
+        if _lib.ML_DSA_PUBLIC_KEY_ENABLED:
+            @property
+            def pub_key_size(self) -> int:
+                """
+                :return: public key size in bytes
+                :rtype: int
+                """
+                return self._pub_key_size
+
+            def encode_pub_key(self) -> bytes:
+                """
+                :return: exported public key
+                :rtype: bytes
+                """
+                return self._encode_pub_key()
+
+        if _lib.ML_DSA_PRIVATE_KEY_ENABLED and _lib.ML_DSA_PUBLIC_KEY_ENABLED:
+            @property
+            def priv_key_size(self) -> int:
+                """
+                :return: private key size in bytes
+                :rtype: int
+                """
+                size = _ffi.new("int *")
+                ret = _lib.wc_MlDsaKey_GetPrivLen(self.native_object, size)
+
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_MlDsaKey_GetPrivLen() error", ret)
+
+                return size[0] - self.pub_key_size
+
+            def encode_priv_key(self) -> bytes:
+                """
+                :return: exported private key
+                :rtype: bytes
+                """
+                in_size = self.priv_key_size
+                priv_key = _ffi.new(f"byte[{in_size}]")
+                out_size = _ffi.new("word32 *")
+                out_size[0] = in_size
+                ret = _lib.wc_dilithium_export_private(
+                    self.native_object, priv_key, out_size
                 )
+
                 if ret < 0:  # pragma: no cover
-                    raise WolfCryptApiError("wc_dilithium_sign_msg() error", ret)
+                    raise WolfCryptApiError("wc_dilithium_export_private() error", ret)
 
-            if in_size != out_size[0]:
-                raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
+                if in_size != out_size[0]:
+                    raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
 
-            return _ffi.buffer(signature, out_size[0])[:]
+                return _ffi.buffer(priv_key, out_size[0])[:]
 
-        def sign_with_seed(self, message: BytesOrStr, seed: bytes, ctx: BytesOrStr | None = None) -> bytes:
-            """
-            :param message: message to be signed
-            :type message: bytes or str
-            :param seed: 32-byte seed for deterministic signature generation.
-            :type seed: bytes
-            :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
-                signing/verification compiled in; pass empty string "" for FIPS-204 empty-context signing).
-            :type ctx: bytes or str. None for no-context signing.
-            :return: signature
-            :rtype: bytes
-            """
-            if ctx is None and not _lib.ML_DSA_NO_CTX_ENABLED:
-                raise WolfCryptError("support for signing without context is disabled")
+        if _lib.ML_DSA_PRIVATE_KEY_ENABLED:
+            def decode_key(self, priv_key: BytesOrStr, pub_key: BytesOrStr | None = None) -> None:
+                """
+                :param priv_key: private key to be imported
+                :type priv_key: bytes or str
+                :param pub_key: public key to be imported
+                :type pub_key: bytes or str or None
+                """
+                if pub_key is not None and not _lib.ML_DSA_PUBLIC_KEY_ENABLED:
+                    raise NotImplementedError("ML-DSA public key import is not supported by this wolfSSL build")
 
-            msg_bytestype = t2b(message)
-            in_size = self.sig_size
-            signature = _ffi.new(f"byte[{in_size}]")
-            out_size = _ffi.new("word32 *")
-            out_size[0] = in_size
+                priv_key_bytestype = t2b(priv_key)
+                ret = _lib.wc_dilithium_import_private(
+                    priv_key_bytestype,
+                    len(priv_key_bytestype),
+                    self.native_object,
+                )
 
-            try:
-                memoryview(seed)
-            except TypeError as exception:
-                raise TypeError("seed must support the buffer protocol, such as `bytes` or `bytearray`") from exception
+                if ret < 0:  # pragma: no cover
+                    raise WolfCryptApiError("wc_dilithium_import_private() error", ret)
 
-            seed = bytes(seed)
+                if pub_key is not None:
+                    self._decode_pub_key(pub_key)
 
-            if len(seed) != ML_DSA_SIGNATURE_SEED_LENGTH:
-                raise ValueError(f"Seed for generating a signature must be {ML_DSA_SIGNATURE_SEED_LENGTH} bytes.")
+        if _lib.ML_DSA_SIGN_ENABLED:
+            def sign(self, message: BytesOrStr, rng: Random | None = None, ctx: BytesOrStr | None = None) -> bytes:
+                """
+                :param message: message to be signed
+                :type message: bytes or str
+                :param rng: random number generator for sign
+                :type rng: Random
+                :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
+                    signing/verification compiled in; pass empty string "" for FIPS-204 empty-context signing).
+                :type ctx: bytes or str. None for no-context signing.
+                :return: signature
+                :rtype: bytes
+                """
+                if ctx is None and not _lib.ML_DSA_NO_CTX_ENABLED:
+                    raise WolfCryptError("support for signing without context is disabled")
 
-            if ctx is not None:
-                ctx_bytestype = t2b(ctx)
-                if len(ctx_bytestype) > 255:
-                    raise ValueError(
-                        f"context length {len(ctx_bytestype)} too large: must be 255 or less"
+                if rng is None:
+                    rng = Random()
+                msg_bytestype = t2b(message)
+                in_size = self.sig_size
+                signature = _ffi.new(f"byte[{in_size}]")
+                out_size = _ffi.new("word32 *")
+                out_size[0] = in_size
+
+                if ctx is not None:
+                    ctx_bytestype = t2b(ctx)
+                    if len(ctx_bytestype) > 255:
+                        raise ValueError(f"context length {len(ctx_bytestype)} too large: must be 255 bytes or less")
+                    ret = _lib.wc_dilithium_sign_ctx_msg(
+                        ctx_bytestype,
+                        len(ctx_bytestype),  # length must be < 256 bytes
+                        msg_bytestype,
+                        len(msg_bytestype),
+                        signature,
+                        out_size,
+                        self.native_object,
+                        rng.native_object,
                     )
-                ret = _lib.wc_dilithium_sign_ctx_msg_with_seed(
-                    ctx_bytestype,
-                    len(ctx_bytestype),  # length must be < 256 bytes
-                    msg_bytestype,
-                    len(msg_bytestype),
-                    signature,
-                    out_size,
-                    self.native_object,
-                    seed,
-                )
-                if ret < 0:  # pragma: no cover
-                    raise WolfCryptApiError("wc_dilithium_sign_ctx_msg_with_seed() error", ret)
-            else:
-                ret = _lib.wc_dilithium_sign_msg_with_seed(
-                    msg_bytestype,
-                    len(msg_bytestype),
-                    signature,
-                    out_size,
-                    self.native_object,
-                    seed,
-                )
-                if ret < 0:  # pragma: no cover
-                    raise WolfCryptApiError("wc_dilithium_sign_msg_with_seed() error", ret)
+                    if ret < 0:  # pragma: no cover
+                        raise WolfCryptApiError("wc_dilithium_sign_ctx_msg() error", ret)
+                else:
+                    ret = _lib.wc_dilithium_sign_msg(
+                        msg_bytestype,
+                        len(msg_bytestype),
+                        signature,
+                        out_size,
+                        self.native_object,
+                        rng.native_object,
+                    )
+                    if ret < 0:  # pragma: no cover
+                        raise WolfCryptApiError("wc_dilithium_sign_msg() error", ret)
+
+                if in_size != out_size[0]:
+                    raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
+
+                return _ffi.buffer(signature, out_size[0])[:]
+
+            def sign_with_seed(self, message: BytesOrStr, seed: bytes, ctx: BytesOrStr | None = None) -> bytes:
+                """
+                :param message: message to be signed
+                :type message: bytes or str
+                :param seed: 32-byte seed for deterministic signature generation.
+                :type seed: bytes
+                :param ctx: context, maximum 255 bytes (optional by default but that requires support for no-context
+                    signing/verification compiled in; pass empty string "" for FIPS-204 empty-context signing).
+                :type ctx: bytes or str. None for no-context signing.
+                :return: signature
+                :rtype: bytes
+                """
+                if ctx is None and not _lib.ML_DSA_NO_CTX_ENABLED:
+                    raise WolfCryptError("support for signing without context is disabled")
+
+                msg_bytestype = t2b(message)
+                in_size = self.sig_size
+                signature = _ffi.new(f"byte[{in_size}]")
+                out_size = _ffi.new("word32 *")
+                out_size[0] = in_size
+
+                try:
+                    memoryview(seed)
+                except TypeError as exception:
+                    raise TypeError("seed must support the buffer protocol, such as `bytes` or `bytearray`") from exception
+
+                seed = bytes(seed)
+
+                if len(seed) != ML_DSA_SIGNATURE_SEED_LENGTH:
+                    raise ValueError(f"Seed for generating a signature must be {ML_DSA_SIGNATURE_SEED_LENGTH} bytes.")
+
+                if ctx is not None:
+                    ctx_bytestype = t2b(ctx)
+                    if len(ctx_bytestype) > 255:
+                        raise ValueError(
+                            f"context length {len(ctx_bytestype)} too large: must be 255 or less"
+                        )
+                    ret = _lib.wc_dilithium_sign_ctx_msg_with_seed(
+                        ctx_bytestype,
+                        len(ctx_bytestype),  # length must be < 256 bytes
+                        msg_bytestype,
+                        len(msg_bytestype),
+                        signature,
+                        out_size,
+                        self.native_object,
+                        seed,
+                    )
+                    if ret < 0:  # pragma: no cover
+                        raise WolfCryptApiError("wc_dilithium_sign_ctx_msg_with_seed() error", ret)
+                else:
+                    ret = _lib.wc_dilithium_sign_msg_with_seed(
+                        msg_bytestype,
+                        len(msg_bytestype),
+                        signature,
+                        out_size,
+                        self.native_object,
+                        seed,
+                    )
+                    if ret < 0:  # pragma: no cover
+                        raise WolfCryptApiError("wc_dilithium_sign_msg_with_seed() error", ret)
 
 
-            if in_size != out_size[0]:
-                raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
+                if in_size != out_size[0]:
+                    raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")
 
-            return _ffi.buffer(signature, out_size[0])[:]
+                return _ffi.buffer(signature, out_size[0])[:]
 
     class MlDsaPublic(_MlDsaBase):
-        @property
-        def key_size(self) -> int:
-            """
-            :return: public key size in bytes
-            :rtype: int
-            """
-            return self._pub_key_size
+        if _lib.ML_DSA_PUBLIC_KEY_ENABLED:
+            @property
+            def key_size(self) -> int:
+                """
+                :return: public key size in bytes
+                :rtype: int
+                """
+                return self._pub_key_size
 
-        def decode_key(self, pub_key: BytesOrStr) -> None:
-            """
-            :param pub_key: public key to be imported
-            :type pub_key: bytes or str
-            """
-            self._decode_pub_key(pub_key)
+            def decode_key(self, pub_key: BytesOrStr) -> None:
+                """
+                :param pub_key: public key to be imported
+                :type pub_key: bytes or str
+                """
+                self._decode_pub_key(pub_key)
 
-        def encode_key(self) -> bytes:
-            """
-            :return: exported public key
-            :rtype: bytes
-            """
-            return self._encode_pub_key()
+            def encode_key(self) -> bytes:
+                """
+                :return: exported public key
+                :rtype: bytes
+                """
+                return self._encode_pub_key()

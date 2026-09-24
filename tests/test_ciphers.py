@@ -1601,3 +1601,53 @@ if _lib.ML_KEM_ENABLED:
                     assert hasattr(getattr(module, cls), name) == bool(getattr(_lib, flag)), (disabled, cls, name)
                 for cls, name in ML_KEM_COMMON_METHODS:
                     assert hasattr(getattr(module, cls), name), (disabled, cls, name)
+
+if _lib.ML_DSA_ENABLED:
+    # Method -> whether the wolfSSL operations it needs are compiled in.
+    ML_DSA_GATED_METHODS = {
+        ("MlDsaPublic", "key_size"): lambda: _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPublic", "decode_key"): lambda: _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPublic", "encode_key"): lambda: _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPublic", "sig_size"): lambda: _lib.ML_DSA_SIGN_ENABLED or _lib.ML_DSA_VERIFY_ENABLED,
+        ("MlDsaPublic", "verify"): lambda: _lib.ML_DSA_VERIFY_ENABLED,
+        ("MlDsaPrivate", "make_key"): lambda: _lib.ML_DSA_MAKE_KEY_ENABLED,
+        ("MlDsaPrivate", "make_key_from_seed"): lambda: _lib.ML_DSA_MAKE_KEY_ENABLED,
+        ("MlDsaPrivate", "pub_key_size"): lambda: _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPrivate", "encode_pub_key"): lambda: _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPrivate", "priv_key_size"): lambda: _lib.ML_DSA_PRIVATE_KEY_ENABLED and _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPrivate", "encode_priv_key"): lambda: _lib.ML_DSA_PRIVATE_KEY_ENABLED and _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPrivate", "decode_key"): lambda: _lib.ML_DSA_PRIVATE_KEY_ENABLED,
+        ("MlDsaPrivate", "sig_size"): lambda: _lib.ML_DSA_SIGN_ENABLED or _lib.ML_DSA_VERIFY_ENABLED,
+        ("MlDsaPrivate", "sign"): lambda: _lib.ML_DSA_SIGN_ENABLED,
+        ("MlDsaPrivate", "sign_with_seed"): lambda: _lib.ML_DSA_SIGN_ENABLED,
+        ("MlDsaPrivate", "verify"): lambda: _lib.ML_DSA_VERIFY_ENABLED,
+    }
+
+    @pytest.mark.parametrize("disabled", [
+        (),
+        ("ML_DSA_MAKE_KEY_ENABLED",),
+        ("ML_DSA_SIGN_ENABLED",),
+        ("ML_DSA_VERIFY_ENABLED",),
+        ("ML_DSA_PUBLIC_KEY_ENABLED",),
+        ("ML_DSA_PRIVATE_KEY_ENABLED",),
+        ("ML_DSA_SIGN_ENABLED", "ML_DSA_VERIFY_ENABLED"),
+        ("ML_DSA_MAKE_KEY_ENABLED", "ML_DSA_SIGN_ENABLED", "ML_DSA_PRIVATE_KEY_ENABLED"),
+    ])
+    def test_ml_dsa_methods_defined_only_when_enabled(monkeypatch, disabled):
+        """F-10071: each ML-DSA method needs its wolfSSL operations to be compiled in."""
+        for flag in disabled:
+            monkeypatch.setattr(_lib, flag, 0)
+        # Load a fresh copy of the module as if the operations were not compiled in.
+        module = load_fresh_ciphers()
+        for (cls, name), enabled in ML_DSA_GATED_METHODS.items():
+            assert hasattr(getattr(module, cls), name) == bool(enabled()), (disabled, cls, name)
+
+    def test_ml_dsa_private_decode_needs_public_key_import(monkeypatch):
+        """F-10071: importing the public key part needs ML-DSA public key support."""
+        if not _lib.ML_DSA_PRIVATE_KEY_ENABLED:
+            pytest.skip("ML-DSA private key support not enabled")
+        monkeypatch.setattr(_lib, "ML_DSA_PUBLIC_KEY_ENABLED", 0)
+        module = load_fresh_ciphers()
+        key = module.MlDsaPrivate(module.MlDsaType.ML_DSA_44)
+        with pytest.raises(NotImplementedError, match="ML-DSA public key import is not supported"):
+            key.decode_key(b"\x00" * 16, b"\x00" * 16)

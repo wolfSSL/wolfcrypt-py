@@ -75,6 +75,11 @@ SUBCAPABILITIES = {
     "ML_KEM_MAKE_KEY": "ML_KEM",
     "ML_KEM_ENCAPSULATE": "ML_KEM",
     "ML_KEM_DECAPSULATE": "ML_KEM",
+    "ML_DSA_MAKE_KEY": "ML_DSA",
+    "ML_DSA_SIGN": "ML_DSA",
+    "ML_DSA_VERIFY": "ML_DSA",
+    "ML_DSA_PUBLIC_KEY": "ML_DSA",
+    "ML_DSA_PRIVATE_KEY": "ML_DSA",
 }
 
 
@@ -632,3 +637,83 @@ def test_ml_kem_subsets_need_ml_kem(bf):
     for names in ML_KEM_OPS.values():
         for name in names:
             assert name not in cdef, name
+
+
+ML_DSA_SUBSETS = ("ML_DSA_MAKE_KEY", "ML_DSA_SIGN", "ML_DSA_VERIFY", "ML_DSA_PUBLIC_KEY", "ML_DSA_PRIVATE_KEY")
+# Function -> sub-capabilities that must all be enabled for it.
+ML_DSA_OPS = {
+    "wc_dilithium_make_key(": ("ML_DSA_MAKE_KEY",),
+    "wc_dilithium_make_key_from_seed(": ("ML_DSA_MAKE_KEY",),
+    "wc_dilithium_export_public(": ("ML_DSA_PUBLIC_KEY",),
+    "wc_dilithium_import_public(": ("ML_DSA_PUBLIC_KEY",),
+    "wc_MlDsaKey_GetPubLen(": ("ML_DSA_PUBLIC_KEY",),
+    "wc_dilithium_export_private(": ("ML_DSA_PRIVATE_KEY",),
+    "wc_dilithium_import_private(": ("ML_DSA_PRIVATE_KEY",),
+    "wc_MlDsaKey_GetPrivLen(": ("ML_DSA_PRIVATE_KEY", "ML_DSA_PUBLIC_KEY"),
+    "wc_dilithium_sign_ctx_msg(": ("ML_DSA_SIGN",),
+    "wc_dilithium_sign_ctx_msg_with_seed(": ("ML_DSA_SIGN",),
+    "wc_dilithium_verify_ctx_msg(": ("ML_DSA_VERIFY",),
+}
+ML_DSA_COMMON = ("dilithium_key;", "wc_dilithium_init_ex(", "wc_dilithium_set_level(", "wc_dilithium_free(",
+                 "DILITHIUM_SEED_SZ;", "WC_ML_DSA_44;")
+MLDSA_VERIFY_ONLY = ("ML_DSA_MAKE_KEY", "ML_DSA_SIGN", "ML_DSA_PRIVATE_KEY")
+
+
+@pytest.mark.parametrize(("defines", "disabled"), [
+    ((), ()),
+    (("#define WOLFSSL_MLDSA_VERIFY_ONLY",), MLDSA_VERIFY_ONLY),
+    (("  #define WOLFSSL_MLDSA_VERIFY_ONLY 1",), MLDSA_VERIFY_ONLY),
+    (("#define WOLFSSL_MLDSA_VERIFY_ONLY", "#define WOLFSSL_MLDSA_NO_MAKE_KEY", "#define WOLFSSL_MLDSA_NO_SIGN"),
+     MLDSA_VERIFY_ONLY),
+    (("#define WOLFSSL_MLDSA_NO_MAKE_KEY", "#define WOLFSSL_MLDSA_NO_SIGN"), MLDSA_VERIFY_ONLY),
+    (("#define WOLFSSL_DILITHIUM_VERIFY_ONLY",), MLDSA_VERIFY_ONLY),
+    (("#define WOLFSSL_MLDSA_NO_MAKE_KEY",), ("ML_DSA_MAKE_KEY",)),
+    (("#define WOLFSSL_MLDSA_NO_SIGN",), ("ML_DSA_SIGN",)),
+    (("#define WOLFSSL_DILITHIUM_NO_SIGN",), ("ML_DSA_SIGN",)),
+    (("#define WOLFSSL_MLDSA_NO_VERIFY",), ("ML_DSA_VERIFY",)),
+    (("#define WOLFSSL_DILITHIUM_NO_VERIFY",), ("ML_DSA_VERIFY",)),
+    (("#define WOLFSSL_MLDSA_NO_MAKE_KEY", "#define WOLFSSL_MLDSA_NO_VERIFY"),
+     ("ML_DSA_MAKE_KEY", "ML_DSA_VERIFY", "ML_DSA_PUBLIC_KEY")),
+    (("#define WOLFSSL_MLDSA_NO_MAKE_KEY", "#define WOLFSSL_MLDSA_NO_VERIFY", "#define WOLFSSL_MLDSA_PUBLIC_KEY"),
+     ("ML_DSA_MAKE_KEY", "ML_DSA_VERIFY")),
+    (("#define WOLFSSL_MLDSA_VERIFY_ONLY", "#define WOLFSSL_DILITHIUM_PRIVATE_KEY"),
+     ("ML_DSA_MAKE_KEY", "ML_DSA_SIGN")),
+], ids=["default", "verify-only", "verify-only-indented", "verify-only-configure", "verify-only-derived",
+        "legacy-verify-only", "no-make-key", "no-sign", "legacy-no-sign", "no-verify", "legacy-no-verify",
+        "sign-only", "sign-only-public-key", "verify-only-private-key"])
+@pytest.mark.parametrize("parent", ["#define WOLFSSL_HAVE_MLDSA", "#define HAVE_DILITHIUM"])
+def test_ml_dsa_operations_follow_subset_macros(bf, parent, defines, disabled):
+    features = detect(bf, parent, *defines)
+    assert features["ML_DSA"] == 1
+    for name in ML_DSA_SUBSETS:
+        assert features[name] == (name not in disabled), name
+    cdef = cdef_for(bf, features)
+    for name, needs in ML_DSA_OPS.items():
+        assert (name in cdef) == all(features[n] for n in needs), name
+    assert ("wc_MlDsaKey_GetSigLen(" in cdef) == bool(features["ML_DSA_SIGN"] or features["ML_DSA_VERIFY"])
+    for name in ML_DSA_COMMON:
+        assert name in cdef, name
+
+
+@pytest.mark.parametrize(("defines", "sign", "verify"), [
+    ((), True, True),
+    (("#define WOLFSSL_MLDSA_VERIFY_ONLY",), False, True),
+    (("#define WOLFSSL_MLDSA_NO_VERIFY",), True, False),
+], ids=["default", "verify-only", "no-verify"])
+def test_ml_dsa_no_ctx_operations_follow_subset_macros(bf, defines, sign, verify):
+    features = detect(bf, "#define WOLFSSL_MLDSA_NO_CTX", "#define WOLFSSL_HAVE_MLDSA", *defines)
+    assert features["ML_DSA_NO_CTX"] == 1
+    cdef = cdef_for(bf, features)
+    assert ("wc_dilithium_sign_msg(" in cdef) == sign
+    assert ("wc_dilithium_sign_msg_with_seed(" in cdef) == sign
+    assert ("wc_dilithium_verify_msg(" in cdef) == verify
+
+
+def test_ml_dsa_subsets_need_ml_dsa(bf):
+    features = detect(bf)
+    assert features["ML_DSA"] == 0
+    for name in ML_DSA_SUBSETS:
+        assert features[name] == 0, name
+    cdef = cdef_for(bf, features)
+    for name in (*ML_DSA_OPS, "wc_MlDsaKey_GetSigLen("):
+        assert name not in cdef, name
