@@ -63,6 +63,11 @@ SUBCAPABILITIES = {
     "ECC_DHE": "ECC",
     "ECC_KEY_IMPORT": "ECC",
     "ECC_KEY_EXPORT": "ECC",
+    "ED25519_MAKE_KEY": "ED25519",
+    "ED25519_SIGN": "ED25519",
+    "ED25519_VERIFY": "ED25519",
+    "ED25519_KEY_IMPORT": "ED25519",
+    "ED25519_KEY_EXPORT": "ED25519",
 }
 
 
@@ -468,5 +473,57 @@ def test_ecc_subsets_need_ecc(bf):
         assert features[name] == 0, name
     cdef = cdef_for(bf, features)
     for names in ECC_OPS.values():
+        for name in names:
+            assert name not in cdef, name
+
+
+ED25519_SUBSETS = ("ED25519_MAKE_KEY", "ED25519_SIGN", "ED25519_VERIFY", "ED25519_KEY_IMPORT",
+                   "ED25519_KEY_EXPORT")
+ED25519_OPS = {
+    "ED25519_MAKE_KEY": ("wc_ed25519_make_key(", "wc_ed25519_make_public("),
+    "ED25519_SIGN": ("wc_ed25519_sign_msg(",),
+    "ED25519_VERIFY": ("wc_ed25519_verify_msg(",),
+    "ED25519_KEY_IMPORT": ("wc_Ed25519PrivateKeyDecode(", "wc_Ed25519PublicKeyDecode(",
+                           "wc_ed25519_import_public(", "wc_ed25519_import_private_only(",
+                           "wc_ed25519_import_private_key("),
+    "ED25519_KEY_EXPORT": ("wc_Ed25519KeyToDer(", "wc_Ed25519PublicKeyToDer(", "wc_ed25519_export_public(",
+                           "wc_ed25519_export_private_only(", "wc_ed25519_export_private(",
+                           "wc_ed25519_export_key("),
+}
+ED25519_COMMON = ("ed25519_key;", "wc_ed25519_init(", "wc_ed25519_free(", "wc_ed25519_size(",
+                  "wc_ed25519_sig_size(", "wc_ed25519_check_key(", "wc_ed25519_pub_size(",
+                  "wc_ed25519_priv_size(")
+
+
+@pytest.mark.parametrize(("defines", "disabled"), [
+    ((), ()),
+    (("#define NO_ED25519_SIGN", "#define NO_ED25519_MAKE_KEY"), ("ED25519_SIGN", "ED25519_MAKE_KEY")),
+    (("#define NO_ED25519_SIGN",), ("ED25519_SIGN",)),
+    (("  #define NO_ED25519_SIGN 1",), ("ED25519_SIGN",)),
+    (("#define NO_ED25519_VERIFY",), ("ED25519_VERIFY",)),
+    (("#define NO_ED25519_KEY_IMPORT",), ("ED25519_KEY_IMPORT",)),
+    (("#define NO_ED25519_KEY_EXPORT",), ("ED25519_KEY_EXPORT",)),
+], ids=["default", "no-sign-no-make-key", "no-sign", "no-sign-indented", "no-verify", "no-import",
+        "no-export"])
+def test_ed25519_operations_follow_subset_macros(bf, defines, disabled):
+    features = detect(bf, "#define HAVE_ED25519", *defines)
+    assert features["ED25519"] == 1
+    for name in ED25519_SUBSETS:
+        assert features[name] == (name not in disabled), name
+    cdef = cdef_for(bf, features)
+    for subset, names in ED25519_OPS.items():
+        for name in names:
+            assert (name in cdef) == (subset not in disabled), name
+    for name in ED25519_COMMON:
+        assert name in cdef, name
+
+
+def test_ed25519_subsets_need_ed25519(bf):
+    features = detect(bf)
+    assert features["ED25519"] == 0
+    for name in ED25519_SUBSETS:
+        assert features[name] == 0, name
+    cdef = cdef_for(bf, features)
+    for names in ED25519_OPS.values():
         for name in names:
             assert name not in cdef, name

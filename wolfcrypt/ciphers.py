@@ -1606,61 +1606,66 @@ if _lib.ED25519_ENABLED:
             _Ed25519.__init__(self)
 
             if key:
+                if not _lib.ED25519_KEY_IMPORT_ENABLED:
+                    raise NotImplementedError("Ed25519 key import is not supported by this wolfSSL build")
                 self.decode_key(key)
 
-        def decode_key(self, key: BytesOrStr) -> None:
-            """
-            Decodes an ED25519 public key
-            """
-            key = t2b(key)
-            if len(key) < _lib.wc_ed25519_pub_size(self.native_object):
-                raise WolfCryptError("Key decode error: key too short")
+        if _lib.ED25519_KEY_IMPORT_ENABLED:
+            def decode_key(self, key: BytesOrStr) -> None:
+                """
+                Decodes an ED25519 public key
+                """
+                key = t2b(key)
+                if len(key) < _lib.wc_ed25519_pub_size(self.native_object):
+                    raise WolfCryptError("Key decode error: key too short")
 
-            idx = _ffi.new("word32*")
-            idx[0] = 0
-            ret = _lib.wc_ed25519_import_public(key, len(key),
-                    self.native_object)
-            if ret < 0:
-                raise WolfCryptApiError("Key decode error", ret)
-            if self.size <= 0:  # pragma: no cover
-                raise WolfCryptError(f"Key decode error ({self.size})")
-            if self.max_signature_size <= 0:  # pragma: no cover
-                raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
+                idx = _ffi.new("word32*")
+                idx[0] = 0
+                ret = _lib.wc_ed25519_import_public(key, len(key),
+                        self.native_object)
+                if ret < 0:
+                    raise WolfCryptApiError("Key decode error", ret)
+                if self.size <= 0:  # pragma: no cover
+                    raise WolfCryptError(f"Key decode error ({self.size})")
+                if self.max_signature_size <= 0:  # pragma: no cover
+                    raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
 
-        def encode_key(self) -> bytes:
-            """
-            Encodes the ED25519 public key
+        if _lib.ED25519_KEY_EXPORT_ENABLED:
+            def encode_key(self) -> bytes:
+                """
+                Encodes the ED25519 public key
 
-            Returns the encoded key.
-            """
-            key = _ffi.new(f"byte[{self.size * 4}]")
-            size = _ffi.new("word32[1]")
+                Returns the encoded key.
+                """
+                key = _ffi.new(f"byte[{self.size * 4}]")
+                size = _ffi.new("word32[1]")
 
-            size[0] = _lib.wc_ed25519_pub_size(self.native_object)
+                size[0] = _lib.wc_ed25519_pub_size(self.native_object)
 
-            ret = _lib.wc_ed25519_export_public(self.native_object, key, size)
-            if ret != 0:  # pragma: no cover
-                raise WolfCryptApiError("Key encode error", ret)
+                ret = _lib.wc_ed25519_export_public(self.native_object, key, size)
+                if ret != 0:  # pragma: no cover
+                    raise WolfCryptApiError("Key encode error", ret)
 
-            return _ffi.buffer(key, size[0])[:]
+                return _ffi.buffer(key, size[0])[:]
 
-        def verify(self, signature: bytes, data: BytesOrStr) -> bool:
-            """
-            Verifies **signature**, using the public key data in the object.
+        if _lib.ED25519_VERIFY_ENABLED:
+            def verify(self, signature: bytes, data: BytesOrStr) -> bool:
+                """
+                Verifies **signature**, using the public key data in the object.
 
-            Returns **True** in case of a valid signature, otherwise **False**.
-            """
-            data = t2b(data)
-            status = _ffi.new("int[1]")
+                Returns **True** in case of a valid signature, otherwise **False**.
+                """
+                data = t2b(data)
+                status = _ffi.new("int[1]")
 
-            ret = _lib.wc_ed25519_verify_msg(signature, len(signature),
-                                          data, len(data),
-                                          status, self.native_object)
+                ret = _lib.wc_ed25519_verify_msg(signature, len(signature),
+                                              data, len(data),
+                                              status, self.native_object)
 
-            if ret < 0:
-                raise WolfCryptApiError("Verify error", ret)
+                if ret < 0:
+                    raise WolfCryptApiError("Verify error", ret)
 
-            return status[0] == 1
+                return status[0] == 1
 
 
 
@@ -1670,114 +1675,123 @@ if _lib.ED25519_ENABLED:
 
             self._rng = None
 
+            if key and not _lib.ED25519_KEY_IMPORT_ENABLED:
+                raise NotImplementedError("Ed25519 key import is not supported by this wolfSSL build")
             if key and not pub:
                 self.decode_key(key)
             if key and pub:
                 self.decode_key(key,pub)
 
-        @classmethod
-        def make_key(cls, size: int, rng: Random | None = None) -> Ed25519Private:
-            """
-            Generates a new key pair of desired length **size**.
-            """
-            if rng is None:
-                rng = Random()
-            ed25519 = cls()
+        if _lib.ED25519_MAKE_KEY_ENABLED:
+            @classmethod
+            def make_key(cls, size: int, rng: Random | None = None) -> Ed25519Private:
+                """
+                Generates a new key pair of desired length **size**.
+                """
+                if rng is None:
+                    rng = Random()
+                ed25519 = cls()
 
-            ret = _lib.wc_ed25519_make_key(rng.native_object, size,
-                    ed25519.native_object)
-            if ret < 0:
-                raise WolfCryptApiError("Key generation error", ret)
-
-            # Retain RNG reference defensively; wolfSSL may retain a pointer
-            # internally on some builds.
-            ed25519._rng = rng
-
-            return ed25519
-
-        @override
-        def decode_key(self, key: BytesOrStr, pub: bytes | None = None) -> None:
-            """
-            Decodes an ED25519 private + pub key
-            """
-            key = t2b(key)
-
-            if len(key) < _lib.wc_ed25519_priv_size(self.native_object)/2:
-                raise WolfCryptError("Key decode error: key too short")
-
-            idx = _ffi.new("word32*")
-            idx[0] = 0
-            if pub:
-                ret = _lib.wc_ed25519_import_private_key(key, len(key), pub,
-                        len(pub), self.native_object)
+                ret = _lib.wc_ed25519_make_key(rng.native_object, size,
+                        ed25519.native_object)
                 if ret < 0:
-                    raise WolfCryptApiError("Key decode error", ret)
-            else:
-                ret = _lib.wc_ed25519_import_private_only(key, len(key),
-                        self.native_object)
-                if ret < 0:
-                    raise WolfCryptApiError("Key decode error", ret)
+                    raise WolfCryptApiError("Key generation error", ret)
+
+                # Retain RNG reference defensively; wolfSSL may retain a pointer
+                # internally on some builds.
+                ed25519._rng = rng
+
+                return ed25519
+
+        if _lib.ED25519_KEY_IMPORT_ENABLED:
+            @override
+            def decode_key(self, key: BytesOrStr, pub: bytes | None = None) -> None:
+                """
+                Decodes an ED25519 private + pub key
+                """
+                key = t2b(key)
+
+                if len(key) < _lib.wc_ed25519_priv_size(self.native_object)/2:
+                    raise WolfCryptError("Key decode error: key too short")
+
+                idx = _ffi.new("word32*")
+                idx[0] = 0
+                if pub:
+                    ret = _lib.wc_ed25519_import_private_key(key, len(key), pub,
+                            len(pub), self.native_object)
+                    if ret < 0:
+                        raise WolfCryptApiError("Key decode error", ret)
+                else:
+                    # wolfSSL builds wc_ed25519_make_public only with key generation.
+                    if not _lib.ED25519_MAKE_KEY_ENABLED:
+                        raise NotImplementedError("Deriving the Ed25519 public key is not supported by this wolfSSL build")
+                    ret = _lib.wc_ed25519_import_private_only(key, len(key),
+                            self.native_object)
+                    if ret < 0:
+                        raise WolfCryptApiError("Key decode error", ret)
+                    pubkey = _ffi.new(f"byte[{self.size * 4}]")
+                    ret = _lib.wc_ed25519_make_public(self.native_object, pubkey,
+                            self.size)
+                    if ret < 0:
+                        raise WolfCryptApiError("Public key generate error", ret)
+                    ret = _lib.wc_ed25519_import_public(pubkey, self.size,
+                            self.native_object)
+                    if ret < 0:
+                        raise WolfCryptApiError("Public key import error", ret)
+
+                if self.size <= 0:  # pragma: no cover
+                    raise WolfCryptError(f"Key decode error ({self.size})")
+                if self.max_signature_size <= 0:  # pragma: no cover
+                    raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
+
+        if _lib.ED25519_KEY_EXPORT_ENABLED:
+            @override
+            def encode_key(self) -> tuple[bytes, bytes]:
+                """
+                Encodes the ED25519 private key.
+
+                Returns the encoded key.
+                """
+                key = _ffi.new(f"byte[{self.size * 4}]")
                 pubkey = _ffi.new(f"byte[{self.size * 4}]")
-                ret = _lib.wc_ed25519_make_public(self.native_object, pubkey,
-                        self.size)
-                if ret < 0:
-                    raise WolfCryptApiError("Public key generate error", ret)
-                ret = _lib.wc_ed25519_import_public(pubkey, self.size,
-                        self.native_object)
-                if ret < 0:
-                    raise WolfCryptApiError("Public key import error", ret)
+                priv_size = _ffi.new("word32[1]")
+                pub_size = _ffi.new("word32[1]")
 
-            if self.size <= 0:  # pragma: no cover
-                raise WolfCryptError(f"Key decode error ({self.size})")
-            if self.max_signature_size <= 0:  # pragma: no cover
-                raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
+                priv_size[0] = _lib.wc_ed25519_priv_size(self.native_object)
+                pub_size[0] = _lib.wc_ed25519_pub_size(self.native_object)
 
-        @override
-        def encode_key(self) -> tuple[bytes, bytes]:
-            """
-            Encodes the ED25519 private key.
+                ret = _lib.wc_ed25519_export_private_only(self.native_object,
+                        key, priv_size)
+                if ret != 0:  # pragma: no cover
+                    raise WolfCryptApiError("Private key encode error", ret)
+                ret = _lib.wc_ed25519_export_public(self.native_object, pubkey,
+                        pub_size)
+                if ret != 0:  # pragma: no cover
+                    raise WolfCryptApiError("Public key encode error", ret)
 
-            Returns the encoded key.
-            """
-            key = _ffi.new(f"byte[{self.size * 4}]")
-            pubkey = _ffi.new(f"byte[{self.size * 4}]")
-            priv_size = _ffi.new("word32[1]")
-            pub_size = _ffi.new("word32[1]")
+                return _ffi.buffer(key, priv_size[0])[:], _ffi.buffer(pubkey, pub_size[0])[:]
 
-            priv_size[0] = _lib.wc_ed25519_priv_size(self.native_object)
-            pub_size[0] = _lib.wc_ed25519_pub_size(self.native_object)
+        if _lib.ED25519_SIGN_ENABLED:
+            def sign(self, plaintext: BytesOrStr) -> bytes:
+                """
+                Signs **plaintext**, using the private key data in the object.
 
-            ret = _lib.wc_ed25519_export_private_only(self.native_object,
-                    key, priv_size)
-            if ret != 0:  # pragma: no cover
-                raise WolfCryptApiError("Private key encode error", ret)
-            ret = _lib.wc_ed25519_export_public(self.native_object, pubkey,
-                    pub_size)
-            if ret != 0:  # pragma: no cover
-                raise WolfCryptApiError("Public key encode error", ret)
+                Returns the signature.
+                """
+                plaintext = t2b(plaintext)
+                signature = _ffi.new(f"byte[{self.max_signature_size}]")
 
-            return _ffi.buffer(key, priv_size[0])[:], _ffi.buffer(pubkey, pub_size[0])[:]
+                signature_size = _ffi.new("word32[1]")
+                signature_size[0] = self.max_signature_size
 
-        def sign(self, plaintext: BytesOrStr) -> bytes:
-            """
-            Signs **plaintext**, using the private key data in the object.
+                ret = _lib.wc_ed25519_sign_msg(plaintext, len(plaintext),
+                                            signature, signature_size,
+                                            self.native_object)
 
-            Returns the signature.
-            """
-            plaintext = t2b(plaintext)
-            signature = _ffi.new(f"byte[{self.max_signature_size}]")
+                if ret != 0:  # pragma: no cover
+                    raise WolfCryptApiError("Signature error", ret)
 
-            signature_size = _ffi.new("word32[1]")
-            signature_size[0] = self.max_signature_size
-
-            ret = _lib.wc_ed25519_sign_msg(plaintext, len(plaintext),
-                                        signature, signature_size,
-                                        self.native_object)
-
-            if ret != 0:  # pragma: no cover
-                raise WolfCryptApiError("Signature error", ret)
-
-            return _ffi.buffer(signature, signature_size[0])[:]
+                return _ffi.buffer(signature, signature_size[0])[:]
 
 if _lib.ED448_ENABLED:
     class _Ed448:  # pylint: disable=too-few-public-methods

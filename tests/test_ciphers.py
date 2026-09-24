@@ -910,6 +910,15 @@ if _lib.ECC_ENABLED:
         assert key.shared_secret(pub_key)
 
 if _lib.ED25519_ENABLED:
+    needs_ed25519_make_key = pytest.mark.skipif(not _lib.ED25519_MAKE_KEY_ENABLED,
+                                                reason="Ed25519 key generation not enabled")
+    needs_ed25519_import = pytest.mark.skipif(not _lib.ED25519_KEY_IMPORT_ENABLED,
+                                              reason="Ed25519 key import not enabled")
+    needs_ed25519_export = pytest.mark.skipif(not _lib.ED25519_KEY_EXPORT_ENABLED,
+                                              reason="Ed25519 key export not enabled")
+    needs_ed25519_sign_verify = pytest.mark.skipif(not (_lib.ED25519_SIGN_ENABLED and _lib.ED25519_VERIFY_ENABLED),
+                                                   reason="Ed25519 signing or verification not enabled")
+
     @pytest.fixture
     def ed25519_private(vectors):
         return Ed25519Private(vectors[Ed25519Private].key, vectors[Ed25519Public].key)
@@ -920,6 +929,8 @@ if _lib.ED25519_ENABLED:
         return Ed25519Public(vectors[Ed25519Public].key)
 
 
+    @needs_ed25519_import
+    @needs_ed25519_make_key
     def test_new_ed25519_raises(vectors):
         with pytest.raises(WolfCryptError):
             Ed25519Private(vectors[Ed25519Private].key[:-1])  # invalid key length
@@ -932,6 +943,9 @@ if _lib.ED25519_ENABLED:
                 Ed25519Private.make_key(1024)
 
 
+    @needs_ed25519_import
+    @needs_ed25519_export
+    @needs_ed25519_make_key
     def test_ed25519_key_encoding(vectors):
         priv = Ed25519Private()
         pub = Ed25519Public()
@@ -944,6 +958,8 @@ if _lib.ED25519_ENABLED:
         assert pub.encode_key() == vectors[Ed25519Public].key
 
 
+    @needs_ed25519_import
+    @needs_ed25519_sign_verify
     def test_ed25519_sign_verify(ed25519_private, ed25519_public):
         plaintext = "Everyone gets Friday off."
 
@@ -1462,3 +1478,46 @@ if _lib.ECC_ENABLED:
             with pytest.raises(NotImplementedError, match="ECC key import is not supported"):
                 cls(vectors[cls].key)
             assert cls().size == 0, cls
+
+if _lib.ED25519_ENABLED:
+    # Method -> flag of the wolfSSL operation it needs.
+    ED25519_GATED_METHODS = {
+        ("Ed25519Public", "decode_key"): "ED25519_KEY_IMPORT_ENABLED",
+        ("Ed25519Public", "encode_key"): "ED25519_KEY_EXPORT_ENABLED",
+        ("Ed25519Public", "verify"): "ED25519_VERIFY_ENABLED",
+        ("Ed25519Private", "make_key"): "ED25519_MAKE_KEY_ENABLED",
+        ("Ed25519Private", "decode_key"): "ED25519_KEY_IMPORT_ENABLED",
+        ("Ed25519Private", "encode_key"): "ED25519_KEY_EXPORT_ENABLED",
+        ("Ed25519Private", "sign"): "ED25519_SIGN_ENABLED",
+    }
+
+    def test_ed25519_methods_defined_only_when_enabled(monkeypatch):
+        """F-12229: each Ed25519 method needs its wolfSSL operation to be compiled in."""
+        for (cls, name), flag in ED25519_GATED_METHODS.items():
+            assert hasattr(getattr(ciphers, cls), name) == bool(getattr(_lib, flag)), (cls, name)
+
+        # Load fresh copies of the module as if one operation were not compiled in.
+        for disabled in set(ED25519_GATED_METHODS.values()):
+            with monkeypatch.context() as m:
+                m.setattr(_lib, disabled, 0)
+                module = load_fresh_ciphers()
+                for (cls, name), flag in ED25519_GATED_METHODS.items():
+                    assert hasattr(getattr(module, cls), name) == bool(getattr(_lib, flag)), (disabled, cls, name)
+
+    def test_ed25519_key_rejected_without_key_import(monkeypatch, vectors):
+        """F-12229: loading a key needs Ed25519 key import in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "ED25519_KEY_IMPORT_ENABLED", 0)
+        for cls in (Ed25519Public, Ed25519Private):
+            with pytest.raises(NotImplementedError, match="Ed25519 key import is not supported"):
+                cls(vectors[cls].key)
+            cls()
+        with pytest.raises(NotImplementedError, match="Ed25519 key import is not supported"):
+            Ed25519Private(vectors[Ed25519Private].key, vectors[Ed25519Public].key)
+
+    @needs_ed25519_import
+    def test_ed25519_private_only_key_needs_make_key(monkeypatch, vectors):
+        """F-12229: deriving the public key needs wc_ed25519_make_public."""
+        monkeypatch.setattr(_lib, "ED25519_MAKE_KEY_ENABLED", 0)
+        with pytest.raises(NotImplementedError, match="Deriving the Ed25519 public key is not supported"):
+            Ed25519Private(vectors[Ed25519Private].key)
+        Ed25519Private(vectors[Ed25519Private].key, vectors[Ed25519Public].key)

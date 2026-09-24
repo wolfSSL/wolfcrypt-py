@@ -485,6 +485,9 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     features["ECC_KEY_IMPORT"] = 1 if ecc and not defined("NO_ECC_KEY_IMPORT") else 0
     features["ECC_KEY_EXPORT"] = 1 if ecc and not defined("NO_ECC_KEY_EXPORT") and (
         defined("WOLFSSL_SP_MATH") or not defined("NO_BIG_INT")) else 0
+    # settings.h derives the Ed25519 operations unless NO_ED25519_<op>.
+    for op in ("MAKE_KEY", "SIGN", "VERIFY", "KEY_IMPORT", "KEY_EXPORT"):
+        features[f"ED25519_{op}"] = 1 if features["ED25519"] and not defined(f"NO_ED25519_{op}") else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -643,6 +646,11 @@ def make_source(features):
         int ECC_DHE_ENABLED = {features["ECC_DHE"]};
         int ECC_KEY_IMPORT_ENABLED = {features["ECC_KEY_IMPORT"]};
         int ECC_KEY_EXPORT_ENABLED = {features["ECC_KEY_EXPORT"]};
+        int ED25519_MAKE_KEY_ENABLED = {features["ED25519_MAKE_KEY"]};
+        int ED25519_SIGN_ENABLED = {features["ED25519_SIGN"]};
+        int ED25519_VERIFY_ENABLED = {features["ED25519_VERIFY"]};
+        int ED25519_KEY_IMPORT_ENABLED = {features["ED25519_KEY_IMPORT"]};
+        int ED25519_KEY_EXPORT_ENABLED = {features["ED25519_KEY_EXPORT"]};
     """
 
     return init_source_string
@@ -716,6 +724,11 @@ def make_cdef(features):
         extern int ECC_DHE_ENABLED;
         extern int ECC_KEY_IMPORT_ENABLED;
         extern int ECC_KEY_EXPORT_ENABLED;
+        extern int ED25519_MAKE_KEY_ENABLED;
+        extern int ED25519_SIGN_ENABLED;
+        extern int ED25519_VERIFY_ENABLED;
+        extern int ED25519_KEY_IMPORT_ENABLED;
+        extern int ED25519_KEY_EXPORT_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -1372,33 +1385,51 @@ def make_cdef(features):
         int wc_ed25519_init(ed25519_key* ed25519);
         void wc_ed25519_free(ed25519_key* ed25519);
 
-        int wc_ed25519_make_key(WC_RNG* rng, int keysize, ed25519_key* key);
-        int wc_ed25519_make_public(ed25519_key* key, unsigned char* pubKey,
-                               word32 pubKeySz);
         int wc_ed25519_size(ed25519_key* key);
         int wc_ed25519_sig_size(ed25519_key* key);
-        int wc_ed25519_sign_msg(const byte* in, word32 inlen, byte* out,
-                            word32 *outlen, ed25519_key* key);
-        int wc_ed25519_verify_msg(const byte* sig, word32 siglen, const byte* msg,
-                              word32 msglen, int* stat, ed25519_key* key);
-        int wc_Ed25519PrivateKeyDecode(const byte*, word32*, ed25519_key*, word32);
-        int wc_Ed25519KeyToDer(ed25519_key*, byte* output, word32 inLen);
-
-        int wc_Ed25519PublicKeyDecode(const byte*, word32*, ed25519_key*, word32);
-        int wc_Ed25519PublicKeyToDer(ed25519_key*, byte* output,
-                                 word32 inLen, int with_AlgCurve);
-
-        int wc_ed25519_import_public(const byte* in, word32 inLen, ed25519_key* key);
-        int wc_ed25519_import_private_only(const byte* priv, word32 privSz, ed25519_key* key);
-        int wc_ed25519_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed25519_key* key);
-        int wc_ed25519_export_public(ed25519_key*, byte* out, word32* outLen);
-        int wc_ed25519_export_private_only(ed25519_key* key, byte* out, word32* outLen);
-        int wc_ed25519_export_private(ed25519_key* key, byte* out, word32* outLen);
-        int wc_ed25519_export_key(ed25519_key* key, byte* priv, word32 *privSz, byte* pub, word32 *pubSz);
         int wc_ed25519_check_key(ed25519_key* key);
         int wc_ed25519_pub_size(ed25519_key* key);
         int wc_ed25519_priv_size(ed25519_key* key);
         """
+
+        if features["ED25519_MAKE_KEY"]:
+            cdef += """
+            int wc_ed25519_make_key(WC_RNG* rng, int keysize, ed25519_key* key);
+            int wc_ed25519_make_public(ed25519_key* key, unsigned char* pubKey,
+                                   word32 pubKeySz);
+            """
+
+        if features["ED25519_SIGN"]:
+            cdef += """
+            int wc_ed25519_sign_msg(const byte* in, word32 inlen, byte* out,
+                                word32 *outlen, ed25519_key* key);
+            """
+
+        if features["ED25519_VERIFY"]:
+            cdef += """
+            int wc_ed25519_verify_msg(const byte* sig, word32 siglen, const byte* msg,
+                                  word32 msglen, int* stat, ed25519_key* key);
+            """
+
+        if features["ED25519_KEY_IMPORT"]:
+            cdef += """
+            int wc_Ed25519PrivateKeyDecode(const byte*, word32*, ed25519_key*, word32);
+            int wc_Ed25519PublicKeyDecode(const byte*, word32*, ed25519_key*, word32);
+            int wc_ed25519_import_public(const byte* in, word32 inLen, ed25519_key* key);
+            int wc_ed25519_import_private_only(const byte* priv, word32 privSz, ed25519_key* key);
+            int wc_ed25519_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed25519_key* key);
+            """
+
+        if features["ED25519_KEY_EXPORT"]:
+            cdef += """
+            int wc_Ed25519KeyToDer(ed25519_key*, byte* output, word32 inLen);
+            int wc_Ed25519PublicKeyToDer(ed25519_key*, byte* output,
+                                     word32 inLen, int with_AlgCurve);
+            int wc_ed25519_export_public(ed25519_key*, byte* out, word32* outLen);
+            int wc_ed25519_export_private_only(ed25519_key* key, byte* out, word32* outLen);
+            int wc_ed25519_export_private(ed25519_key* key, byte* out, word32* outLen);
+            int wc_ed25519_export_key(ed25519_key* key, byte* priv, word32 *privSz, byte* pub, word32 *pubSz);
+            """
 
     if features["ED448"]:
         cdef += """
@@ -1791,6 +1822,11 @@ def default_features():
         "ECC_DHE": 1,
         "ECC_KEY_IMPORT": 1,
         "ECC_KEY_EXPORT": 1,
+        "ED25519_MAKE_KEY": 1,
+        "ED25519_SIGN": 1,
+        "ED25519_VERIFY": 1,
+        "ED25519_KEY_IMPORT": 1,
+        "ED25519_KEY_EXPORT": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
