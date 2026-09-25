@@ -188,7 +188,8 @@ def make_flags(prefix, fips):
     else:
         flags = []
 
-        if get_platform() in ["linux-x86_64", "linux-i686"]:
+        # The static lib is linked into the shared extension.
+        if get_platform().startswith("linux"):
             flags.append("CFLAGS=-fPIC")
 
         # install location

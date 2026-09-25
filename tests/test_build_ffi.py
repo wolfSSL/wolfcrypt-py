@@ -28,6 +28,8 @@ Nothing here builds wolfSSL or compiles C code.
 import importlib.util
 import os
 import re
+import shlex
+import sys
 
 import pytest
 from cffi import FFI
@@ -187,6 +189,17 @@ def test_detection_matches_indented_defines_with_values(bf):
     assert detect(bf, "  #  define WOLFSSL_AES_COUNTER 1 /* CTR */")["AES_CTR"] == 1
     assert detect(bf, "/* #define WOLFSSL_AES_COUNTER */")["AES_CTR"] == 0
     assert detect(bf, "#define WOLFSSL_AES_COUNTER_X")["AES_CTR"] == 0
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="configure flags are not used on Windows")
+@pytest.mark.parametrize("platform", [
+    "linux-x86_64", "linux-i686", "linux-aarch64", "linux-armv7l",
+    "linux-ppc64le", "linux-s390x", "linux-riscv64"])
+def test_make_flags_builds_pic_on_linux(bf, monkeypatch, platform):
+    """The bundled static wolfSSL is linked into the shared extension, so it
+    must be position independent on every Linux architecture."""
+    monkeypatch.setattr(bf, "get_platform", lambda: platform)
+    assert "CFLAGS=-fPIC" in shlex.split(bf.make_flags("/prefix", False))
 
 
 def test_aes_ctr_needs_aes_counter(bf):
