@@ -709,6 +709,14 @@ def test_ml_dsa_no_ctx_operations_follow_subset_macros(bf, defines, sign, verify
     assert ("wc_dilithium_verify_msg(" in cdef) == verify
 
 
+@pytest.mark.parametrize("name", ["WOLFSSL_MLDSA_NO_CTX", "WOLFSSL_MLDSA_FIPS204_DRAFT",
+                                  "WOLFSSL_DILITHIUM_NO_CTX", "WOLFSSL_DILITHIUM_FIPS204_DRAFT"])
+def test_ml_dsa_no_ctx_macro_on_last_line(bf, name):
+    """F-13023: the no-context macro is found when nothing follows it."""
+    assert detect(bf, "#define WOLFSSL_HAVE_MLDSA", f"#define {name}")["ML_DSA_NO_CTX"] == 1
+    assert detect(bf, "#define WOLFSSL_HAVE_MLDSA", f"#define {name}_X")["ML_DSA_NO_CTX"] == 0
+
+
 def test_ml_dsa_subsets_need_ml_dsa(bf):
     features = detect(bf)
     assert features["ML_DSA"] == 0
