@@ -1293,7 +1293,8 @@ def make_cdef(features):
 
     if features["ECC"]:
         cdef += """
-        typedef struct {...; } ecc_key;
+        typedef struct { int type; ...; } ecc_key;
+        static const int ECC_PRIVATEKEY;
 
         int wc_ecc_init(ecc_key* ecc);
         void wc_ecc_free(ecc_key* ecc);

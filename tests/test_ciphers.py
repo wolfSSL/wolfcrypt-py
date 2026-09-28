@@ -797,6 +797,31 @@ if _lib.ECC_ENABLED:
             EccPublic(der[:-1] + bytes([der[-1] ^ 1]))
 
 
+    @needs_ecc_import
+    def test_ecc_private_import_rejects_off_curve_point(vectors):
+        """
+        decode_key_raw and decode_key of EccPrivate reject a public point
+        that is not on the curve, as EccPublic does.
+        """
+        key = vectors[EccPrivate].raw_key
+        qx, qy, d = key[0:32], key[32:64], key[64:96]
+        with pytest.raises(WolfCryptApiError):
+            EccPrivate().decode_key_raw(qx, qy[:-1] + bytes([qy[-1] ^ 1]), d)
+
+        der = vectors[EccPrivate].key
+        with pytest.raises(WolfCryptApiError):
+            EccPrivate(der[:-1] + bytes([der[-1] ^ 1]))
+
+
+    @needs_ecc_import
+    def test_ecc_private_key_without_public_key(vectors):
+        """The public key is optional in an ECPrivateKey."""
+        der = vectors[EccPrivate].key
+        # Drop the trailing [1] publicKey field and fix the SEQUENCE length.
+        assert der[:2] == b"\x30\x77" and der[51] == 0xa1
+        assert EccPrivate(b"\x30\x31" + der[2:51]).size == 32
+
+
 
     @needs_ecc_import
     @needs_ecc_export

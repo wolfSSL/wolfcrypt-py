@@ -1413,6 +1413,9 @@ if _lib.ECC_ENABLED:
                     raise WolfCryptError(f"Key decode error {self.size}")
                 if self.max_signature_size <= 0:  # pragma: no cover
                     raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
+                # The public key is optional in an ECPrivateKey.
+                if self.native_object.type == _lib.ECC_PRIVATEKEY:
+                    self._check_key()
 
             @override
             def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, d: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
@@ -1435,6 +1438,7 @@ if _lib.ECC_ENABLED:
                         curve_id)
                 if ret != 0:
                     raise WolfCryptApiError("Key decode error", ret)
+                self._check_key()
 
         if _lib.ECC_KEY_EXPORT_ENABLED:
             @override
