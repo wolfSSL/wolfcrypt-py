@@ -416,8 +416,7 @@ def detect_features(defines, features, fips=False, include_dirs=()):
         "WOLFSSL_DILITHIUM_NO_CTX",
         "WOLFSSL_DILITHIUM_FIPS204_DRAFT",
     ]
-    have_mldsa_no_context_support = re.search(r'#define\s+(' + '|'.join(mldsa_no_context_defines) + r')\s+', '\n'.join(defines))
-    features["ML_DSA_NO_CTX"] = 1 if have_mldsa_no_context_support else 0
+    features["ML_DSA_NO_CTX"] = 1 if any(defined(name) for name in mldsa_no_context_defines) else 0
     features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM' in defines else 0
     # hmac.h and hmac.c provide HKDF only without NO_HMAC.
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines and features["HMAC"] else 0
