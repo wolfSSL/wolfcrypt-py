@@ -132,6 +132,57 @@ def test_reference_configs_enable_all_subcapabilities(bf, config):
     assert features["RNG"] == 1
 
 
+# options.h macro -> (feature, its value when the macro is defined)
+BASE_FEATURE_MACROS = {
+    "WOLFSSL_PUBLIC_MP": ("MPAPI", 1),
+    "NO_SHA": ("SHA", 0),
+    "NO_SHA256": ("SHA256", 0),
+    "WOLFSSL_SHA384": ("SHA384", 1),
+    "WOLFSSL_SHA512": ("SHA512", 1),
+    "WOLFSSL_SHA3": ("SHA3", 1),
+    "NO_DES3": ("DES3", 0),
+    "NO_AES": ("AES", 0),
+    "WOLFSSL_AES_SIV": ("AES_SIV", 1),
+    "HAVE_CHACHA": ("CHACHA", 1),
+    "NO_HMAC": ("HMAC", 0),
+    "NO_RSA": ("RSA", 0),
+    "ECC_TIMING_RESISTANT": ("ECC_TIMING_RESISTANCE", 1),
+    "WC_RSA_BLINDING": ("RSA_BLINDING", 1),
+    "HAVE_ECC": ("ECC", 1),
+    "HAVE_ED25519": ("ED25519", 1),
+    "HAVE_ED448": ("ED448", 1),
+    "WOLFSSL_KEY_GEN": ("KEYGEN", 1),
+    "NO_PWDBASED": ("PWDBASED", 0),
+    "NO_ERROR_STRINGS": ("ERROR_STRINGS", 0),
+    "NO_ASN": ("ASN", 0),
+    "WC_RNG_SEED_CB": ("WC_RNG_SEED_CB", 1),
+    "WOLFSSL_AESGCM_STREAM": ("AESGCM_STREAM", 1),
+    "WC_RSA_PSS": ("RSA_PSS", 1),
+    "HAVE_DILITHIUM": ("ML_DSA", 1),
+    "WOLFSSL_HAVE_MLDSA": ("ML_DSA", 1),
+    "WOLFSSL_HAVE_MLKEM": ("ML_KEM", 1),
+    "HAVE_HKDF": ("HKDF", 1),
+    "WC_NO_HASHDRBG": ("HASHDRBG", 0),
+    "CUSTOM_RAND_GENERATE_BLOCK": ("HASHDRBG", 0),
+}
+
+
+@pytest.mark.parametrize("form", ["#define {}", "  #  define {}", "#define {} 1", "#define {} /* on */"],
+                         ids=["plain", "indented", "value", "comment"])
+def test_base_features_match_any_define_form(bf, form):
+    """F-8281: a feature macro counts whatever its indentation, value or comment."""
+    for macro, (feature, value) in BASE_FEATURE_MACROS.items():
+        assert detect(bf)[feature] == 1 - value, macro
+        assert detect(bf, form.format(macro))[feature] == value, macro
+        assert detect(bf, form.format(macro + "_X"))[feature] == 1 - value, macro
+        assert detect(bf, "/* " + form.format(macro) + " */")[feature] == 1 - value, macro
+    lines = (form.format("HAVE_CHACHA"), form.format("HAVE_POLY1305"))
+    assert detect(bf, *lines)["CHACHA20_POLY1305"] == 1
+    features = detect(bf, form.format("HAVE_FIPS"), "#define HAVE_FIPS_VERSION 5", fips=True)
+    assert features["FIPS"] == 1
+    assert features["FIPS_VERSION"] == 5
+
+
 def test_detection_matches_indented_defines_with_values(bf):
     assert detect(bf, "  #  define WOLFSSL_AES_COUNTER 1 /* CTR */")["AES_CTR"] == 1
     assert detect(bf, "/* #define WOLFSSL_AES_COUNTER */")["AES_CTR"] == 0
