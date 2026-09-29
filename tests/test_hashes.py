@@ -84,7 +84,7 @@ def vectors():
                        "e8fff55e644ee8a106aae19c07f91b3f"
                        "2a2a6d40dfa7302c0fa6a1a9a5bfa03f")
         )
-    if _lib.SHA3_ENABLED:
+    if _lib.SHA3_ENABLED and _lib.SHA3_384_ENABLED:
         vectorArray[Sha3]=TestVector(
             digest=t2b("6170dedf06f83c3305ec18b7558384a5"
                        "a62d86e42c143d416aaec32f971986c1"
@@ -124,7 +124,7 @@ if _lib.SHA384_ENABLED:
     hash_params.append(Sha384)   # ty: ignore[possibly-unresolved-reference]
 if _lib.SHA512_ENABLED:
     hash_params.append(Sha512)   # ty: ignore[possibly-unresolved-reference]
-if _lib.SHA3_ENABLED:
+if _lib.SHA3_ENABLED and _lib.SHA3_384_ENABLED:
     hash_params.append(Sha3)   # ty: ignore[possibly-unresolved-reference]
 
 hmac_params = []
@@ -218,3 +218,22 @@ def test_hash_copy_destroy_lifecycle(hash_cls, vectors):
         assert c.hexdigest() == digest
         del c
     gc.collect()
+
+
+if _lib.SHA3_ENABLED:
+    SHA3_FLAGS = {
+        28: "SHA3_224_ENABLED",
+        32: "SHA3_256_ENABLED",
+        48: "SHA3_384_ENABLED",
+        64: "SHA3_512_ENABLED",
+    }
+
+    @pytest.mark.parametrize("size", sorted(SHA3_FLAGS))
+    def test_sha3_size_not_compiled_in(monkeypatch, size):
+        """F-12226: a SHA-3 size missing from the linked wolfSSL raises NotImplementedError."""
+        monkeypatch.setattr(_lib, SHA3_FLAGS[size], 0)
+        with pytest.raises(NotImplementedError, match="SHA3"):
+            Sha3("wolfcrypt", size)   # ty: ignore[possibly-unresolved-reference]
+        for other, flag in SHA3_FLAGS.items():
+            if other != size and getattr(_lib, flag):
+                assert len(Sha3("wolfcrypt", other).digest()) == other   # ty: ignore[possibly-unresolved-reference]

@@ -32,6 +32,8 @@ from wolfcrypt.exceptions import WolfCryptApiError
 from wolfcrypt.utils import t2b, b2h, BytesOrStr
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from _cffi_backend import FFI
 
 
@@ -323,19 +325,22 @@ if _lib.SHA3_ENABLED:
         SHA3_384_DIGEST_SIZE = 48
         SHA3_512_DIGEST_SIZE = 64
 
-        _SHA3_FREE = {
-            28: _lib.wc_Sha3_224_Free,
-            32: _lib.wc_Sha3_256_Free,
-            48: _lib.wc_Sha3_384_Free,
-            64: _lib.wc_Sha3_512_Free,
-        }
-
-        _SHA3_COPY = {
-            28: _lib.wc_Sha3_224_Copy,
-            32: _lib.wc_Sha3_256_Copy,
-            48: _lib.wc_Sha3_384_Copy,
-            64: _lib.wc_Sha3_512_Copy,
-        }
+        _SHA3_FREE: dict[int, Callable[[FFI.CData], None]] = {}
+        _SHA3_COPY: dict[int, Callable[[FFI.CData, FFI.CData], int]] = {}
+        if _lib.SHA3_224_ENABLED:
+            _SHA3_FREE[28] = _lib.wc_Sha3_224_Free
+            _SHA3_COPY[28] = _lib.wc_Sha3_224_Copy
+        if _lib.SHA3_256_ENABLED:
+            _SHA3_FREE[32] = _lib.wc_Sha3_256_Free
+            _SHA3_COPY[32] = _lib.wc_Sha3_256_Copy
+        if _lib.SHA3_384_ENABLED:
+            _SHA3_FREE[48] = _lib.wc_Sha3_384_Free
+            _SHA3_COPY[48] = _lib.wc_Sha3_384_Copy
+        if _lib.SHA3_512_ENABLED:
+            _SHA3_FREE[64] = _lib.wc_Sha3_512_Free
+            _SHA3_COPY[64] = _lib.wc_Sha3_512_Copy
+        _SHA3_FLAGS = {28: "SHA3_224_ENABLED", 32: "SHA3_256_ENABLED",
+                       48: "SHA3_384_ENABLED", 64: "SHA3_512_ENABLED"}
 
         def __del__(self) -> None:
             # Unlike the SHA-1/2 classes, Sha3's _delete is set per-instance
@@ -350,6 +355,9 @@ if _lib.SHA3_ENABLED:
                 self._delete(self._native_object)
 
         def __init__(self, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE) -> None:  # pylint: disable=W0231
+            flag = self._SHA3_FLAGS.get(size)
+            if flag is not None and not getattr(_lib, flag):
+                raise NotImplementedError(f"SHA3-{size * 8} is not supported by this wolfSSL build")
             self._native_object = _ffi.new(self._native_type)
             self._shallow_copy = False
             self.digest_size = size
@@ -393,37 +401,37 @@ if _lib.SHA3_ENABLED:
 
         @override
         def _init(self) -> int:
-            if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE and _lib.SHA3_224_ENABLED:
                 return _lib.wc_InitSha3_224(self._native_object, _ffi.NULL, 0)
-            if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE and _lib.SHA3_256_ENABLED:
                 return _lib.wc_InitSha3_256(self._native_object, _ffi.NULL, 0)
-            if self.digest_size == Sha3.SHA3_384_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_384_DIGEST_SIZE and _lib.SHA3_384_ENABLED:
                 return _lib.wc_InitSha3_384(self._native_object, _ffi.NULL, 0)
-            if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE and _lib.SHA3_512_ENABLED:
                 return _lib.wc_InitSha3_512(self._native_object, _ffi.NULL, 0)
             return -1
 
         @override
         def _update(self, data: bytes) -> int:
-            if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE and _lib.SHA3_224_ENABLED:
                 return _lib.wc_Sha3_224_Update(self._native_object, data, len(data))
-            if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE and _lib.SHA3_256_ENABLED:
                 return _lib.wc_Sha3_256_Update(self._native_object, data, len(data))
-            if self.digest_size == Sha3.SHA3_384_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_384_DIGEST_SIZE and _lib.SHA3_384_ENABLED:
                 return _lib.wc_Sha3_384_Update(self._native_object, data, len(data))
-            if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE and _lib.SHA3_512_ENABLED:
                 return _lib.wc_Sha3_512_Update(self._native_object, data, len(data))
             return -1
 
         @override
         def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
-            if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE and _lib.SHA3_224_ENABLED:
                 return _lib.wc_Sha3_224_Final(obj, ret)
-            if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE and _lib.SHA3_256_ENABLED:
                 return _lib.wc_Sha3_256_Final(obj, ret)
-            if self.digest_size == Sha3.SHA3_384_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_384_DIGEST_SIZE and _lib.SHA3_384_ENABLED:
                 return _lib.wc_Sha3_384_Final(obj, ret)
-            if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
+            if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE and _lib.SHA3_512_ENABLED:
                 return _lib.wc_Sha3_512_Final(obj, ret)
             return -1
 

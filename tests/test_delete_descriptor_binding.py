@@ -51,8 +51,9 @@ from wolfcrypt._ffi import lib as _lib
 
 def _static_attrs():
     """Yield (cls, attr_name) pairs that must be staticmethod-wrapped."""
-    from wolfcrypt.random import Random
-    yield Random, "_delete"
+    if _lib.RNG_ENABLED:
+        from wolfcrypt.random import Random
+        yield Random, "_delete"
 
     if _lib.SHA_ENABLED:
         from wolfcrypt.hashes import Sha  # ty: ignore[possibly-missing-import]
@@ -151,6 +152,7 @@ def test_descriptor_binding_semantics_documentation():
     )
 
 
+@pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
 def test_random_delete_receives_only_native_object():
     """End-to-end behavioral check on the real ``Random`` class.
 

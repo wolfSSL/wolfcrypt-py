@@ -27,6 +27,8 @@ from wolfcrypt.random import Random
 
 @pytest.fixture
 def rng():
+    if not _lib.RNG_ENABLED:
+        pytest.skip("RNG not enabled")
     return Random()
 
 
@@ -42,6 +44,8 @@ def test_bytes(rng):
 
 @pytest.fixture
 def rng_nonce():
+    if not _lib.RNG_ENABLED:
+        pytest.skip("RNG not enabled")
     return Random(b"abcdefghijklmnopqrstuv")
 
 
@@ -80,3 +84,10 @@ def test_reseed_multiple(rng):
 
     # Pull some bytes from the random number generator to test that it still works.
     rng.bytes(100)
+
+
+def test_random_rejected_when_not_compiled_in(monkeypatch):
+    """F-13021: Random needs the RNG API in the linked wolfSSL."""
+    monkeypatch.setattr(_lib, "RNG_ENABLED", 0)
+    with pytest.raises(NotImplementedError, match="RNG is not supported"):
+        Random()

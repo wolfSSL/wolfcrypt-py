@@ -21,18 +21,31 @@
 # pylint: disable=redefined-outer-name
 # ty: ignore[possibly-missing-import]
 
+import hashlib
+import importlib.util
 import os
 import random
 from collections import namedtuple
 
 import pytest
 
+from wolfcrypt import ciphers
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.ciphers import MODE_CBC, MODE_CTR, MODE_ECB, WolfCryptError
+from wolfcrypt.exceptions import WolfCryptApiError
 from wolfcrypt.random import Random
 from wolfcrypt.utils import h2b, t2b
 
 certs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "certs")
+
+
+def load_fresh_ciphers():
+    """Load a fresh copy of wolfcrypt.ciphers, e.g. with _lib flags patched."""
+    spec = importlib.util.find_spec("wolfcrypt.ciphers")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
 
 if _lib.DES3_ENABLED:
     from wolfcrypt.ciphers import Des3
@@ -50,7 +63,7 @@ if _lib.RSA_ENABLED:
     from wolfcrypt.ciphers import HASH_TYPE_SHA, HASH_TYPE_SHA256, RsaPrivate, RsaPublic
 
 if _lib.ECC_ENABLED:
-    from wolfcrypt.ciphers import EccPrivate, EccPublic
+    from wolfcrypt.ciphers import ECC_SECP112R1, ECC_SECP128R1, ECC_SECP160R1, ECC_SECP192R1, EccPrivate, EccPublic
 
 if _lib.ED25519_ENABLED:
     from wolfcrypt.ciphers import Ed25519Private, Ed25519Public
@@ -244,9 +257,13 @@ def test_block_cipher(cipher_cls, vectors):
     plaintext = vectors[cipher_cls].plaintext
     ciphertext = vectors[cipher_cls].ciphertext
     ciphertext_ctr = vectors[cipher_cls].ciphertext_ctr
+    is_aes = _lib.AES_ENABLED and cipher_cls is Aes
+    # Without AES-CBC, MODE_CBC is rejected before its arguments are checked.
+    cbc = not (is_aes and not _lib.AES_CBC_ENABLED)
 
-    with pytest.raises(ValueError):
-        cipher_cls.new(key[:-1], MODE_CBC, iv)  # invalid key length
+    if cbc:
+        with pytest.raises(ValueError):
+            cipher_cls.new(key[:-1], MODE_CBC, iv)  # invalid key length
 
     with pytest.raises(ValueError):
         cipher_cls.new(key, -1, iv)             # invalid mode
@@ -254,20 +271,24 @@ def test_block_cipher(cipher_cls, vectors):
     with pytest.raises(ValueError):
         cipher_cls.new(key, MODE_ECB, iv)       # unsuported mode
 
-    with pytest.raises(ValueError):
-        cipher_cls.new(key, MODE_CBC, None)     # invalid iv
+    if cbc:
+        with pytest.raises(ValueError):
+            cipher_cls.new(key, MODE_CBC, None)     # invalid iv
 
-    with pytest.raises(ValueError):
-        cipher_cls.new(key, MODE_CBC, iv[:-1])  # invalid iv length
+        with pytest.raises(ValueError):
+            cipher_cls.new(key, MODE_CBC, iv[:-1])  # invalid iv length
 
 
     # Test AES in counter mode
-    if ciphertext_ctr is not None:
+    if ciphertext_ctr is not None and _lib.AES_CTR_ENABLED:
         cipher_obj = cipher_cls.new(key, MODE_CTR, iv)
         res = cipher_obj.encrypt(plaintext)
         assert res == ciphertext_ctr
         cipher_obj = cipher_cls.new(key, MODE_CTR, iv)
         assert plaintext == cipher_obj.decrypt(res)
+
+    if not cbc:
+        return
 
     # single encryption
     cipher_obj = cipher_new(cipher_cls, vectors)
@@ -286,6 +307,9 @@ def test_block_cipher(cipher_cls, vectors):
         result += cipher_obj.encrypt(segment)
 
     assert result == ciphertext
+
+    if is_aes and not _lib.AES_DECRYPT_ENABLED:
+        return
 
     # single decryption
     cipher_obj = cipher_new(cipher_cls, vectors)
@@ -326,6 +350,14 @@ if _lib.CHACHA_ENABLED:
         assert plaintext == dec
 
 if _lib.RSA_ENABLED:
+    # RSA encrypt and sign create a Random on first use.
+    needs_rng = pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
+    needs_encrypt_decrypt = pytest.mark.skipif(not (_lib.RSA_ENCRYPT_ENABLED and _lib.RSA_PRIVATE_ENABLED),
+                                               reason="RSA encryption or decryption not enabled")
+    needs_oaep = pytest.mark.skipif(not _lib.RSA_OAEP_ENABLED, reason="RSA OAEP not enabled")
+    needs_sign_verify = pytest.mark.skipif(not (_lib.RSA_SIGN_ENABLED and _lib.RSA_VERIFY_ENABLED),
+                                           reason="RSA signing or verification not enabled")
+
     @pytest.fixture
     def rng():
         return Random()
@@ -390,6 +422,7 @@ if _lib.RSA_ENABLED:
             pem = f.read()
         return RsaPublic.from_pem(pem, rng=rng)   # ty: ignore[possibly-missing-attribute]
 
+    @needs_rng
     def test_new_rsa_raises(vectors):
         with pytest.raises(WolfCryptError):
             RsaPrivate(vectors[RsaPrivate].key[:-1])  # invalid key length
@@ -397,11 +430,13 @@ if _lib.RSA_ENABLED:
         with pytest.raises(WolfCryptError):
             RsaPublic(vectors[RsaPublic].key[:-1])    # invalid key length
 
-        if _lib.KEYGEN_ENABLED:
+        if _lib.KEYGEN_ENABLED and _lib.RSA_PRIVATE_ENABLED:
             with pytest.raises(WolfCryptError):           # invalid key size
                 RsaPrivate.make_key(16384)   # ty: ignore[possibly-missing-attribute]
 
 
+    @needs_rng
+    @needs_encrypt_decrypt
     def test_rsa_encrypt_decrypt(rsa_private, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -418,6 +453,8 @@ if _lib.RSA_ENABLED:
         assert 1024 / 8 == len(ciphertext) == rsa_private.output_size
         assert plaintext == rsa_private.decrypt(ciphertext)
 
+    @needs_rng
+    @needs_encrypt_decrypt
     def test_rsa_encrypt_decrypt_rng(rsa_private_rng, rsa_public_rng):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -434,6 +471,9 @@ if _lib.RSA_ENABLED:
         assert 1024 / 8 == len(ciphertext) == rsa_private_rng.output_size
         assert plaintext == rsa_private_rng.decrypt(ciphertext)
 
+    @needs_rng
+    @needs_encrypt_decrypt
+    @needs_oaep
     def test_rsa_encrypt_decrypt_pad_oaep(rsa_private_oaep, rsa_public_oaep):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -451,6 +491,9 @@ if _lib.RSA_ENABLED:
         assert plaintext == rsa_private_oaep.decrypt_oaep(ciphertext)
 
 
+    @pytest.mark.skipif(not _lib.PKCS8_ENABLED, reason="PKCS#8 not enabled")
+    @needs_rng
+    @needs_encrypt_decrypt
     def test_rsa_pkcs8_encrypt_decrypt(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -468,6 +511,8 @@ if _lib.RSA_ENABLED:
         assert plaintext == rsa_private_pkcs8.decrypt(ciphertext)
 
 
+    @needs_rng
+    @needs_sign_verify
     def test_rsa_sign_verify(rsa_private, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -484,7 +529,26 @@ if _lib.RSA_ENABLED:
         assert 1024 / 8 == len(signature) == rsa_private.output_size
         assert plaintext == rsa_private.verify(signature)
 
+    @needs_rng
+    @needs_sign_verify
+    def test_rsa_verify_without_rng(rsa_private, vectors, monkeypatch):
+        plaintext = t2b("Everyone gets Friday off.")
+        signature = rsa_private.sign(plaintext)
+
+        def no_rng():
+            raise NotImplementedError("RNG is not supported by this wolfSSL build")
+
+        # Verify must not need an RNG. Blinding always needs one.
+        monkeypatch.setattr(ciphers, "Random", no_rng)
+        monkeypatch.setattr(_lib, "RSA_BLINDING_ENABLED", 0)
+        rsa_public = RsaPublic(vectors[RsaPublic].key)
+        assert plaintext == rsa_public.verify(signature)
+        with pytest.raises(NotImplementedError):
+            _ = rsa_public._random
+
     if _lib.RSA_PSS_ENABLED:
+        @needs_rng
+        @pytest.mark.skipif(not _lib.RSA_SIGN_ENABLED, reason="RSA signing not enabled")
         def test_rsa_pss_sign_verify(rsa_private_pss, rsa_public_pss):
             plaintext = t2b("Everyone gets Friday off.")
 
@@ -501,6 +565,9 @@ if _lib.RSA_ENABLED:
             assert 1024 / 8 == len(signature) == rsa_private_pss.output_size
             assert rsa_private_pss.verify_pss(plaintext, signature) is True
 
+    @pytest.mark.skipif(not _lib.PEM_TO_DER_ENABLED, reason="PEM to DER not enabled")
+    @needs_rng
+    @needs_sign_verify
     def test_rsa_sign_verify_pem(rsa_private_pem, rsa_public_pem):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -517,6 +584,9 @@ if _lib.RSA_ENABLED:
         assert 256 == len(signature) == rsa_private_pem.output_size
         assert plaintext == rsa_private_pem.verify(signature)
 
+    @pytest.mark.skipif(not _lib.PEM_TO_DER_ENABLED, reason="PEM to DER not enabled")
+    @needs_rng
+    @needs_sign_verify
     def test_rsa_sign_verify_pem_rng(rsa_private_pem_rng, rsa_public_pem_rng):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -533,6 +603,9 @@ if _lib.RSA_ENABLED:
         assert 256 == len(signature) == rsa_private_pem_rng.output_size
         assert plaintext == rsa_private_pem_rng.verify(signature)
 
+    @pytest.mark.skipif(not _lib.PKCS8_ENABLED, reason="PKCS#8 not enabled")
+    @needs_rng
+    @needs_sign_verify
     def test_rsa_pkcs8_sign_verify(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -551,6 +624,13 @@ if _lib.RSA_ENABLED:
 
 
 if _lib.ECC_ENABLED:
+    needs_ecc_import = pytest.mark.skipif(not _lib.ECC_KEY_IMPORT_ENABLED, reason="ECC key import not enabled")
+    needs_ecc_export = pytest.mark.skipif(not _lib.ECC_KEY_EXPORT_ENABLED, reason="ECC key export not enabled")
+    needs_ecc_sign_verify = pytest.mark.skipif(not (_lib.ECC_SIGN_ENABLED and _lib.ECC_VERIFY_ENABLED),
+                                               reason="ECC signing or verification not enabled")
+    needs_ecc_verify = pytest.mark.skipif(not _lib.ECC_VERIFY_ENABLED, reason="ECC verification not enabled")
+    needs_ecc_dhe = pytest.mark.skipif(not _lib.ECC_DHE_ENABLED, reason="ECDH not enabled")
+
     @pytest.fixture
     def ecc_private(vectors):
         return EccPrivate(vectors[EccPrivate].key)
@@ -561,6 +641,7 @@ if _lib.ECC_ENABLED:
         return EccPublic(vectors[EccPublic].key)
 
 
+    @needs_ecc_import
     def test_new_ecc_raises(vectors):
         with pytest.raises(WolfCryptError):
             EccPrivate(vectors[EccPrivate].key[:-1])  # invalid key length
@@ -575,6 +656,8 @@ if _lib.ECC_ENABLED:
             EccPrivate.make_key(1024)
 
 
+    @needs_ecc_import
+    @needs_ecc_export
     def test_key_encoding(vectors):
         priv = EccPrivate()
         pub = EccPublic()
@@ -613,6 +696,55 @@ if _lib.ECC_ENABLED:
         assert qy[0:32] == vectors[EccPublic].raw_key[32:64]
 
 
+    @needs_ecc_import
+    @needs_ecc_export
+    def test_ecc_encode_key_buffer_not_from_field_size(vectors, monkeypatch):
+        """
+        F-10070: the private key DER is larger than four times the field
+        size on small curves, so the output buffer must not be sized from it.
+        """
+        monkeypatch.setattr(EccPrivate, "size", property(lambda self: 14))
+        priv = EccPrivate(vectors[EccPrivate].key)
+        assert priv.encode_key() == vectors[EccPrivate].key
+
+
+    @pytest.mark.parametrize("curve_id", [ECC_SECP112R1, ECC_SECP128R1, ECC_SECP160R1, ECC_SECP192R1])
+    @needs_ecc_import
+    @needs_ecc_export
+    def test_ecc_encode_key_small_curves(curve_id):
+        """
+        F-10070: private key DER encoding round-trips on small curves.
+        """
+        size = _lib.wc_ecc_get_curve_size_from_id(curve_id)
+        if size <= 0:
+            pytest.skip("curve not enabled")
+        if _lib.FIPS_ENABLED and _lib.FIPS_VERSION >= 6 and size < 28:
+            pytest.skip("FIPS 140-3 does not generate keys under 224 bits")
+        key = EccPrivate.make_key(size)
+        assert key.size == size
+        der = key.encode_key()
+        assert EccPrivate(der).encode_key() == der
+
+
+    @needs_ecc_import
+    @needs_ecc_export
+    def test_ecc_encode_key_p192_vector():
+        """
+        F-10070: an imported P-192 private key re-encodes to the same DER.
+        FIPS 140-3 builds can import P-192 keys but not generate them.
+        """
+        if _lib.wc_ecc_get_curve_size_from_id(ECC_SECP192R1) <= 0:
+            pytest.skip("curve not enabled")
+        der = h2b(
+            "305f02010104189611a7935930fa834b7de535a371d3461d1ff4a309d15cb8a0"
+            "0a06082a8648ce3d030101a13403320004a9afcfd908947032399677a3ae1d9d"
+            "5ec75906e27f7d3ddeec030107d246b3550a48208cbcb9b1f15978f938b652ff"
+            "0b"
+        )
+        assert EccPrivate(der).encode_key() == der
+
+
+    @needs_ecc_import
     def test_ecc_decode_key_raw_rejects_wrong_length(vectors):
         """
         wc_ecc_import_unsigned reads exactly curve_size bytes from each
@@ -646,59 +778,229 @@ if _lib.ECC_ENABLED:
         raw_priv.decode_key_raw(qx_good, qy_good, d_good)
 
 
+    P256_PRIME = h2b(
+        "ffffffff00000001000000000000000000000000ffffffffffffffffffffffff")
 
+
+    @pytest.mark.parametrize("bad", ["off_curve", "x_not_below_p"])
+    @needs_ecc_import
+    def test_ecc_decode_key_raw_rejects_invalid_point(vectors, bad):
+        """
+        F-8277: wc_ecc_import_unsigned does not validate the point, so
+        decode_key_raw must reject points that are not on the curve.
+        """
+        key = vectors[EccPublic].raw_key
+        qx, qy = key[0:32], key[32:64]
+        if bad == "off_curve":
+            qy = qy[:-1] + bytes([qy[-1] ^ 1])
+        else:
+            qx = P256_PRIME
+
+        with pytest.raises(WolfCryptApiError):
+            EccPublic().decode_key_raw(qx, qy)
+
+
+    @needs_ecc_import
+    def test_ecc_import_rejects_off_curve_point(vectors):
+        """
+        F-8277: import_x963 and decode_key reject a point that is not on
+        the curve.
+        """
+        key = vectors[EccPublic].raw_key
+        bad_qy = key[32:63] + bytes([key[63] ^ 1])
+        with pytest.raises(WolfCryptApiError):
+            EccPublic().import_x963(b"\x04" + key[0:32] + bad_qy)
+
+        der = vectors[EccPublic].key
+        with pytest.raises(WolfCryptApiError):
+            EccPublic(der[:-1] + bytes([der[-1] ^ 1]))
+
+
+    @needs_ecc_import
+    def test_ecc_private_import_rejects_off_curve_point(vectors):
+        """
+        decode_key_raw and decode_key of EccPrivate reject a public point
+        that is not on the curve, as EccPublic does.
+        """
+        key = vectors[EccPrivate].raw_key
+        qx, qy, d = key[0:32], key[32:64], key[64:96]
+        with pytest.raises(WolfCryptApiError):
+            EccPrivate().decode_key_raw(qx, qy[:-1] + bytes([qy[-1] ^ 1]), d)
+
+        der = vectors[EccPrivate].key
+        with pytest.raises(WolfCryptApiError):
+            EccPrivate(der[:-1] + bytes([der[-1] ^ 1]))
+
+
+    @needs_ecc_import
+    def test_ecc_private_key_without_public_key(vectors):
+        """The public key is optional in an ECPrivateKey."""
+        der = vectors[EccPrivate].key
+        # Drop the trailing [1] publicKey field and fix the SEQUENCE length.
+        assert der[:2] == b"\x30\x77" and der[51] == 0xa1
+        assert EccPrivate(b"\x30\x31" + der[2:51]).size == 32
+
+
+
+    @needs_ecc_import
+    @needs_ecc_export
     def test_x963(ecc_private, ecc_public):
         assert ecc_private.export_x963() == ecc_public.export_x963()
 
 
+    @needs_ecc_import
+    @needs_ecc_export
+    @needs_ecc_sign_verify
     def test_ecc_sign_verify(ecc_private, ecc_public):
-        plaintext = "Everyone gets Friday off."
+        digest = hashlib.sha256(b"Everyone gets Friday off.").digest()
 
         # normal usage, sign with private, verify with public
-        signature = ecc_private.sign(plaintext)
+        signature = ecc_private.sign(digest)
 
         assert len(signature) <= ecc_private.max_signature_size
-        assert ecc_public.verify(signature, plaintext)
+        assert ecc_public.verify(signature, digest)
 
         # invalid signature
         with pytest.raises(WolfCryptError):
-            ecc_public.verify(signature[:-1], plaintext)
+            ecc_public.verify(signature[:-1], digest)
 
         # private object holds both private and public info, so it can also verify
         # using the known public key.
-        assert ecc_private.verify(signature, plaintext)
+        assert ecc_private.verify(signature, digest)
 
         ecc_x963 = EccPublic()
         ecc_x963.import_x963(ecc_public.export_x963())
-        assert ecc_x963.verify(signature, plaintext)
+        assert ecc_x963.verify(signature, digest)
 
         ecc_x963 = EccPublic()
         ecc_x963.import_x963(ecc_private.export_x963())
-        assert ecc_x963.verify(signature, plaintext)
+        assert ecc_x963.verify(signature, digest)
 
         ecc_x963 = EccPublic()
         with pytest.raises(WolfCryptError):
             ecc_x963.import_x963(ecc_public.export_x963()[:-1])
 
     if _lib.MPAPI_ENABLED:
+        @needs_ecc_import
+        @needs_ecc_sign_verify
         def test_ecc_sign_verify_raw(ecc_private, ecc_public):
-            plaintext = "Everyone gets Friday off."
+            digest = hashlib.sha256(b"Everyone gets Friday off.").digest()
 
             # normal usage, sign with private, verify with public
-            r,s = ecc_private.sign_raw(plaintext)
+            r,s = ecc_private.sign_raw(digest)
 
             assert len(r) + len(s) <= 2 * ecc_private.size
-            assert ecc_public.verify_raw(r, s, plaintext)
+            assert ecc_public.verify_raw(r, s, digest)
 
             # invalid signature
-            ret = ecc_public.verify_raw(r, s[:-1], plaintext)
+            ret = ecc_public.verify_raw(r, s[:-1], digest)
             assert not ret
 
             # private object holds both private and public info, so it can also verify
             # using the known public key.
-            assert ecc_private.verify_raw(r, s, plaintext)
+            assert ecc_private.verify_raw(r, s, digest)
 
 
+    # Made with `openssl dgst -sha256 -sign` and the vectors[EccPrivate] key.
+    ECC_OPENSSL_MESSAGE = b"Everyone gets Friday off. This message is longer than one digest."
+    ECC_OPENSSL_SHA256_SIGNATURE = h2b(
+        "3045022100b2314357b468577038b0eb8fc7e051e40eb729e6e3319d5bfd3b4cbc78be73cb"
+        "022076c30495ee4e21edf2ac2086d4fb426e413ee26f009f09c3daa312ba7065c35f")
+
+
+    @needs_ecc_import
+    @needs_ecc_verify
+    def test_ecc_verify_openssl_signature(ecc_public):
+        """
+        F-8279: verify() takes the digest of the message, as signed by
+        `openssl dgst -sha256 -sign`.
+        """
+        digest = hashlib.sha256(ECC_OPENSSL_MESSAGE).digest()
+        other = hashlib.sha256(ECC_OPENSSL_MESSAGE[:-1]).digest()
+        assert ecc_public.verify(ECC_OPENSSL_SHA256_SIGNATURE, digest)
+        assert not ecc_public.verify(ECC_OPENSSL_SHA256_SIGNATURE, other)
+
+
+    @pytest.mark.parametrize("length", [0, 16, 25, 33, 65, 100])
+    @needs_ecc_import
+    @needs_ecc_sign_verify
+    def test_ecc_sign_rejects_non_digest_length(ecc_private, ecc_public, length):
+        """
+        F-8279: sign() and verify() take a digest, so an input that is not
+        the size of a SHA-1 or SHA-2 digest raises ValueError.
+        """
+        signature = ecc_private.sign(hashlib.sha256(b"message").digest())
+        with pytest.raises(ValueError, match="digest"):
+            ecc_private.sign(b"\x01" * length)
+        with pytest.raises(ValueError, match="digest"):
+            ecc_public.verify(signature, b"\x01" * length)
+
+
+    @pytest.mark.parametrize("hash_name", ["sha1", "sha224", "sha256", "sha384", "sha512"])
+    @needs_ecc_import
+    @needs_ecc_sign_verify
+    def test_ecc_sign_digest_sizes(ecc_private, ecc_public, hash_name):
+        """
+        F-8279: SHA-1 and SHA-2 digest sizes are accepted.
+        """
+        digest = hashlib.new(hash_name, b"message").digest()
+        if not _lib.WC_MIN_DIGEST_SIZE <= len(digest) <= _lib.WC_MAX_DIGEST_SIZE:
+            pytest.skip("digest size not accepted by this wolfSSL build")
+        assert ecc_public.verify(ecc_private.sign(digest), digest)
+
+
+    if _lib.MPAPI_ENABLED:
+        # r and s of ECC_OPENSSL_SHA256_SIGNATURE.
+        ECC_OPENSSL_SHA256_R = h2b("b2314357b468577038b0eb8fc7e051e40eb729e6e3319d5bfd3b4cbc78be73cb")
+        ECC_OPENSSL_SHA256_S = h2b("76c30495ee4e21edf2ac2086d4fb426e413ee26f009f09c3daa312ba7065c35f")
+
+
+        @needs_ecc_import
+        @needs_ecc_verify
+        def test_ecc_verify_raw_openssl_signature(ecc_public):
+            """
+            F-8280: verify_raw() takes the digest of the message, as signed by
+            `openssl dgst -sha256 -sign`.
+            """
+            r, s = ECC_OPENSSL_SHA256_R, ECC_OPENSSL_SHA256_S
+            digest = hashlib.sha256(ECC_OPENSSL_MESSAGE).digest()
+            other = hashlib.sha256(ECC_OPENSSL_MESSAGE[:-1]).digest()
+            assert ecc_public.verify_raw(r, s, digest)
+            assert not ecc_public.verify_raw(r, s, other)
+
+
+        @pytest.mark.parametrize("length", [0, 16, 25, 33, 65, 100])
+        @needs_ecc_import
+        @needs_ecc_sign_verify
+        def test_ecc_sign_raw_rejects_non_digest_length(ecc_private, ecc_public, length):
+            """
+            F-8280: sign_raw() and verify_raw() take a digest, so an input that
+            is not the size of a SHA-1 or SHA-2 digest raises ValueError.
+            """
+            r, s = ecc_private.sign_raw(hashlib.sha256(b"message").digest())
+            with pytest.raises(ValueError, match="digest"):
+                ecc_private.sign_raw(b"\x01" * length)
+            with pytest.raises(ValueError, match="digest"):
+                ecc_public.verify_raw(r, s, b"\x01" * length)
+
+
+        @pytest.mark.parametrize("hash_name", ["sha1", "sha224", "sha256", "sha384", "sha512"])
+        @needs_ecc_import
+        @needs_ecc_sign_verify
+        def test_ecc_sign_raw_digest_sizes(ecc_private, ecc_public, hash_name):
+            """
+            F-8280: SHA-1 and SHA-2 digest sizes are accepted.
+            """
+            digest = hashlib.new(hash_name, b"message").digest()
+            if not _lib.WC_MIN_DIGEST_SIZE <= len(digest) <= _lib.WC_MAX_DIGEST_SIZE:
+                pytest.skip("digest size not accepted by this wolfSSL build")
+            r, s = ecc_private.sign_raw(digest)
+            assert ecc_public.verify_raw(r, s, digest)
+
+
+    @needs_ecc_import
+    @needs_ecc_export
+    @needs_ecc_dhe
     def test_ecc_make_shared_secret():
         a = EccPrivate.make_key(32, rng=Random())
         a_pub = EccPublic()
@@ -713,6 +1015,9 @@ if _lib.ECC_ENABLED:
             == a.shared_secret(b_pub) \
             == b.shared_secret(a_pub)
 
+    @needs_ecc_import
+    @needs_ecc_export
+    @needs_ecc_dhe
     def test_ecc_make_key_no_rng():
         key = EccPrivate.make_key(32)
         pub_key = EccPublic()
@@ -721,6 +1026,15 @@ if _lib.ECC_ENABLED:
         assert key.shared_secret(pub_key)
 
 if _lib.ED25519_ENABLED:
+    needs_ed25519_make_key = pytest.mark.skipif(not _lib.ED25519_MAKE_KEY_ENABLED,
+                                                reason="Ed25519 key generation not enabled")
+    needs_ed25519_import = pytest.mark.skipif(not _lib.ED25519_KEY_IMPORT_ENABLED,
+                                              reason="Ed25519 key import not enabled")
+    needs_ed25519_export = pytest.mark.skipif(not _lib.ED25519_KEY_EXPORT_ENABLED,
+                                              reason="Ed25519 key export not enabled")
+    needs_ed25519_sign_verify = pytest.mark.skipif(not (_lib.ED25519_SIGN_ENABLED and _lib.ED25519_VERIFY_ENABLED),
+                                                   reason="Ed25519 signing or verification not enabled")
+
     @pytest.fixture
     def ed25519_private(vectors):
         return Ed25519Private(vectors[Ed25519Private].key, vectors[Ed25519Public].key)
@@ -731,6 +1045,8 @@ if _lib.ED25519_ENABLED:
         return Ed25519Public(vectors[Ed25519Public].key)
 
 
+    @needs_ed25519_import
+    @needs_ed25519_make_key
     def test_new_ed25519_raises(vectors):
         with pytest.raises(WolfCryptError):
             Ed25519Private(vectors[Ed25519Private].key[:-1])  # invalid key length
@@ -738,10 +1054,14 @@ if _lib.ED25519_ENABLED:
         with pytest.raises(WolfCryptError):
             Ed25519Public(vectors[Ed25519Public].key[:-1])    # invalid key length
 
-        with pytest.raises(WolfCryptError):           # invalid key size
-            Ed25519Private.make_key(1024)
+        if _lib.RNG_ENABLED:
+            with pytest.raises(WolfCryptError):           # invalid key size
+                Ed25519Private.make_key(1024)
 
 
+    @needs_ed25519_import
+    @needs_ed25519_export
+    @needs_ed25519_make_key
     def test_ed25519_key_encoding(vectors):
         priv = Ed25519Private()
         pub = Ed25519Public()
@@ -754,6 +1074,8 @@ if _lib.ED25519_ENABLED:
         assert pub.encode_key() == vectors[Ed25519Public].key
 
 
+    @needs_ed25519_import
+    @needs_ed25519_sign_verify
     def test_ed25519_sign_verify(ed25519_private, ed25519_public):
         plaintext = "Everyone gets Friday off."
 
@@ -772,6 +1094,13 @@ if _lib.ED25519_ENABLED:
         assert ed25519_private.verify(signature, plaintext)
 
 if _lib.ED448_ENABLED:
+    needs_ed448_import = pytest.mark.skipif(not _lib.ED448_KEY_IMPORT_ENABLED,
+                                            reason="Ed448 key import not enabled")
+    needs_ed448_export = pytest.mark.skipif(not _lib.ED448_KEY_EXPORT_ENABLED,
+                                            reason="Ed448 key export not enabled")
+    needs_ed448_sign_verify = pytest.mark.skipif(not (_lib.ED448_SIGN_ENABLED and _lib.ED448_VERIFY_ENABLED),
+                                                 reason="Ed448 signing or verification not enabled")
+
     @pytest.fixture
     def ed448_private(vectors):
         return Ed448Private(vectors[Ed448Private].key, vectors[Ed448Public].key)
@@ -782,6 +1111,7 @@ if _lib.ED448_ENABLED:
         return Ed448Public(vectors[Ed448Public].key)
 
 
+    @needs_ed448_import
     def test_new_ed448_raises(vectors):
         with pytest.raises(WolfCryptError):
             Ed448Private(vectors[Ed448Private].key[:-1])  # invalid key length
@@ -789,10 +1119,13 @@ if _lib.ED448_ENABLED:
         with pytest.raises(WolfCryptError):
             Ed448Public(vectors[Ed448Public].key[:-1])    # invalid key length
 
-        with pytest.raises(WolfCryptError):           # invalid key size
-            Ed448Private.make_key(1024)
+        if _lib.RNG_ENABLED:
+            with pytest.raises(WolfCryptError):           # invalid key size
+                Ed448Private.make_key(1024)
 
 
+    @needs_ed448_import
+    @needs_ed448_export
     def test_ed448_key_encoding(vectors):
         priv = Ed448Private()
         pub = Ed448Public()
@@ -805,6 +1138,8 @@ if _lib.ED448_ENABLED:
         assert pub.encode_key() == vectors[Ed448Public].key
 
 
+    @needs_ed448_import
+    @needs_ed448_sign_verify
     def test_ed448_sign_verify(ed448_private, ed448_public):
         plaintext = "Everyone gets Friday off."
 
@@ -1011,6 +1346,36 @@ if _lib.DES3_ENABLED:
             Des3.new(key, MODE_ECB, iv)
 
 
+if _lib.AES_ENABLED:
+    def test_aes_ctr_rejected_when_not_compiled_in(monkeypatch):
+        """F-11250: MODE_CTR needs AES-CTR support in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "AES_CTR_ENABLED", 0)
+        with pytest.raises(NotImplementedError, match="AES-CTR"):
+            Aes.new(b"0" * 16, MODE_CTR, b"0" * 16)
+        if _lib.AES_CBC_ENABLED:
+            assert Aes.new(b"0" * 16, MODE_CBC, b"0" * 16).encrypt(b"0" * 16)
+
+    def test_aes_cbc_rejected_when_not_compiled_in(monkeypatch):
+        """F-12224: MODE_CBC needs AES-CBC support in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "AES_CBC_ENABLED", 0)
+        with pytest.raises(NotImplementedError, match="AES-CBC"):
+            Aes.new(b"0" * 16, MODE_CBC, b"0" * 16)
+
+    def test_aes_cbc_decrypt_rejected_when_not_compiled_in(monkeypatch, vectors):
+        """F-12224: CBC decryption needs AES decryption in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "AES_DECRYPT_ENABLED", 0)
+        vector = vectors[Aes]
+        if _lib.AES_CBC_ENABLED:
+            cipher_obj = Aes.new(vector.key, MODE_CBC, vector.iv)
+            assert cipher_obj.encrypt(vector.plaintext) == vector.ciphertext
+            with pytest.raises(NotImplementedError, match="AES-CBC decryption"):
+                cipher_obj.decrypt(vector.ciphertext)
+        # CTR decryption only uses the encryption key schedule.
+        if _lib.AES_CTR_ENABLED:
+            cipher_obj = Aes.new(vector.key, MODE_CTR, vector.iv)
+            assert cipher_obj.decrypt(vector.ciphertext_ctr) == vector.plaintext
+
+
 if _lib.CHACHA_ENABLED:
     def test_chacha_non_block_aligned():
         key = b"\x00" * 32
@@ -1107,12 +1472,298 @@ if _lib.CHACHA_ENABLED:
 
 
 if _lib.RSA_ENABLED:
+    @needs_rng
+    @pytest.mark.skipif(not (_lib.RSA_ENCRYPT_ENABLED and _lib.RSA_OAEP_ENABLED), reason="RSA OAEP encryption not enabled")
     def test_encrypt_oaep_requires_hash_type(vectors):
         rsa = RsaPublic(vectors[RsaPublic].key)
         with pytest.raises(WolfCryptError, match="Hash type not set"):
             rsa.encrypt_oaep(b"plaintext")
 
+    @needs_rng
+    @pytest.mark.skipif(not (_lib.RSA_PRIVATE_ENABLED and _lib.RSA_OAEP_ENABLED), reason="RSA OAEP decryption not enabled")
     def test_decrypt_oaep_requires_hash_type(vectors):
         rsa = RsaPrivate(vectors[RsaPrivate].key)
         with pytest.raises(WolfCryptError, match="Hash type not set"):
             rsa.decrypt_oaep(b"\x00" * rsa.output_size)
+
+    def test_rsa_from_pem_defined_only_when_enabled(monkeypatch):
+        """F-12233: from_pem needs wc_PemToDer in the linked wolfSSL."""
+        for cls in (RsaPublic, RsaPrivate):
+            assert hasattr(cls, "from_pem") == bool(_lib.PEM_TO_DER_ENABLED), cls
+
+        # Load a fresh copy of the module as if wc_PemToDer were not compiled in.
+        monkeypatch.setattr(_lib, "PEM_TO_DER_ENABLED", 0)
+        module = load_fresh_ciphers()
+        for cls in (module.RsaPublic, module.RsaPrivate):
+            assert not hasattr(cls, "from_pem"), cls
+
+    @needs_rng
+    def test_rsa_private_without_pkcs8_offset(monkeypatch, vectors):
+        """F-12234: RsaPrivate must not need wc_GetPkcs8TraditionalOffset without PKCS#8."""
+        class LibWithoutPkcs8:
+            PKCS8_ENABLED = 0
+
+            def __getattr__(self, name):
+                if name == "wc_GetPkcs8TraditionalOffset":
+                    raise AttributeError(name)
+                return getattr(_lib, name)
+
+        monkeypatch.setattr(ciphers, "_lib", LibWithoutPkcs8())
+        with pytest.raises(WolfCryptApiError):
+            RsaPrivate(vectors[RsaPrivate].key[:-1])
+        assert RsaPrivate(vectors[RsaPrivate].key).output_size == 128
+        if _lib.PKCS8_ENABLED:
+            # wc_RsaPrivateKeyDecode skips a PKCS#8 header by itself.
+            assert RsaPrivate(vectors[RsaPrivate].pkcs8_key).output_size == 128
+
+    # Method -> flags of the wolfSSL operations it needs.
+    RSA_GATED_METHODS = {
+        ("RsaPublic", "encrypt"): ("RSA_ENCRYPT_ENABLED",),
+        ("RsaPublic", "encrypt_oaep"): ("RSA_ENCRYPT_ENABLED", "RSA_OAEP_ENABLED"),
+        ("RsaPrivate", "decrypt"): ("RSA_PRIVATE_ENABLED",),
+        ("RsaPrivate", "decrypt_oaep"): ("RSA_PRIVATE_ENABLED", "RSA_OAEP_ENABLED"),
+        ("RsaPrivate", "make_key"): ("KEYGEN_ENABLED", "RSA_PRIVATE_ENABLED"),
+        ("RsaPrivate", "sign_pss"): ("RSA_PSS_ENABLED", "RSA_SIGN_ENABLED"),
+    }
+
+    def test_rsa_methods_defined_only_when_enabled(monkeypatch):
+        """F-12227: each RSA method needs its wolfSSL operation to be compiled in."""
+        for (cls, name), flags in RSA_GATED_METHODS.items():
+            enabled = all(getattr(_lib, flag) for flag in flags)
+            assert hasattr(getattr(ciphers, cls), name) == enabled, (cls, name)
+
+        # Load fresh copies of the module as if one operation were not compiled in.
+        for disabled in ("RSA_ENCRYPT_ENABLED", "RSA_PRIVATE_ENABLED", "RSA_SIGN_ENABLED", "RSA_OAEP_ENABLED"):
+            with monkeypatch.context() as m:
+                m.setattr(_lib, disabled, 0)
+                module = load_fresh_ciphers()
+            for (cls, name), flags in RSA_GATED_METHODS.items():
+                if disabled in flags:
+                    assert not hasattr(getattr(module, cls), name), (disabled, cls, name)
+            # sign() and verify() implement the RSA protocols, so they stay.
+            assert hasattr(module.RsaPrivate, "sign"), disabled
+            assert hasattr(module.RsaPublic, "verify"), disabled
+
+    @needs_rng
+    def test_rsa_sign_rejected_when_not_compiled_in(monkeypatch, vectors):
+        """F-12227: sign() needs RSA signing in the linked wolfSSL."""
+        rsa = RsaPrivate(vectors[RsaPrivate].key)
+        monkeypatch.setattr(_lib, "RSA_SIGN_ENABLED", 0)
+        with pytest.raises(NotImplementedError, match="RSA signing is not supported"):
+            rsa.sign(b"Everyone gets Friday off.")
+
+    @needs_rng
+    @pytest.mark.skipif(not _lib.RSA_SIGN_ENABLED, reason="RSA signing not enabled")
+    def test_rsa_verify_rejected_when_not_compiled_in(monkeypatch, vectors):
+        """F-12227: verify() needs wc_RsaSSL_Verify in the linked wolfSSL."""
+        signature = RsaPrivate(vectors[RsaPrivate].key).sign(b"Everyone gets Friday off.")
+        rsa = RsaPublic(vectors[RsaPublic].key)
+        monkeypatch.setattr(_lib, "RSA_VERIFY_ENABLED", 0)
+        with pytest.raises(NotImplementedError, match="RSA verification is not supported"):
+            rsa.verify(signature)
+
+if _lib.ECC_ENABLED:
+    # Method -> flags of the wolfSSL operations it needs.
+    ECC_GATED_METHODS = {
+        ("EccPublic", "decode_key"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPublic", "decode_key_raw"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPublic", "import_x963"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPublic", "encode_key"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPublic", "encode_key_raw"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPublic", "export_x963"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPublic", "verify"): ("ECC_VERIFY_ENABLED",),
+        ("EccPublic", "verify_raw"): ("ECC_VERIFY_ENABLED", "MPAPI_ENABLED"),
+        ("EccPrivate", "decode_key"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPrivate", "decode_key_raw"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPrivate", "encode_key"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPrivate", "encode_key_raw"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPrivate", "shared_secret"): ("ECC_DHE_ENABLED",),
+        ("EccPrivate", "sign"): ("ECC_SIGN_ENABLED",),
+        ("EccPrivate", "sign_raw"): ("ECC_SIGN_ENABLED", "MPAPI_ENABLED"),
+    }
+
+    def test_ecc_methods_defined_only_when_enabled(monkeypatch):
+        """F-12228: each ECC method needs its wolfSSL operation to be compiled in."""
+        for (cls, name), flags in ECC_GATED_METHODS.items():
+            enabled = all(getattr(_lib, flag) for flag in flags)
+            assert hasattr(getattr(ciphers, cls), name) == enabled, (cls, name)
+
+        # Load fresh copies of the module as if one operation were not compiled in.
+        for disabled in ("ECC_KEY_IMPORT_ENABLED", "ECC_KEY_EXPORT_ENABLED", "ECC_DHE_ENABLED",
+                         "ECC_SIGN_ENABLED", "ECC_VERIFY_ENABLED"):
+            with monkeypatch.context() as m:
+                m.setattr(_lib, disabled, 0)
+                module = load_fresh_ciphers()
+                for (cls, name), flags in ECC_GATED_METHODS.items():
+                    enabled = all(getattr(_lib, flag) for flag in flags)
+                    assert hasattr(getattr(module, cls), name) == enabled, (disabled, cls, name)
+            assert hasattr(module.EccPrivate, "make_key"), disabled
+
+    def test_ecc_key_rejected_without_key_import(monkeypatch, vectors):
+        """F-12228: loading a key needs ECC key import in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "ECC_KEY_IMPORT_ENABLED", 0)
+        for cls in (EccPublic, EccPrivate):
+            with pytest.raises(NotImplementedError, match="ECC key import is not supported"):
+                cls(vectors[cls].key)
+            assert cls().size == 0, cls
+
+if _lib.ED25519_ENABLED:
+    # Method -> flag of the wolfSSL operation it needs.
+    ED25519_GATED_METHODS = {
+        ("Ed25519Public", "decode_key"): "ED25519_KEY_IMPORT_ENABLED",
+        ("Ed25519Public", "encode_key"): "ED25519_KEY_EXPORT_ENABLED",
+        ("Ed25519Public", "verify"): "ED25519_VERIFY_ENABLED",
+        ("Ed25519Private", "make_key"): "ED25519_MAKE_KEY_ENABLED",
+        ("Ed25519Private", "decode_key"): "ED25519_KEY_IMPORT_ENABLED",
+        ("Ed25519Private", "encode_key"): "ED25519_KEY_EXPORT_ENABLED",
+        ("Ed25519Private", "sign"): "ED25519_SIGN_ENABLED",
+    }
+
+    def test_ed25519_methods_defined_only_when_enabled(monkeypatch):
+        """F-12229: each Ed25519 method needs its wolfSSL operation to be compiled in."""
+        for (cls, name), flag in ED25519_GATED_METHODS.items():
+            assert hasattr(getattr(ciphers, cls), name) == bool(getattr(_lib, flag)), (cls, name)
+
+        # Load fresh copies of the module as if one operation were not compiled in.
+        for disabled in set(ED25519_GATED_METHODS.values()):
+            with monkeypatch.context() as m:
+                m.setattr(_lib, disabled, 0)
+                module = load_fresh_ciphers()
+                for (cls, name), flag in ED25519_GATED_METHODS.items():
+                    assert hasattr(getattr(module, cls), name) == bool(getattr(_lib, flag)), (disabled, cls, name)
+
+    def test_ed25519_key_rejected_without_key_import(monkeypatch, vectors):
+        """F-12229: loading a key needs Ed25519 key import in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "ED25519_KEY_IMPORT_ENABLED", 0)
+        for cls in (Ed25519Public, Ed25519Private):
+            with pytest.raises(NotImplementedError, match="Ed25519 key import is not supported"):
+                cls(vectors[cls].key)
+            cls()
+        with pytest.raises(NotImplementedError, match="Ed25519 key import is not supported"):
+            Ed25519Private(vectors[Ed25519Private].key, vectors[Ed25519Public].key)
+
+    @needs_ed25519_import
+    def test_ed25519_private_only_key_needs_make_key(monkeypatch, vectors):
+        """F-12229: deriving the public key needs wc_ed25519_make_public."""
+        monkeypatch.setattr(_lib, "ED25519_MAKE_KEY_ENABLED", 0)
+        with pytest.raises(NotImplementedError, match="Deriving the Ed25519 public key is not supported"):
+            Ed25519Private(vectors[Ed25519Private].key)
+        Ed25519Private(vectors[Ed25519Private].key, vectors[Ed25519Public].key)
+
+if _lib.ED448_ENABLED:
+    # Method -> flag of the wolfSSL operation it needs.
+    ED448_GATED_METHODS = {
+        ("Ed448Public", "decode_key"): "ED448_KEY_IMPORT_ENABLED",
+        ("Ed448Public", "encode_key"): "ED448_KEY_EXPORT_ENABLED",
+        ("Ed448Public", "verify"): "ED448_VERIFY_ENABLED",
+        ("Ed448Private", "decode_key"): "ED448_KEY_IMPORT_ENABLED",
+        ("Ed448Private", "encode_key"): "ED448_KEY_EXPORT_ENABLED",
+        ("Ed448Private", "sign"): "ED448_SIGN_ENABLED",
+    }
+
+    def test_ed448_methods_defined_only_when_enabled(monkeypatch):
+        """F-12230: each Ed448 method needs its wolfSSL operation to be compiled in."""
+        for (cls, name), flag in ED448_GATED_METHODS.items():
+            assert hasattr(getattr(ciphers, cls), name) == bool(getattr(_lib, flag)), (cls, name)
+        assert hasattr(ciphers.Ed448Private, "make_key")
+
+        # Load fresh copies of the module as if one operation were not compiled in.
+        for disabled in set(ED448_GATED_METHODS.values()):
+            with monkeypatch.context() as m:
+                m.setattr(_lib, disabled, 0)
+                module = load_fresh_ciphers()
+                for (cls, name), flag in ED448_GATED_METHODS.items():
+                    assert hasattr(getattr(module, cls), name) == bool(getattr(_lib, flag)), (disabled, cls, name)
+                assert hasattr(module.Ed448Private, "make_key"), disabled
+
+    def test_ed448_key_rejected_without_key_import(monkeypatch, vectors):
+        """F-12230: loading a key needs Ed448 key import in the linked wolfSSL."""
+        monkeypatch.setattr(_lib, "ED448_KEY_IMPORT_ENABLED", 0)
+        for cls in (Ed448Public, Ed448Private):
+            with pytest.raises(NotImplementedError, match="Ed448 key import is not supported"):
+                cls(vectors[cls].key)
+            cls()
+        with pytest.raises(NotImplementedError, match="Ed448 key import is not supported"):
+            Ed448Private(vectors[Ed448Private].key, vectors[Ed448Public].key)
+
+if _lib.ML_KEM_ENABLED:
+    # Method -> flag of the wolfSSL operation it needs.
+    ML_KEM_GATED_METHODS = {
+        ("MlKemPublic", "encapsulate"): "ML_KEM_ENCAPSULATE_ENABLED",
+        ("MlKemPublic", "encapsulate_with_random"): "ML_KEM_ENCAPSULATE_ENABLED",
+        ("MlKemPrivate", "make_key"): "ML_KEM_MAKE_KEY_ENABLED",
+        ("MlKemPrivate", "make_key_with_random"): "ML_KEM_MAKE_KEY_ENABLED",
+        ("MlKemPrivate", "decapsulate"): "ML_KEM_DECAPSULATE_ENABLED",
+    }
+    ML_KEM_COMMON_METHODS = (
+        ("MlKemPublic", "decode_key"),
+        ("MlKemPublic", "encode_key"),
+        ("MlKemPrivate", "decode_key"),
+        ("MlKemPrivate", "encode_priv_key"),
+        ("MlKemPrivate", "encode_pub_key"),
+    )
+
+    def test_ml_kem_methods_defined_only_when_enabled(monkeypatch):
+        """F-12231: each ML-KEM method needs its wolfSSL operation to be compiled in."""
+        for (cls, name), flag in ML_KEM_GATED_METHODS.items():
+            assert hasattr(getattr(ciphers, cls), name) == bool(getattr(_lib, flag)), (cls, name)
+
+        # Load fresh copies of the module as if one operation were not compiled in.
+        for disabled in set(ML_KEM_GATED_METHODS.values()):
+            with monkeypatch.context() as m:
+                m.setattr(_lib, disabled, 0)
+                module = load_fresh_ciphers()
+                for (cls, name), flag in ML_KEM_GATED_METHODS.items():
+                    assert hasattr(getattr(module, cls), name) == bool(getattr(_lib, flag)), (disabled, cls, name)
+                for cls, name in ML_KEM_COMMON_METHODS:
+                    assert hasattr(getattr(module, cls), name), (disabled, cls, name)
+
+if _lib.ML_DSA_ENABLED:
+    # Method -> whether the wolfSSL operations it needs are compiled in.
+    ML_DSA_GATED_METHODS = {
+        ("MlDsaPublic", "key_size"): lambda: _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPublic", "decode_key"): lambda: _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPublic", "encode_key"): lambda: _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPublic", "sig_size"): lambda: _lib.ML_DSA_SIGN_ENABLED or _lib.ML_DSA_VERIFY_ENABLED,
+        ("MlDsaPublic", "verify"): lambda: _lib.ML_DSA_VERIFY_ENABLED,
+        ("MlDsaPrivate", "make_key"): lambda: _lib.ML_DSA_MAKE_KEY_ENABLED,
+        ("MlDsaPrivate", "make_key_from_seed"): lambda: _lib.ML_DSA_MAKE_KEY_ENABLED,
+        ("MlDsaPrivate", "pub_key_size"): lambda: _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPrivate", "encode_pub_key"): lambda: _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPrivate", "priv_key_size"): lambda: _lib.ML_DSA_PRIVATE_KEY_ENABLED and _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPrivate", "encode_priv_key"): lambda: _lib.ML_DSA_PRIVATE_KEY_ENABLED and _lib.ML_DSA_PUBLIC_KEY_ENABLED,
+        ("MlDsaPrivate", "decode_key"): lambda: _lib.ML_DSA_PRIVATE_KEY_ENABLED,
+        ("MlDsaPrivate", "sig_size"): lambda: _lib.ML_DSA_SIGN_ENABLED or _lib.ML_DSA_VERIFY_ENABLED,
+        ("MlDsaPrivate", "sign"): lambda: _lib.ML_DSA_SIGN_ENABLED,
+        ("MlDsaPrivate", "sign_with_seed"): lambda: _lib.ML_DSA_SIGN_ENABLED,
+        ("MlDsaPrivate", "verify"): lambda: _lib.ML_DSA_VERIFY_ENABLED,
+    }
+
+    @pytest.mark.parametrize("disabled", [
+        (),
+        ("ML_DSA_MAKE_KEY_ENABLED",),
+        ("ML_DSA_SIGN_ENABLED",),
+        ("ML_DSA_VERIFY_ENABLED",),
+        ("ML_DSA_PUBLIC_KEY_ENABLED",),
+        ("ML_DSA_PRIVATE_KEY_ENABLED",),
+        ("ML_DSA_SIGN_ENABLED", "ML_DSA_VERIFY_ENABLED"),
+        ("ML_DSA_MAKE_KEY_ENABLED", "ML_DSA_SIGN_ENABLED", "ML_DSA_PRIVATE_KEY_ENABLED"),
+    ])
+    def test_ml_dsa_methods_defined_only_when_enabled(monkeypatch, disabled):
+        """F-10071: each ML-DSA method needs its wolfSSL operations to be compiled in."""
+        for flag in disabled:
+            monkeypatch.setattr(_lib, flag, 0)
+        # Load a fresh copy of the module as if the operations were not compiled in.
+        module = load_fresh_ciphers()
+        for (cls, name), enabled in ML_DSA_GATED_METHODS.items():
+            assert hasattr(getattr(module, cls), name) == bool(enabled()), (disabled, cls, name)
+
+    def test_ml_dsa_private_decode_needs_public_key_import(monkeypatch):
+        """F-10071: importing the public key part needs ML-DSA public key support."""
+        if not _lib.ML_DSA_PRIVATE_KEY_ENABLED:
+            pytest.skip("ML-DSA private key support not enabled")
+        monkeypatch.setattr(_lib, "ML_DSA_PUBLIC_KEY_ENABLED", 0)
+        module = load_fresh_ciphers()
+        key = module.MlDsaPrivate(module.MlDsaType.ML_DSA_44)
+        with pytest.raises(NotImplementedError, match="ML-DSA public key import is not supported"):
+            key.decode_key(b"\x00" * 16, b"\x00" * 16)

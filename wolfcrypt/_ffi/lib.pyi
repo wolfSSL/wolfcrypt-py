@@ -24,31 +24,71 @@ from typing import TypeAlias
 INVALID_DEVID: int
 
 AES_ENABLED: int
+AES_CBC_ENABLED: int
+AES_CTR_ENABLED: int
+AES_DECRYPT_ENABLED: int
 AES_SIV_ENABLED: int
 AESGCM_STREAM_ENABLED: int
+AESGCM_STREAM_DECRYPT_ENABLED: int
 ASN_ENABLED: int
 CHACHA_ENABLED: int
 CHACHA_STREAM_ENABLED: int
 CHACHA20_POLY1305_ENABLED: int
+DER_TO_PEM_ENABLED: int
 DES3_ENABLED: int
 ECC_ENABLED: int
+ECC_DHE_ENABLED: int
+ECC_KEY_EXPORT_ENABLED: int
+ECC_KEY_IMPORT_ENABLED: int
+ECC_SIGN_ENABLED: int
+ECC_VERIFY_ENABLED: int
 ED25519_ENABLED: int
+ED25519_KEY_EXPORT_ENABLED: int
+ED25519_KEY_IMPORT_ENABLED: int
+ED25519_MAKE_KEY_ENABLED: int
+ED25519_SIGN_ENABLED: int
+ED25519_VERIFY_ENABLED: int
 ED448_ENABLED: int
+ED448_KEY_EXPORT_ENABLED: int
+ED448_KEY_IMPORT_ENABLED: int
+ED448_SIGN_ENABLED: int
+ED448_VERIFY_ENABLED: int
 ERROR_STRINGS_ENABLED: int
 FIPS_ENABLED: int
 HMAC_ENABLED: int
 KEYGEN_ENABLED: int
 HKDF_ENABLED: int
 ML_DSA_ENABLED: int
+ML_DSA_MAKE_KEY_ENABLED: int
 ML_DSA_NO_CTX_ENABLED: int
+ML_DSA_PRIVATE_KEY_ENABLED: int
+ML_DSA_PUBLIC_KEY_ENABLED: int
+ML_DSA_SIGN_ENABLED: int
+ML_DSA_VERIFY_ENABLED: int
+ML_KEM_DECAPSULATE_ENABLED: int
 ML_KEM_ENABLED: int
+ML_KEM_ENCAPSULATE_ENABLED: int
+ML_KEM_MAKE_KEY_ENABLED: int
 MPAPI_ENABLED: int
+PBKDF2_ENABLED: int
+PEM_TO_DER_ENABLED: int
+PKCS8_ENABLED: int
 PWDBASED_ENABLED: int
+RNG_ENABLED: int
 RSA_ENABLED: int
 RSA_BLINDING_ENABLED: int
+RSA_ENCRYPT_ENABLED: int
+RSA_OAEP_ENABLED: int
+RSA_PRIVATE_ENABLED: int
 RSA_PSS_ENABLED: int
+RSA_SIGN_ENABLED: int
+RSA_VERIFY_ENABLED: int
 SHA_ENABLED: int
 SHA3_ENABLED: int
+SHA3_224_ENABLED: int
+SHA3_256_ENABLED: int
+SHA3_384_ENABLED: int
+SHA3_512_ENABLED: int
 SHA256_ENABLED: int
 SHA384_ENABLED: int
 SHA512_ENABLED: int
@@ -275,6 +315,8 @@ MIN_CODE_E: int
 
 FIPS_VERSION: int
 
+ECC_PRIVATEKEY: int
+
 WC_MGF1NONE: int
 WC_MGF1SHA1: int
 WC_MGF1SHA224: int
@@ -298,6 +340,9 @@ WC_HASH_TYPE_SHA3_384: int
 WC_HASH_TYPE_SHA3_512: int
 WC_HASH_TYPE_BLAKE2B: int
 WC_HASH_TYPE_BLAKE2S: int
+
+WC_MIN_DIGEST_SIZE: int
+WC_MAX_DIGEST_SIZE: int
 
 WC_ML_KEM_512: int
 WC_ML_KEM_768: int
@@ -477,6 +522,7 @@ def wc_ecc_free(key: EccKey) -> int: ...
 def wc_ecc_size(key: EccKey) -> int: ...
 def wc_ecc_sig_size(key: EccKey) -> int: ...
 def wc_ecc_get_curve_size_from_id(curve_id: int) -> int: ...
+def wc_ecc_check_key(key: EccKey) -> int: ...
 def wc_ecc_import_unsigned(key: EccKey, qx: bytes, qy: bytes, d: bytes | FFI.CData, curve_id: int) -> int: ...
 def wc_ecc_export_public_raw(key: EccKey, qx: BytePtr, qx_len: IntPtr, qy: BytePtr, qy_len: IntPtr) -> int: ...
 def wc_ecc_import_x963(x963: bytes, x963_len: int, key: EccKey) -> int: ...
@@ -494,6 +540,7 @@ def wc_EccPublicKeyDecode(pub_der: bytes, in_out_idx: IntPtr, key: EccKey, pub_d
 def wc_EccPrivateKeyDecode(priv_der: bytes, in_out_idx: IntPtr, key: EccKey, priv_der_len: int) -> int: ...
 def wc_EccPublicKeyToDer(key: EccKey, pub_der: BytePtr, pub_der_len: int, with_alg_curve: int) -> int: ...
 def wc_EccKeyToDer(key: EccKey, priv_key_der: BytePtr, priv_key_len: int) -> int: ...
+def wc_EccKeyDerSize(key: EccKey, pub: int) -> int: ...
 
 Ed25519Key: TypeAlias = FFI.CData
 

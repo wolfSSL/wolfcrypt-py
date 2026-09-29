@@ -24,8 +24,10 @@
 import pytest
 
 from wolfcrypt._ffi import lib as _lib
-from wolfcrypt.hkdf import HKDF, HKDF_Extract, HKDF_Expand
-from wolfcrypt.hashes import HmacSha, HmacSha256
+
+if _lib.HKDF_ENABLED:
+    from wolfcrypt.hkdf import HKDF, HKDF_Extract, HKDF_Expand
+    from wolfcrypt.hashes import HmacSha, HmacSha256
 
 # Skip the whole module if required features are not available.
 pytestmark = pytest.mark.skipif(

@@ -35,6 +35,8 @@ class Random:
 
     def __init__(self, nonce: __builtins__.bytes = b"", device_id: int = -2) -> None:
         self._native_object: _lib.RNG | None = None
+        if not _lib.RNG_ENABLED:
+            raise NotImplementedError("RNG is not supported by this wolfSSL build")
         self._native_object = _ffi.new("WC_RNG *")
 
         ret = _lib.wc_InitRngNonce_ex(self._native_object, nonce, len(nonce), _ffi.NULL, device_id)
@@ -42,8 +44,9 @@ class Random:
             self._native_object = None
             raise WolfCryptApiError("RNG init error", ret)
 
-    # making sure _lib.wc_FreeRng outlives WC_RNG instances
-    _delete = staticmethod(_lib.wc_FreeRng)
+    if _lib.RNG_ENABLED:
+        # making sure _lib.wc_FreeRng outlives WC_RNG instances
+        _delete = staticmethod(_lib.wc_FreeRng)
 
     def __del__(self) -> None:
         if self._native_object is not None:

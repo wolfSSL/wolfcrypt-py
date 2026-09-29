@@ -23,7 +23,11 @@ import sys
 import re
 import subprocess
 from contextlib import contextmanager
-from distutils.util import get_platform
+try:
+    from distutils.util import get_platform
+except ImportError:
+    # Python >= 3.12 without setuptools' distutils shim (unit tests).
+    from sysconfig import get_platform
 from cffi import FFI
 import shutil
 from wolfcrypt._version import __wolfssl_version__ as version
@@ -184,7 +188,8 @@ def make_flags(prefix, fips):
     else:
         flags = []
 
-        if get_platform() in ["linux-x86_64", "linux-i686"]:
+        # The static lib is linked into the shared extension.
+        if get_platform().startswith("linux"):
             flags.append("CFLAGS=-fPIC")
 
         # install location
@@ -350,35 +355,44 @@ def get_features(local_wolfssl, features):
         with open(file) as f:
             defines += f.read().splitlines()
 
-    features["MPAPI"] = 1 if '#define WOLFSSL_PUBLIC_MP' in defines else 0
-    features["SHA"] = 0 if '#define NO_SHA' in defines else 1
-    features["SHA256"] = 0 if '#define NO_SHA256' in defines else 1
-    features["SHA384"] = 1 if '#define WOLFSSL_SHA384' in defines else 0
-    features["SHA512"] = 1 if '#define WOLFSSL_SHA512' in defines else 0
-    features["SHA3"] = 1 if '#define WOLFSSL_SHA3' in defines else 0
-    features["DES3"] = 0 if '#define NO_DES3' in defines else 1
-    features["AES"] = 0 if '#define NO_AES' in defines else 1
-    features["AES_SIV"] = 1 if '#define WOLFSSL_AES_SIV' in defines else 0
-    features["CHACHA"] = 1 if '#define HAVE_CHACHA' in defines else 0
-    features["HMAC"] = 0 if '#define NO_HMAC' in defines else 1
-    features["RSA"] = 0 if '#define NO_RSA' in defines else 1
-    features["ECC_TIMING_RESISTANCE"] = 1 if '#define ECC_TIMING_RESISTANT' in defines else 0
-    features["RSA_BLINDING"] = 1 if '#define WC_RSA_BLINDING' in defines else 0
-    features["ECC"] = 1 if '#define HAVE_ECC' in defines else 0
-    features["ED25519"] = 1 if '#define HAVE_ED25519' in defines else 0
-    features["ED448"] = 1 if '#define HAVE_ED448' in defines else 0
-    features["KEYGEN"] = 1 if '#define WOLFSSL_KEY_GEN' in defines else 0
-    features["PWDBASED"] = 0 if '#define NO_PWDBASED' in defines else 1
-    features["ERROR_STRINGS"] = 0 if '#define NO_ERROR_STRINGS' in defines else 1
-    features["ASN"] = 0 if '#define NO_ASN' in defines else 1
-    features["WC_RNG_SEED_CB"] = 1 if '#define WC_RNG_SEED_CB' in defines else 0
-    features["AESGCM_STREAM"] = 1 if '#define WOLFSSL_AESGCM_STREAM' in defines else 0
+    return detect_features(defines, features, fips)
+
+def detect_features(defines, features, fips=False):
+    """Set features from the lines of options.h/user_settings.h."""
+    text = "\n".join(defines)
+
+    def defined(name):
+        return re.search(rf"^\s*#\s*define\s+{name}\b", text, re.MULTILINE) is not None
+
+    features["MPAPI"] = 1 if defined("WOLFSSL_PUBLIC_MP") else 0
+    features["SHA"] = 0 if defined("NO_SHA") else 1
+    features["SHA256"] = 0 if defined("NO_SHA256") else 1
+    features["SHA384"] = 1 if defined("WOLFSSL_SHA384") else 0
+    features["SHA512"] = 1 if defined("WOLFSSL_SHA512") else 0
+    features["SHA3"] = 1 if defined("WOLFSSL_SHA3") else 0
+    features["DES3"] = 0 if defined("NO_DES3") else 1
+    features["AES"] = 0 if defined("NO_AES") else 1
+    features["AES_SIV"] = 1 if defined("WOLFSSL_AES_SIV") else 0
+    features["CHACHA"] = 1 if defined("HAVE_CHACHA") else 0
+    features["HMAC"] = 0 if defined("NO_HMAC") else 1
+    features["RSA"] = 0 if defined("NO_RSA") else 1
+    features["ECC_TIMING_RESISTANCE"] = 1 if defined("ECC_TIMING_RESISTANT") else 0
+    features["RSA_BLINDING"] = 1 if defined("WC_RSA_BLINDING") else 0
+    features["ECC"] = 1 if defined("HAVE_ECC") else 0
+    features["ED25519"] = 1 if defined("HAVE_ED25519") else 0
+    features["ED448"] = 1 if defined("HAVE_ED448") else 0
+    features["KEYGEN"] = 1 if defined("WOLFSSL_KEY_GEN") else 0
+    features["PWDBASED"] = 0 if defined("NO_PWDBASED") else 1
+    features["ERROR_STRINGS"] = 0 if defined("NO_ERROR_STRINGS") else 1
+    features["ASN"] = 0 if defined("NO_ASN") else 1
+    features["WC_RNG_SEED_CB"] = 1 if defined("WC_RNG_SEED_CB") else 0
+    features["AESGCM_STREAM"] = 1 if defined("WOLFSSL_AESGCM_STREAM") else 0
     # Try to read minimum AESGCM authentication tag size from settings, else use default.
     min_auth_tag_sz = re.search(r'#define\s+WOLFSSL_MIN_AUTH_TAG_SZ\s+(\d+)', '\n'.join(defines))
     features["MIN_AUTH_TAG_SZ"] = int(min_auth_tag_sz.group(1)) if min_auth_tag_sz else 12
-    features["RSA_PSS"] = 1 if '#define WC_RSA_PSS' in defines else 0
-    features["CHACHA20_POLY1305"] = 1 if ('#define HAVE_CHACHA' in defines and '#define HAVE_POLY1305' in defines) else 0
-    features["ML_DSA"] = 1 if ('#define HAVE_DILITHIUM' in defines or '#define WOLFSSL_HAVE_MLDSA' in defines) else 0
+    features["RSA_PSS"] = 1 if defined("WC_RSA_PSS") else 0
+    features["CHACHA20_POLY1305"] = 1 if (defined("HAVE_CHACHA") and defined("HAVE_POLY1305")) else 0
+    features["ML_DSA"] = 1 if (defined("HAVE_DILITHIUM") or defined("WOLFSSL_HAVE_MLDSA")) else 0
     # Determine if support for ML-DSA signing & verification without context has been enabled.
     mldsa_no_context_defines = [
         "WOLFSSL_MLDSA_NO_CTX",
@@ -387,15 +401,102 @@ def get_features(local_wolfssl, features):
         "WOLFSSL_DILITHIUM_NO_CTX",
         "WOLFSSL_DILITHIUM_FIPS204_DRAFT",
     ]
-    have_mldsa_no_context_support = re.search(r'#define\s+(' + '|'.join(mldsa_no_context_defines) + r')\s+', '\n'.join(defines))
-    features["ML_DSA_NO_CTX"] = 1 if have_mldsa_no_context_support else 0
-    features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
-    features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
+    features["ML_DSA_NO_CTX"] = 1 if any(defined(name) for name in mldsa_no_context_defines) else 0
+    features["ML_KEM"] = 1 if defined("WOLFSSL_HAVE_MLKEM") else 0
+    # hmac.h and hmac.c provide HKDF only without NO_HMAC.
+    features["HKDF"] = 1 if defined("HAVE_HKDF") and features["HMAC"] else 0
     # Unlike the other fatures, HASHDRBG is enabled by default in random.h, unless WC_NO_HASHDRBG or
     # CUSTOM_RAND_GENERATE_BLOCK is defined.
-    features["HASHDRBG"] = 0 if ("#define WC_NO_HASHDRBG" in defines or "#define CUSTOM_RAND_GENERATE_BLOCK" in defines) else 1
+    features["HASHDRBG"] = 0 if (defined("WC_NO_HASHDRBG") or defined("CUSTOM_RAND_GENERATE_BLOCK")) else 1
+    # random.h replaces the RNG API with macros under WC_NO_RNG. random.c and
+    # rsa.c then build no DRBG, seed callback or RSA blinding functions.
+    features["RNG"] = 0 if defined("WC_NO_RNG") else 1
+    if not features["RNG"]:
+        features["HASHDRBG"] = 0
+        features["WC_RNG_SEED_CB"] = 0
+        features["RSA_BLINDING"] = 0
+    # aes.h declares wc_AesCtrEncrypt only with WOLFSSL_AES_COUNTER.
+    features["AES_CTR"] = 1 if features["AES"] and defined("WOLFSSL_AES_COUNTER") else 0
+    # settings.h derives HAVE_AES_CBC and HAVE_AES_DECRYPT unless NO_AES_CBC/NO_AES_DECRYPT.
+    features["AES_CBC"] = 1 if features["AES"] and not defined("NO_AES_CBC") else 0
+    features["AES_DECRYPT"] = 1 if features["AES"] and not defined("NO_AES_DECRYPT") else 0
+    # aes.c builds streaming GCM decryption only with HAVE_AES_DECRYPT or HAVE_AESGCM_DECRYPT.
+    features["AESGCM_STREAM_DECRYPT"] = 1 if features["AES"] and features["AESGCM_STREAM"] and (
+        features["AES_DECRYPT"] or defined("HAVE_AESGCM_DECRYPT")) else 0
+    # sha3.c builds each SHA-3 size unless WOLFSSL_NOSHA3_<bits>. settings.h
+    # leaves only SHA3-384 on Xilinx.
+    xilinx_sha3 = defined("WOLFSSL_XILINX_CRYPT") or defined("WOLFSSL_AFALG_XILINX")
+    for bits in (224, 256, 384, 512):
+        disabled = defined(f"WOLFSSL_NOSHA3_{bits}") or (xilinx_sha3 and bits != 384)
+        features[f"SHA3_{bits}"] = 1 if features["SHA3"] and not disabled else 0
+    # pwdbased.c builds wc_PBKDF2 only with HAVE_PBKDF2 and without NO_HMAC.
+    # settings.h defines HAVE_PBKDF2 unless NO_PBKDF2, and always for PKCS7 and scrypt.
+    features["PBKDF2"] = 1 if features["PWDBASED"] and features["HMAC"] and (
+        not defined("NO_PBKDF2") or defined("HAVE_PBKDF2") or defined("HAVE_PKCS7")
+        or defined("HAVE_SCRYPT")) else 0
+    # asn.c builds the PEM/DER conversions only with certificate support.
+    # settings.h derives WOLFSSL_PEM_TO_DER and WOLFSSL_DER_TO_PEM.
+    certs = features["ASN"] and not defined("NO_CERTS")
+    features["PEM_TO_DER"] = 1 if certs and (defined("WOLFSSL_PEM_TO_DER") or not (
+        defined("WOLFSSL_NO_PEM") or defined("NO_CODING"))) else 0
+    features["DER_TO_PEM"] = 1 if certs and (defined("WOLFSSL_DER_TO_PEM")
+        or defined("WOLFSSL_CERT_GEN") or defined("OPENSSL_EXTRA") or defined("OPENSSL_ALL")
+        or defined("WOLFSSL_DUAL_ALG_CERTS")
+        or (defined("WOLFSSL_KEY_GEN") and not defined("WOLFSSL_NO_DER_TO_PEM"))) else 0
+    # asn.c builds wc_GetPkcs8TraditionalOffset only with HAVE_PKCS8.
+    # settings.h defines HAVE_PKCS8 unless both NO_PKCS8 and NO_PKCS12.
+    features["PKCS8"] = 1 if features["ASN"] and (not defined("NO_PKCS8") or not defined("NO_PKCS12")
+        or defined("HAVE_PKCS8") or defined("HAVE_PKCS12")) else 0
+    # rsa.c leaves out RSA operations for the subset macros set by
+    # --enable-rsapub, --enable-rsavfy and --disable-oaep.
+    rsa_public_only = defined("WOLFSSL_RSA_PUBLIC_ONLY")
+    rsa_verify_only = defined("WOLFSSL_RSA_VERIFY_ONLY")
+    features["RSA_ENCRYPT"] = 1 if features["RSA"] and not rsa_verify_only else 0
+    features["RSA_PRIVATE"] = 1 if features["RSA"] and not rsa_public_only else 0
+    features["RSA_SIGN"] = 1 if features["RSA_PRIVATE"] and not rsa_verify_only else 0
+    features["RSA_VERIFY"] = 1 if features["RSA"] and not defined("WOLFSSL_RSA_VERIFY_INLINE") else 0
+    features["RSA_OAEP"] = 1 if features["RSA"] and not defined("WC_NO_RSA_OAEP") else 0
+    # settings.h derives the ECC operations unless NO_ECC_<op>. Timing
+    # resistant signing and DHE need the RNG. Key export needs SP or big
+    # integer math.
+    ecc = features["ECC"]
+    features["ECC_SIGN"] = 1 if ecc and not defined("NO_ECC_SIGN") and (
+        features["RNG"] or not defined("ECC_TIMING_RESISTANT")) else 0
+    features["ECC_VERIFY"] = 1 if ecc and not defined("NO_ECC_VERIFY") else 0
+    features["ECC_DHE"] = 1 if ecc and not defined("NO_ECC_DHE") and features["RNG"] else 0
+    features["ECC_KEY_IMPORT"] = 1 if ecc and not defined("NO_ECC_KEY_IMPORT") else 0
+    features["ECC_KEY_EXPORT"] = 1 if ecc and not defined("NO_ECC_KEY_EXPORT") and (
+        defined("WOLFSSL_SP_MATH") or not defined("NO_BIG_INT")) else 0
+    # settings.h derives the Ed25519 operations unless NO_ED25519_<op>.
+    for op in ("MAKE_KEY", "SIGN", "VERIFY", "KEY_IMPORT", "KEY_EXPORT"):
+        features[f"ED25519_{op}"] = 1 if features["ED25519"] and not defined(f"NO_ED25519_{op}") else 0
+    # settings.h derives the Ed448 operations unless NO_ED448_<op>.
+    for op in ("SIGN", "VERIFY", "KEY_IMPORT", "KEY_EXPORT"):
+        features[f"ED448_{op}"] = 1 if features["ED448"] and not defined(f"NO_ED448_{op}") else 0
+    # wc_mlkem.c builds each ML-KEM operation unless WOLFSSL_MLKEM_NO_<op>.
+    # wc_mlkem.h maps the legacy WOLFSSL_KYBER_NO_<op> names to these.
+    for op in ("MAKE_KEY", "ENCAPSULATE", "DECAPSULATE"):
+        features[f"ML_KEM_{op}"] = 1 if features["ML_KEM"] and not (
+            defined(f"WOLFSSL_MLKEM_NO_{op}") or defined(f"WOLFSSL_KYBER_NO_{op}")) else 0
+    # dilithium.h derives the ML-DSA operations and key parts from
+    # WOLFSSL_MLDSA_<gate> or the legacy WOLFSSL_DILITHIUM_<gate> names.
+    def mldsa_defined(gate):
+        return defined(f"WOLFSSL_MLDSA_{gate}") or defined(f"WOLFSSL_DILITHIUM_{gate}")
 
-    if '#define HAVE_FIPS' in defines:
+    mldsa_verify_only = mldsa_defined("VERIFY_ONLY")
+    mldsa_no_make_key = mldsa_verify_only or mldsa_defined("NO_MAKE_KEY")
+    mldsa_no_sign = mldsa_verify_only or mldsa_defined("NO_SIGN")
+    mldsa_no_verify = mldsa_defined("NO_VERIFY")
+    ml_dsa = features["ML_DSA"]
+    features["ML_DSA_MAKE_KEY"] = 1 if ml_dsa and not mldsa_no_make_key else 0
+    features["ML_DSA_SIGN"] = 1 if ml_dsa and not mldsa_no_sign else 0
+    features["ML_DSA_VERIFY"] = 1 if ml_dsa and not mldsa_no_verify else 0
+    features["ML_DSA_PUBLIC_KEY"] = 1 if ml_dsa and (not mldsa_no_make_key or not mldsa_no_verify
+        or mldsa_defined("PUBLIC_KEY")) else 0
+    features["ML_DSA_PRIVATE_KEY"] = 1 if ml_dsa and (not mldsa_no_make_key or not mldsa_no_sign
+        or mldsa_defined("PRIVATE_KEY")) else 0
+
+    if defined("HAVE_FIPS"):
         if not fips:
             e = "fips.c empty but HAVE_FIPS defined."
             raise RuntimeError(e)
@@ -430,6 +531,15 @@ def build_ffi(local_wolfssl, features):
     else:
         cffi_libraries.append("wolfssl")
 
+    ffibuilder.set_source( "wolfcrypt._ffi", make_source(features),
+        include_dirs=cffi_include_dirs,
+        library_dirs=[wolfssl_lib_dir(local_wolfssl, features["FIPS"])],
+        libraries=cffi_libraries)
+
+    ffibuilder.cdef(make_cdef(features))
+
+def make_source(features):
+    """Return the C source passed to set_source()."""
     includes_string = ""
 
     if sys.platform == 'win32':
@@ -515,13 +625,52 @@ def build_ffi(local_wolfssl, features):
         int ML_DSA_NO_CTX_ENABLED = {features["ML_DSA_NO_CTX"]};
         int HKDF_ENABLED = {features["HKDF"]};
         int HASHDRBG_ENABLED = {features["HASHDRBG"]};
+        int AES_CTR_ENABLED = {features["AES_CTR"]};
+        int AES_CBC_ENABLED = {features["AES_CBC"]};
+        int AES_DECRYPT_ENABLED = {features["AES_DECRYPT"]};
+        int AESGCM_STREAM_DECRYPT_ENABLED = {features["AESGCM_STREAM_DECRYPT"]};
+        int SHA3_224_ENABLED = {features["SHA3_224"]};
+        int SHA3_256_ENABLED = {features["SHA3_256"]};
+        int SHA3_384_ENABLED = {features["SHA3_384"]};
+        int SHA3_512_ENABLED = {features["SHA3_512"]};
+        int PBKDF2_ENABLED = {features["PBKDF2"]};
+        int PEM_TO_DER_ENABLED = {features["PEM_TO_DER"]};
+        int DER_TO_PEM_ENABLED = {features["DER_TO_PEM"]};
+        int PKCS8_ENABLED = {features["PKCS8"]};
+        int RNG_ENABLED = {features["RNG"]};
+        int RSA_ENCRYPT_ENABLED = {features["RSA_ENCRYPT"]};
+        int RSA_PRIVATE_ENABLED = {features["RSA_PRIVATE"]};
+        int RSA_SIGN_ENABLED = {features["RSA_SIGN"]};
+        int RSA_VERIFY_ENABLED = {features["RSA_VERIFY"]};
+        int RSA_OAEP_ENABLED = {features["RSA_OAEP"]};
+        int ECC_SIGN_ENABLED = {features["ECC_SIGN"]};
+        int ECC_VERIFY_ENABLED = {features["ECC_VERIFY"]};
+        int ECC_DHE_ENABLED = {features["ECC_DHE"]};
+        int ECC_KEY_IMPORT_ENABLED = {features["ECC_KEY_IMPORT"]};
+        int ECC_KEY_EXPORT_ENABLED = {features["ECC_KEY_EXPORT"]};
+        int ED25519_MAKE_KEY_ENABLED = {features["ED25519_MAKE_KEY"]};
+        int ED25519_SIGN_ENABLED = {features["ED25519_SIGN"]};
+        int ED25519_VERIFY_ENABLED = {features["ED25519_VERIFY"]};
+        int ED25519_KEY_IMPORT_ENABLED = {features["ED25519_KEY_IMPORT"]};
+        int ED25519_KEY_EXPORT_ENABLED = {features["ED25519_KEY_EXPORT"]};
+        int ED448_SIGN_ENABLED = {features["ED448_SIGN"]};
+        int ED448_VERIFY_ENABLED = {features["ED448_VERIFY"]};
+        int ED448_KEY_IMPORT_ENABLED = {features["ED448_KEY_IMPORT"]};
+        int ED448_KEY_EXPORT_ENABLED = {features["ED448_KEY_EXPORT"]};
+        int ML_KEM_MAKE_KEY_ENABLED = {features["ML_KEM_MAKE_KEY"]};
+        int ML_KEM_ENCAPSULATE_ENABLED = {features["ML_KEM_ENCAPSULATE"]};
+        int ML_KEM_DECAPSULATE_ENABLED = {features["ML_KEM_DECAPSULATE"]};
+        int ML_DSA_MAKE_KEY_ENABLED = {features["ML_DSA_MAKE_KEY"]};
+        int ML_DSA_SIGN_ENABLED = {features["ML_DSA_SIGN"]};
+        int ML_DSA_VERIFY_ENABLED = {features["ML_DSA_VERIFY"]};
+        int ML_DSA_PUBLIC_KEY_ENABLED = {features["ML_DSA_PUBLIC_KEY"]};
+        int ML_DSA_PRIVATE_KEY_ENABLED = {features["ML_DSA_PRIVATE_KEY"]};
     """
 
-    ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
-        include_dirs=cffi_include_dirs,
-        library_dirs=[wolfssl_lib_dir(local_wolfssl, features["FIPS"])],
-        libraries=cffi_libraries)
+    return init_source_string
 
+def make_cdef(features):
+    """Return the cdef for the given features."""
     # TODO: change cdef to cdef.
     # cdef = ""
     cdef = """
@@ -558,20 +707,62 @@ def build_ffi(local_wolfssl, features):
         extern int ML_DSA_NO_CTX_ENABLED;
         extern int HKDF_ENABLED;
         extern int HASHDRBG_ENABLED;
+        extern int AES_CTR_ENABLED;
+        extern int AES_CBC_ENABLED;
+        extern int AES_DECRYPT_ENABLED;
+        extern int AESGCM_STREAM_DECRYPT_ENABLED;
+        extern int SHA3_224_ENABLED;
+        extern int SHA3_256_ENABLED;
+        extern int SHA3_384_ENABLED;
+        extern int SHA3_512_ENABLED;
+        extern int PBKDF2_ENABLED;
+        extern int PEM_TO_DER_ENABLED;
+        extern int DER_TO_PEM_ENABLED;
+        extern int PKCS8_ENABLED;
+        extern int RNG_ENABLED;
+        extern int RSA_ENCRYPT_ENABLED;
+        extern int RSA_PRIVATE_ENABLED;
+        extern int RSA_SIGN_ENABLED;
+        extern int RSA_VERIFY_ENABLED;
+        extern int RSA_OAEP_ENABLED;
+        extern int ECC_SIGN_ENABLED;
+        extern int ECC_VERIFY_ENABLED;
+        extern int ECC_DHE_ENABLED;
+        extern int ECC_KEY_IMPORT_ENABLED;
+        extern int ECC_KEY_EXPORT_ENABLED;
+        extern int ED25519_MAKE_KEY_ENABLED;
+        extern int ED25519_SIGN_ENABLED;
+        extern int ED25519_VERIFY_ENABLED;
+        extern int ED25519_KEY_IMPORT_ENABLED;
+        extern int ED25519_KEY_EXPORT_ENABLED;
+        extern int ED448_SIGN_ENABLED;
+        extern int ED448_VERIFY_ENABLED;
+        extern int ED448_KEY_IMPORT_ENABLED;
+        extern int ED448_KEY_EXPORT_ENABLED;
+        extern int ML_KEM_MAKE_KEY_ENABLED;
+        extern int ML_KEM_ENCAPSULATE_ENABLED;
+        extern int ML_KEM_DECAPSULATE_ENABLED;
+        extern int ML_DSA_MAKE_KEY_ENABLED;
+        extern int ML_DSA_SIGN_ENABLED;
+        extern int ML_DSA_VERIFY_ENABLED;
+        extern int ML_DSA_PUBLIC_KEY_ENABLED;
+        extern int ML_DSA_PRIVATE_KEY_ENABLED;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
 
         typedef struct { ...; } WC_RNG;
         typedef struct { ...; } OS_Seed;
-
+    """
+    if features["RNG"]:
+        cdef += """
         int wc_InitRng(WC_RNG*);
         int wc_InitRngNonce(WC_RNG*, byte*, word32);
         int wc_InitRngNonce_ex(WC_RNG*, byte*, word32, void*, int);
         int wc_RNG_GenerateBlock(WC_RNG*, byte*, word32);
         int wc_RNG_GenerateByte(WC_RNG*, byte*);
         int wc_FreeRng(WC_RNG*);
-    """
+        """
     if features["HASHDRBG"]:
         cdef += """
         int wc_RNG_DRBG_Reseed(WC_RNG*, const byte*, word32);
@@ -841,7 +1032,7 @@ def build_ffi(local_wolfssl, features):
         const char* wc_GetErrorString(int error);
         """
 
-    if not features["FIPS"] or features["FIPS_VERSION"] > 2:
+    if features["RNG"] and (not features["FIPS"] or features["FIPS_VERSION"] > 2):
         cdef += """
         int wc_GenerateSeed(OS_Seed* os, byte* seed, word32 sz);
         """
@@ -900,27 +1091,16 @@ def build_ffi(local_wolfssl, features):
     if features["SHA3"]:
         cdef += """
         typedef struct { ...; } wc_Sha3;
-        int wc_InitSha3_224(wc_Sha3*, void *, int);
-        int wc_InitSha3_256(wc_Sha3*, void *, int);
-        int wc_InitSha3_384(wc_Sha3*, void *, int);
-        int wc_InitSha3_512(wc_Sha3*, void *, int);
-        int wc_Sha3_224_Update(wc_Sha3*, const byte*, word32);
-        int wc_Sha3_256_Update(wc_Sha3*, const byte*, word32);
-        int wc_Sha3_384_Update(wc_Sha3*, const byte*, word32);
-        int wc_Sha3_512_Update(wc_Sha3*, const byte*, word32);
-        int wc_Sha3_224_Final(wc_Sha3*, byte*);
-        int wc_Sha3_256_Final(wc_Sha3*, byte*);
-        int wc_Sha3_384_Final(wc_Sha3*, byte*);
-        int wc_Sha3_512_Final(wc_Sha3*, byte*);
-        void wc_Sha3_224_Free(wc_Sha3*);
-        void wc_Sha3_256_Free(wc_Sha3*);
-        void wc_Sha3_384_Free(wc_Sha3*);
-        void wc_Sha3_512_Free(wc_Sha3*);
-        int wc_Sha3_224_Copy(wc_Sha3*, wc_Sha3*);
-        int wc_Sha3_256_Copy(wc_Sha3*, wc_Sha3*);
-        int wc_Sha3_384_Copy(wc_Sha3*, wc_Sha3*);
-        int wc_Sha3_512_Copy(wc_Sha3*, wc_Sha3*);
         """
+        for bits in (224, 256, 384, 512):
+            if features[f"SHA3_{bits}"]:
+                cdef += f"""
+                int wc_InitSha3_{bits}(wc_Sha3*, void *, int);
+                int wc_Sha3_{bits}_Update(wc_Sha3*, const byte*, word32);
+                int wc_Sha3_{bits}_Final(wc_Sha3*, byte*);
+                void wc_Sha3_{bits}_Free(wc_Sha3*);
+                int wc_Sha3_{bits}_Copy(wc_Sha3*, wc_Sha3*);
+                """
 
     if features["DES3"]:
         cdef += """
@@ -935,10 +1115,19 @@ def build_ffi(local_wolfssl, features):
         typedef struct { ...; } Aes;
 
         int wc_AesSetKey(Aes*, const byte*, word32, const byte*, int);
-        int wc_AesCbcEncrypt(Aes*, byte*, const byte*, word32);
-        int wc_AesCbcDecrypt(Aes*, byte*, const byte*, word32);
-        int wc_AesCtrEncrypt(Aes*, byte*, const byte*, word32);
         """
+        if features["AES_CBC"]:
+            cdef += """
+            int wc_AesCbcEncrypt(Aes*, byte*, const byte*, word32);
+            """
+        if features["AES_CBC"] and features["AES_DECRYPT"]:
+            cdef += """
+            int wc_AesCbcDecrypt(Aes*, byte*, const byte*, word32);
+            """
+        if features["AES_CTR"]:
+            cdef += """
+            int wc_AesCtrEncrypt(Aes*, byte*, const byte*, word32);
+            """
 
     if features["AES"] and features["AESGCM_STREAM"]:
         cdef += """
@@ -953,14 +1142,17 @@ def build_ffi(local_wolfssl, features):
             word32 sz, const byte* authIn, word32 authInSz);
         int wc_AesGcmEncryptFinal(Aes* aes, byte* authTag,
             word32 authTagSz);
-        int wc_AesGcmDecryptInit(Aes* aes, const byte* key, word32 len,
-            const byte* iv, word32 ivSz);
-        int wc_AesGcmDecryptUpdate(Aes* aes, byte* out, const byte* in,
-            word32 sz, const byte* authIn, word32 authInSz);
-        int wc_AesGcmDecryptFinal(Aes* aes, const byte* authTag,
-            word32 authTagSz);
         void wc_AesFree(Aes* aes);
         """
+        if features["AESGCM_STREAM_DECRYPT"]:
+            cdef += """
+            int wc_AesGcmDecryptInit(Aes* aes, const byte* key, word32 len,
+                const byte* iv, word32 ivSz);
+            int wc_AesGcmDecryptUpdate(Aes* aes, byte* out, const byte* in,
+                word32 sz, const byte* authIn, word32 authInSz);
+            int wc_AesGcmDecryptFinal(Aes* aes, const byte* authTag,
+                word32 authTagSz);
+            """
 
     if features["AES"] and features["AES_SIV"]:
         cdef += """
@@ -1019,6 +1211,11 @@ def build_ffi(local_wolfssl, features):
         void wc_HmacFree(Hmac*);
         """
 
+    cdef += """
+        #define WC_MIN_DIGEST_SIZE ...
+        #define WC_MAX_DIGEST_SIZE ...
+        """
+
     if features["RSA"]:
         cdef += """
         static const int WC_RSA_PKCSV15_PAD;
@@ -1057,27 +1254,52 @@ def build_ffi(local_wolfssl, features):
         int wc_RsaPrivateKeyDecode(const byte*, word32*, RsaKey*, word32);
         int wc_RsaPublicKeyDecode(const byte*, word32*, RsaKey*, word32);
         int wc_RsaEncryptSize(RsaKey*);
-
-        int wc_RsaPrivateDecrypt(const byte*, word32, byte*, word32,
-                                RsaKey* key);
-        int wc_RsaPublicEncrypt(const byte*, word32, byte*, word32,
-                                RsaKey*, WC_RNG*);
-        int wc_RsaPublicEncrypt_ex(const byte* in, word32 inLen, byte* out,
-                   word32 outLen, RsaKey* key, WC_RNG* rng, int type,
-                   enum wc_HashType hash, int mgf, byte* label,
-                   word32 labelSz);
-        int wc_RsaPrivateDecrypt_ex(const byte* in, word32 inLen,
-                   byte* out, word32 outLen, RsaKey* key, int type,
-                   enum wc_HashType hash, int mgf, byte* label,
-                   word32 labelSz);
-        int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
-        int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
         """
 
-        if features["RSA_PSS"]:
+        if features["RSA_ENCRYPT"]:
+            cdef += """
+            int wc_RsaPublicEncrypt(const byte*, word32, byte*, word32,
+                                    RsaKey*, WC_RNG*);
+            """
+            if features["RSA_OAEP"]:
+                cdef += """
+                int wc_RsaPublicEncrypt_ex(const byte* in, word32 inLen, byte* out,
+                           word32 outLen, RsaKey* key, WC_RNG* rng, int type,
+                           enum wc_HashType hash, int mgf, byte* label,
+                           word32 labelSz);
+                """
+
+        if features["RSA_PRIVATE"]:
+            cdef += """
+            int wc_RsaPrivateDecrypt(const byte*, word32, byte*, word32,
+                                    RsaKey* key);
+            """
+            if features["RSA_OAEP"]:
+                cdef += """
+                int wc_RsaPrivateDecrypt_ex(const byte* in, word32 inLen,
+                           byte* out, word32 outLen, RsaKey* key, int type,
+                           enum wc_HashType hash, int mgf, byte* label,
+                           word32 labelSz);
+                """
+
+        if features["RSA_SIGN"]:
+            cdef += """
+            int wc_RsaSSL_Sign(const byte*, word32, byte*, word32, RsaKey*, WC_RNG*);
+            """
+
+        if features["RSA_VERIFY"]:
+            cdef += """
+            int wc_RsaSSL_Verify(const byte*, word32, byte*, word32, RsaKey*);
+            """
+
+        if features["RSA_PSS"] and features["RSA_SIGN"]:
             cdef += """
             int wc_RsaPSS_Sign(const byte* in, word32 inLen, byte* out, word32 outLen,
                                enum wc_HashType hash, int mgf, RsaKey* key, WC_RNG* rng);
+            """
+
+        if features["RSA_PSS"]:
+            cdef += """
             int wc_RsaPSS_Verify(const byte* in, word32 inLen, byte* out, word32 outLen,
                                    enum wc_HashType hash, int mgf, RsaKey* key);
             int wc_RsaPSS_CheckPadding(const byte* in, word32 inSz, byte* sig,
@@ -1089,9 +1311,13 @@ def build_ffi(local_wolfssl, features):
             int wc_RsaSetRNG(RsaKey* key, WC_RNG* rng);
             """
 
-        if features["KEYGEN"]:
+        if features["KEYGEN"] and features["RSA_PRIVATE"]:
             cdef += """
             int wc_MakeRsaKey(RsaKey* key, int size, long e, WC_RNG* rng);
+            """
+
+        if features["KEYGEN"]:
+            cdef += """
             int wc_RsaKeyToDer(RsaKey* key, byte* output, word32 inLen);
             int wc_RsaKeyToPublicDer(RsaKey* key, byte* output, word32 inLen);
 
@@ -1099,7 +1325,8 @@ def build_ffi(local_wolfssl, features):
 
     if features["ECC"]:
         cdef += """
-        typedef struct {...; } ecc_key;
+        typedef struct { int type; ...; } ecc_key;
+        static const int ECC_PRIVATEKEY;
 
         int wc_ecc_init(ecc_key* ecc);
         void wc_ecc_free(ecc_key* ecc);
@@ -1107,43 +1334,61 @@ def build_ffi(local_wolfssl, features):
         int wc_ecc_make_key(WC_RNG* rng, int keysize, ecc_key* key);
         int wc_ecc_size(ecc_key* key);
         int wc_ecc_sig_size(ecc_key* key);
-
-        int wc_EccPrivateKeyDecode(const byte*, word32*, ecc_key*, word32);
-        int wc_EccKeyToDer(ecc_key*, byte* output, word32 inLen);
-
-        int wc_EccPublicKeyDecode(const byte*, word32*, ecc_key*, word32);
-        int wc_EccPublicKeyToDer(ecc_key*, byte* output,
-                                 word32 inLen, int with_AlgCurve);
-
-        int wc_ecc_export_x963(ecc_key*, byte* out, word32* outLen);
-        int wc_ecc_import_x963(const byte* in, word32 inLen, ecc_key* key);
-        int wc_ecc_export_private_raw(ecc_key* key, byte* qx, word32* qxLen,
-                                  byte* qy, word32* qyLen, byte* d, word32* dLen);
-        int wc_ecc_import_unsigned(ecc_key* key, const byte* qx, const byte* qy,
-                       const byte* d, int curve_id);
-        int wc_ecc_export_public_raw(ecc_key* key, byte* qx, word32* qxLen,
-                                 byte* qy, word32* qyLen);
         int wc_ecc_get_curve_size_from_id(int curve_id);
-
-
-        int wc_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
-                                 byte* out, word32* outlen);
-
-        int wc_ecc_sign_hash(const byte* in, word32 inlen,
-                             byte* out, word32 *outlen,
-                             WC_RNG* rng, ecc_key* key);
-        int wc_ecc_verify_hash(const byte* sig, word32 siglen,
-                               const byte* hash, word32 hashlen,
-                               int* stat, ecc_key* key);
+        int wc_ecc_check_key(ecc_key* key);
         """
 
-        if features["MPAPI"]:
+        if features["ECC_KEY_IMPORT"]:
             cdef += """
-            int wc_ecc_sign_hash_ex(const byte* in, word32 inlen, WC_RNG* rng,
-                                 ecc_key* key, mp_int *r, mp_int *s);
-            int wc_ecc_verify_hash_ex(mp_int *r, mp_int *s, const byte* hash,
-                            word32 hashlen, int* res, ecc_key* key);
+            int wc_EccPrivateKeyDecode(const byte*, word32*, ecc_key*, word32);
+            int wc_EccPublicKeyDecode(const byte*, word32*, ecc_key*, word32);
+            int wc_ecc_import_x963(const byte* in, word32 inLen, ecc_key* key);
+            int wc_ecc_import_unsigned(ecc_key* key, const byte* qx, const byte* qy,
+                           const byte* d, int curve_id);
             """
+
+        if features["ECC_KEY_EXPORT"]:
+            cdef += """
+            int wc_EccKeyToDer(ecc_key*, byte* output, word32 inLen);
+            int wc_EccKeyDerSize(ecc_key*, int pub);
+            int wc_EccPublicKeyToDer(ecc_key*, byte* output,
+                                     word32 inLen, int with_AlgCurve);
+            int wc_ecc_export_x963(ecc_key*, byte* out, word32* outLen);
+            int wc_ecc_export_private_raw(ecc_key* key, byte* qx, word32* qxLen,
+                                      byte* qy, word32* qyLen, byte* d, word32* dLen);
+            int wc_ecc_export_public_raw(ecc_key* key, byte* qx, word32* qxLen,
+                                     byte* qy, word32* qyLen);
+            """
+
+        if features["ECC_DHE"]:
+            cdef += """
+            int wc_ecc_shared_secret(ecc_key* private_key, ecc_key* public_key,
+                                     byte* out, word32* outlen);
+            """
+
+        if features["ECC_SIGN"]:
+            cdef += """
+            int wc_ecc_sign_hash(const byte* in, word32 inlen,
+                                 byte* out, word32 *outlen,
+                                 WC_RNG* rng, ecc_key* key);
+            """
+            if features["MPAPI"]:
+                cdef += """
+                int wc_ecc_sign_hash_ex(const byte* in, word32 inlen, WC_RNG* rng,
+                                     ecc_key* key, mp_int *r, mp_int *s);
+                """
+
+        if features["ECC_VERIFY"]:
+            cdef += """
+            int wc_ecc_verify_hash(const byte* sig, word32 siglen,
+                                   const byte* hash, word32 hashlen,
+                                   int* stat, ecc_key* key);
+            """
+            if features["MPAPI"]:
+                cdef += """
+                int wc_ecc_verify_hash_ex(mp_int *r, mp_int *s, const byte* hash,
+                                word32 hashlen, int* res, ecc_key* key);
+                """
 
         if features["ECC_TIMING_RESISTANCE"] and (not features["FIPS"] or
            features["FIPS_VERSION"] > 2):
@@ -1159,33 +1404,51 @@ def build_ffi(local_wolfssl, features):
         int wc_ed25519_init(ed25519_key* ed25519);
         void wc_ed25519_free(ed25519_key* ed25519);
 
-        int wc_ed25519_make_key(WC_RNG* rng, int keysize, ed25519_key* key);
-        int wc_ed25519_make_public(ed25519_key* key, unsigned char* pubKey,
-                               word32 pubKeySz);
         int wc_ed25519_size(ed25519_key* key);
         int wc_ed25519_sig_size(ed25519_key* key);
-        int wc_ed25519_sign_msg(const byte* in, word32 inlen, byte* out,
-                            word32 *outlen, ed25519_key* key);
-        int wc_ed25519_verify_msg(const byte* sig, word32 siglen, const byte* msg,
-                              word32 msglen, int* stat, ed25519_key* key);
-        int wc_Ed25519PrivateKeyDecode(const byte*, word32*, ed25519_key*, word32);
-        int wc_Ed25519KeyToDer(ed25519_key*, byte* output, word32 inLen);
-
-        int wc_Ed25519PublicKeyDecode(const byte*, word32*, ed25519_key*, word32);
-        int wc_Ed25519PublicKeyToDer(ed25519_key*, byte* output,
-                                 word32 inLen, int with_AlgCurve);
-
-        int wc_ed25519_import_public(const byte* in, word32 inLen, ed25519_key* key);
-        int wc_ed25519_import_private_only(const byte* priv, word32 privSz, ed25519_key* key);
-        int wc_ed25519_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed25519_key* key);
-        int wc_ed25519_export_public(ed25519_key*, byte* out, word32* outLen);
-        int wc_ed25519_export_private_only(ed25519_key* key, byte* out, word32* outLen);
-        int wc_ed25519_export_private(ed25519_key* key, byte* out, word32* outLen);
-        int wc_ed25519_export_key(ed25519_key* key, byte* priv, word32 *privSz, byte* pub, word32 *pubSz);
         int wc_ed25519_check_key(ed25519_key* key);
         int wc_ed25519_pub_size(ed25519_key* key);
         int wc_ed25519_priv_size(ed25519_key* key);
         """
+
+        if features["ED25519_MAKE_KEY"]:
+            cdef += """
+            int wc_ed25519_make_key(WC_RNG* rng, int keysize, ed25519_key* key);
+            int wc_ed25519_make_public(ed25519_key* key, unsigned char* pubKey,
+                                   word32 pubKeySz);
+            """
+
+        if features["ED25519_SIGN"]:
+            cdef += """
+            int wc_ed25519_sign_msg(const byte* in, word32 inlen, byte* out,
+                                word32 *outlen, ed25519_key* key);
+            """
+
+        if features["ED25519_VERIFY"]:
+            cdef += """
+            int wc_ed25519_verify_msg(const byte* sig, word32 siglen, const byte* msg,
+                                  word32 msglen, int* stat, ed25519_key* key);
+            """
+
+        if features["ED25519_KEY_IMPORT"]:
+            cdef += """
+            int wc_Ed25519PrivateKeyDecode(const byte*, word32*, ed25519_key*, word32);
+            int wc_Ed25519PublicKeyDecode(const byte*, word32*, ed25519_key*, word32);
+            int wc_ed25519_import_public(const byte* in, word32 inLen, ed25519_key* key);
+            int wc_ed25519_import_private_only(const byte* priv, word32 privSz, ed25519_key* key);
+            int wc_ed25519_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed25519_key* key);
+            """
+
+        if features["ED25519_KEY_EXPORT"]:
+            cdef += """
+            int wc_Ed25519KeyToDer(ed25519_key*, byte* output, word32 inLen);
+            int wc_Ed25519PublicKeyToDer(ed25519_key*, byte* output,
+                                     word32 inLen, int with_AlgCurve);
+            int wc_ed25519_export_public(ed25519_key*, byte* out, word32* outLen);
+            int wc_ed25519_export_private_only(ed25519_key* key, byte* out, word32* outLen);
+            int wc_ed25519_export_private(ed25519_key* key, byte* out, word32* outLen);
+            int wc_ed25519_export_key(ed25519_key* key, byte* priv, word32 *privSz, byte* pub, word32 *pubSz);
+            """
 
     if features["ED448"]:
         cdef += """
@@ -1199,30 +1462,44 @@ def build_ffi(local_wolfssl, features):
                                word32 pubKeySz);
         int wc_ed448_size(ed448_key* key);
         int wc_ed448_sig_size(ed448_key* key);
-        int wc_ed448_sign_msg(const byte* in, word32 inlen, byte* out,
-                            word32 *outlen, ed448_key* key, const byte* ctx,
-                            byte ctx_len);
-        int wc_ed448_verify_msg(const byte* sig, word32 siglen, const byte* msg,
-                              word32 msglen, int* stat, ed448_key* key, const byte *ctx,
-                              byte ctx_len);
-        int wc_Ed448PrivateKeyDecode(const byte*, word32*, ed448_key*, word32);
-        int wc_Ed448KeyToDer(ed448_key*, byte* output, word32 inLen);
-
-        int wc_Ed448PublicKeyDecode(const byte*, word32*, ed448_key*, word32);
-        int wc_Ed448PublicKeyToDer(ed448_key*, byte* output,
-                                 word32 inLen, int with_AlgCurve);
-
-        int wc_ed448_import_public(const byte* in, word32 inLen, ed448_key* key);
-        int wc_ed448_import_private_only(const byte* priv, word32 privSz, ed448_key* key);
-        int wc_ed448_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed448_key* key);
-        int wc_ed448_export_public(ed448_key*, byte* out, word32* outLen);
-        int wc_ed448_export_private_only(ed448_key* key, byte* out, word32* outLen);
-        int wc_ed448_export_private(ed448_key* key, byte* out, word32* outLen);
-        int wc_ed448_export_key(ed448_key* key, byte* priv, word32 *privSz, byte* pub, word32 *pubSz);
         int wc_ed448_check_key(ed448_key* key);
         int wc_ed448_pub_size(ed448_key* key);
         int wc_ed448_priv_size(ed448_key* key);
         """
+
+        if features["ED448_SIGN"]:
+            cdef += """
+            int wc_ed448_sign_msg(const byte* in, word32 inlen, byte* out,
+                                word32 *outlen, ed448_key* key, const byte* ctx,
+                                byte ctx_len);
+            """
+
+        if features["ED448_VERIFY"]:
+            cdef += """
+            int wc_ed448_verify_msg(const byte* sig, word32 siglen, const byte* msg,
+                                  word32 msglen, int* stat, ed448_key* key, const byte *ctx,
+                                  byte ctx_len);
+            """
+
+        if features["ED448_KEY_IMPORT"]:
+            cdef += """
+            int wc_Ed448PrivateKeyDecode(const byte*, word32*, ed448_key*, word32);
+            int wc_Ed448PublicKeyDecode(const byte*, word32*, ed448_key*, word32);
+            int wc_ed448_import_public(const byte* in, word32 inLen, ed448_key* key);
+            int wc_ed448_import_private_only(const byte* priv, word32 privSz, ed448_key* key);
+            int wc_ed448_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed448_key* key);
+            """
+
+        if features["ED448_KEY_EXPORT"]:
+            cdef += """
+            int wc_Ed448KeyToDer(ed448_key*, byte* output, word32 inLen);
+            int wc_Ed448PublicKeyToDer(ed448_key*, byte* output,
+                                     word32 inLen, int with_AlgCurve);
+            int wc_ed448_export_public(ed448_key*, byte* out, word32* outLen);
+            int wc_ed448_export_private_only(ed448_key* key, byte* out, word32* outLen);
+            int wc_ed448_export_private(ed448_key* key, byte* out, word32* outLen);
+            int wc_ed448_export_key(ed448_key* key, byte* priv, word32 *privSz, byte* pub, word32 *pubSz);
+            """
 
     if features["HKDF"]:
         cdef += """
@@ -1244,7 +1521,7 @@ def build_ffi(local_wolfssl, features):
                               void* heap, int devId);
         """
 
-    if features["PWDBASED"]:
+    if features["PBKDF2"]:
         cdef += """
         int wc_PBKDF2(byte* output, const byte* passwd, int pLen,
                       const byte* salt, int sLen, int iterations, int kLen,
@@ -1262,6 +1539,12 @@ def build_ffi(local_wolfssl, features):
         static const long SHA384h;
         static const long SHA512h;
 
+        word32 wc_EncodeSignature(byte* out, const byte* digest, word32 digSz,
+                                  int hashOID);
+        """
+
+    if features["PEM_TO_DER"]:
+        cdef += """
         typedef struct DerBuffer {
             byte*  buffer;
             void*  heap;
@@ -1271,18 +1554,19 @@ def build_ffi(local_wolfssl, features):
         } DerBuffer;
         typedef struct { ...; } EncryptedInfo;
 
-        word32 wc_EncodeSignature(byte* out, const byte* digest, word32 digSz,
-                                  int hashOID);
         int wc_PemToDer(const unsigned char* buff, long longSz, int type,
                         DerBuffer** pDer, void* heap, EncryptedInfo* info,
                         int* keyFormat);
         void wc_FreeDer(DerBuffer** pDer);
+        """
+
+    if features["DER_TO_PEM"]:
+        cdef += """
         int wc_DerToPemEx(const byte* der, word32 derSz, byte* output, word32 outSz,
                         byte *cipher_info, int type);
         """
 
-    if features["ASN"] or features["RSA"]:
-        # This ASN function is used by the RSA binding as well.
+    if features["PKCS8"]:
         cdef += """
         int wc_GetPkcs8TraditionalOffset(byte* input, word32* inOutIdx, word32 sz);
         """
@@ -1321,16 +1605,28 @@ def build_ffi(local_wolfssl, features):
         int wc_KyberKey_PublicKeySize(KyberKey* key, word32* len);
         int wc_KyberKey_Init(int type, KyberKey* key, void* heap, int devId);
         void wc_KyberKey_Free(KyberKey* key);
-        int wc_KyberKey_MakeKey(KyberKey* key, WC_RNG* rng);
-        int wc_KyberKey_MakeKeyWithRandom(KyberKey* key, const unsigned char* rand, int len);
         int wc_KyberKey_EncodePublicKey(KyberKey* key, unsigned char* out, word32 len);
         int wc_KyberKey_DecodePublicKey(KyberKey* key, const unsigned char* in, word32 len);
-        int wc_KyberKey_Encapsulate(KyberKey* key, unsigned char* ct, unsigned char* ss, WC_RNG* rng);
-        int wc_KyberKey_EncapsulateWithRandom(KyberKey* key, unsigned char* ct, unsigned char* ss, const unsigned char* rand, int len);
-        int wc_KyberKey_Decapsulate(KyberKey* key, unsigned char* ss, const unsigned char* ct, word32 len);
         int wc_KyberKey_EncodePrivateKey(KyberKey* key, unsigned char* out, word32 len);
         int wc_KyberKey_DecodePrivateKey(KyberKey* key, const unsigned char* in, word32 len);
         """
+
+        if features["ML_KEM_MAKE_KEY"]:
+            cdef += """
+            int wc_KyberKey_MakeKey(KyberKey* key, WC_RNG* rng);
+            int wc_KyberKey_MakeKeyWithRandom(KyberKey* key, const unsigned char* rand, int len);
+            """
+
+        if features["ML_KEM_ENCAPSULATE"]:
+            cdef += """
+            int wc_KyberKey_Encapsulate(KyberKey* key, unsigned char* ct, unsigned char* ss, WC_RNG* rng);
+            int wc_KyberKey_EncapsulateWithRandom(KyberKey* key, unsigned char* ct, unsigned char* ss, const unsigned char* rand, int len);
+            """
+
+        if features["ML_KEM_DECAPSULATE"]:
+            cdef += """
+            int wc_KyberKey_Decapsulate(KyberKey* key, unsigned char* ss, const unsigned char* ct, word32 len);
+            """
 
     if features["ML_DSA"]:
         cdef += """
@@ -1342,31 +1638,62 @@ def build_ffi(local_wolfssl, features):
         int wc_dilithium_init_ex(dilithium_key* key, void* heap, int devId);
         int wc_dilithium_set_level(dilithium_key* key, byte level);
         void wc_dilithium_free(dilithium_key* key);
-        int wc_dilithium_make_key(dilithium_key* key, WC_RNG* rng);
-        int wc_dilithium_make_key_from_seed(dilithium_key* key, const byte* seed);
-        int wc_dilithium_export_private(dilithium_key* key, byte* out, word32* outLen);
-        int wc_dilithium_import_private(const byte* priv, word32 privSz, dilithium_key* key);
-        int wc_dilithium_export_public(dilithium_key* key, byte* out, word32* outLen);
-        int wc_dilithium_import_public(const byte* in, word32 inLen, dilithium_key* key);
-        int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
-        int wc_dilithium_sign_ctx_msg_with_seed(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
-        int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
         typedef dilithium_key MlDsaKey;
-        int wc_MlDsaKey_GetPrivLen(MlDsaKey* key, int* len);
-        int wc_MlDsaKey_GetPubLen(MlDsaKey* key, int* len);
-        int wc_MlDsaKey_GetSigLen(MlDsaKey* key, int* len);
         """
-        if features["ML_DSA_NO_CTX"]:
+
+        if features["ML_DSA_MAKE_KEY"]:
             cdef += """
-            int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
-            int wc_dilithium_sign_msg_with_seed(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
-            int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
+            int wc_dilithium_make_key(dilithium_key* key, WC_RNG* rng);
+            int wc_dilithium_make_key_from_seed(dilithium_key* key, const byte* seed);
             """
 
-    ffibuilder.cdef(cdef)
+        if features["ML_DSA_PRIVATE_KEY"]:
+            cdef += """
+            int wc_dilithium_export_private(dilithium_key* key, byte* out, word32* outLen);
+            int wc_dilithium_import_private(const byte* priv, word32 privSz, dilithium_key* key);
+            """
 
-def main(ffibuilder):
-    # Default features.
+        if features["ML_DSA_PUBLIC_KEY"]:
+            cdef += """
+            int wc_dilithium_export_public(dilithium_key* key, byte* out, word32* outLen);
+            int wc_dilithium_import_public(const byte* in, word32 inLen, dilithium_key* key);
+            int wc_MlDsaKey_GetPubLen(MlDsaKey* key, int* len);
+            """
+
+        if features["ML_DSA_PRIVATE_KEY"] and features["ML_DSA_PUBLIC_KEY"]:
+            cdef += """
+            int wc_MlDsaKey_GetPrivLen(MlDsaKey* key, int* len);
+            """
+
+        if features["ML_DSA_SIGN"] or features["ML_DSA_VERIFY"]:
+            cdef += """
+            int wc_MlDsaKey_GetSigLen(MlDsaKey* key, int* len);
+            """
+
+        if features["ML_DSA_SIGN"]:
+            cdef += """
+            int wc_dilithium_sign_ctx_msg(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
+            int wc_dilithium_sign_ctx_msg_with_seed(const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
+            """
+            if features["ML_DSA_NO_CTX"]:
+                cdef += """
+                int wc_dilithium_sign_msg(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, WC_RNG* rng);
+                int wc_dilithium_sign_msg_with_seed(const byte* msg, word32 msgLen, byte* sig, word32* sigLen, dilithium_key* key, const byte* seed);
+                """
+
+        if features["ML_DSA_VERIFY"]:
+            cdef += """
+            int wc_dilithium_verify_ctx_msg(const byte* sig, word32 sigLen, const byte* ctx, byte ctxLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
+            """
+            if features["ML_DSA_NO_CTX"]:
+                cdef += """
+                int wc_dilithium_verify_msg(const byte* sig, word32 sigLen, const byte* msg, word32 msgLen, int* res, dilithium_key* key);
+                """
+
+    return cdef
+
+def default_features():
+    """Return the default features, before detection."""
     features = {
         "MPAPI": 1,
         "SHA": 1,
@@ -1400,6 +1727,46 @@ def main(ffibuilder):
         "ML_DSA_NO_CTX": 0,
         "HKDF": 1,
         "HASHDRBG": 1,
+        "AES_CTR": 1,
+        "AES_CBC": 1,
+        "AES_DECRYPT": 1,
+        "AESGCM_STREAM_DECRYPT": 1,
+        "SHA3_224": 1,
+        "SHA3_256": 1,
+        "SHA3_384": 1,
+        "SHA3_512": 1,
+        "PBKDF2": 1,
+        "PEM_TO_DER": 1,
+        "DER_TO_PEM": 1,
+        "PKCS8": 1,
+        "RNG": 1,
+        "RSA_ENCRYPT": 1,
+        "RSA_PRIVATE": 1,
+        "RSA_SIGN": 1,
+        "RSA_VERIFY": 1,
+        "RSA_OAEP": 1,
+        "ECC_SIGN": 1,
+        "ECC_VERIFY": 1,
+        "ECC_DHE": 1,
+        "ECC_KEY_IMPORT": 1,
+        "ECC_KEY_EXPORT": 1,
+        "ED25519_MAKE_KEY": 1,
+        "ED25519_SIGN": 1,
+        "ED25519_VERIFY": 1,
+        "ED25519_KEY_IMPORT": 1,
+        "ED25519_KEY_EXPORT": 1,
+        "ED448_SIGN": 1,
+        "ED448_VERIFY": 1,
+        "ED448_KEY_IMPORT": 1,
+        "ED448_KEY_EXPORT": 1,
+        "ML_KEM_MAKE_KEY": 1,
+        "ML_KEM_ENCAPSULATE": 1,
+        "ML_KEM_DECAPSULATE": 1,
+        "ML_DSA_MAKE_KEY": 1,
+        "ML_DSA_SIGN": 1,
+        "ML_DSA_VERIFY": 1,
+        "ML_DSA_PUBLIC_KEY": 1,
+        "ML_DSA_PRIVATE_KEY": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.
@@ -1407,6 +1774,11 @@ def main(ffibuilder):
         features["ED448"] = 0
     else:
         features["ED448"] = 1
+
+    return features
+
+def main(ffibuilder):
+    features = default_features()
 
     local_wolfssl = os.environ.get("USE_LOCAL_WOLFSSL")
     if local_wolfssl:
@@ -1430,7 +1802,10 @@ def main(ffibuilder):
 
 
 ffibuilder = FFI()
-main(ffibuilder)
+
+# cffi's setuptools integration runs this file with __name__ == "__cffi__".
+if __name__ in ("__main__", "__cffi__"):
+    main(ffibuilder)
 
 if __name__ == "__main__":
     ffibuilder.compile(verbose=True)

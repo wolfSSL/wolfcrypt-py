@@ -27,7 +27,7 @@ from wolfcrypt._ffi import lib as _lib
 
 from wolfcrypt.exceptions import WolfCryptApiError
 
-if _lib.PWDBASED_ENABLED:
+if _lib.PBKDF2_ENABLED:
     def PBKDF2(password: bytes | str, salt: bytes | str, iterations: int, key_length: int, hash_type: int) -> bytes:
         if isinstance(salt, str):
             salt = str.encode(salt)
