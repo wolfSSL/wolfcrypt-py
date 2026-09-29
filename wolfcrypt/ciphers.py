@@ -784,15 +784,12 @@ if _lib.RSA_ENABLED:
         _hash_type = None
 
         def __init__(self, rng: Random | None = None) -> None:
-            if rng is None:
-                rng = Random()
-
             self.native_object = _ffi.new("RsaKey *")
             ret = _lib.wc_InitRsaKey(self.native_object, _ffi.NULL)
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("Invalid key error", ret)
 
-            self._random = rng
+            self._rng = rng
             if _lib.RSA_BLINDING_ENABLED:
                 ret = _lib.wc_RsaSetRNG(self.native_object,
                         self._random.native_object)
@@ -805,6 +802,13 @@ if _lib.RSA_ENABLED:
         def __del__(self) -> None:
             if self.native_object:
                 self._delete(self.native_object)
+
+        # Created on first use so verify works in builds without an RNG.
+        @property
+        def _random(self) -> Random:
+            if self._rng is None:
+                self._rng = Random()
+            return self._rng
 
         def set_mgf(self, mgf: int) -> None:
             self._mgf = mgf
