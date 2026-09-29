@@ -350,7 +350,7 @@ if _lib.CHACHA_ENABLED:
         assert plaintext == dec
 
 if _lib.RSA_ENABLED:
-    # RSA key objects always create a Random.
+    # RSA encrypt and sign create a Random on first use.
     needs_rng = pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
     needs_encrypt_decrypt = pytest.mark.skipif(not (_lib.RSA_ENCRYPT_ENABLED and _lib.RSA_PRIVATE_ENABLED),
                                                reason="RSA encryption or decryption not enabled")
@@ -528,6 +528,23 @@ if _lib.RSA_ENABLED:
 
         assert 1024 / 8 == len(signature) == rsa_private.output_size
         assert plaintext == rsa_private.verify(signature)
+
+    @needs_rng
+    @needs_sign_verify
+    def test_rsa_verify_without_rng(rsa_private, vectors, monkeypatch):
+        plaintext = t2b("Everyone gets Friday off.")
+        signature = rsa_private.sign(plaintext)
+
+        def no_rng():
+            raise NotImplementedError("RNG is not supported by this wolfSSL build")
+
+        # Verify must not need an RNG. Blinding always needs one.
+        monkeypatch.setattr(ciphers, "Random", no_rng)
+        monkeypatch.setattr(_lib, "RSA_BLINDING_ENABLED", 0)
+        rsa_public = RsaPublic(vectors[RsaPublic].key)
+        assert plaintext == rsa_public.verify(signature)
+        with pytest.raises(NotImplementedError):
+            _ = rsa_public._random
 
     if _lib.RSA_PSS_ENABLED:
         @needs_rng
