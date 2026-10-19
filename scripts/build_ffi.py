@@ -568,6 +568,8 @@ def build_ffi(local_wolfssl, features):
         extern int CRYPTO_CB_ENABLED;
 
         static const int INVALID_DEVID;
+        static const int WC_HW_E;
+        static const int CRYPTOCB_UNAVAILABLE;
 
         typedef unsigned char byte;
         typedef unsigned int word32;
@@ -771,7 +773,6 @@ def build_ffi(local_wolfssl, features):
 
         static const int ECC_PRIVATEONLY_E;
         static const int EXTKEYUSAGE_E;
-        static const int WC_HW_E;
         static const int WC_HW_WAIT_E;
 
         static const int PSS_SALTLEN_E;
@@ -799,7 +800,6 @@ def build_ffi(local_wolfssl, features):
         static const int PKCS7_NO_SIGNER_E;
         static const int WC_PKCS7_WANT_READ_E;
 
-        static const int CRYPTOCB_UNAVAILABLE;
         static const int PKCS7_SIGNEEDS_CHECK;
         static const int PSS_SALTLEN_RECOVER_E;
         static const int CHACHA_POLY_OVERFLOW;
@@ -1446,6 +1446,8 @@ def build_ffi(local_wolfssl, features):
         #     } cipher;
         # """
 
+        # wolfSSL names the input fields in/inSz; renamed here because "in" is a
+        # Python keyword. The layout must still match wc_CryptoInfo in cryptocb.h.
         cdef += """
             struct {
                 int type; /* enum wc_HashType */
