@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, ClassVar, Final
 
 from typing_extensions import Self
 
@@ -83,30 +83,38 @@ if _lib.CRYPTO_CB_ENABLED:
 
 
     class CryptoCallback:
+        # Keeps each registered instance (and its ctx handle) alive until it is
+        # unregistered, and records which instance owns a device id.
+        _registered: ClassVar[dict[int, CryptoCallback]] = {}
+
         def __init__(self, device_id: int) -> None:
             self.device_id = device_id
             self.ctx = _ffi.new_handle(self)
             ret = _lib.wc_CryptoCb_RegisterDevice(device_id, _lib.py_wc_crypto_callback, self.ctx)
             if ret < 0:  # pragma: no cover
                 raise WolfCryptError(f"CryptoCb device registration error ({ret})")
+            CryptoCallback._registered[device_id] = self
 
         def __enter__(self) -> Self:
             return self
 
         def __exit__(
             self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None
-        ) -> bool:
+        ) -> None:
             self._unregister()
-            return False
 
         def __del__(self) -> None:
-            self._unregister()
+            try:
+                self._unregister()
+            except AttributeError:
+                # Can occur during interpreter shutdown
+                pass
 
         def callback(self, device_id: int, info: _lib.wc_CryptoInfo) -> int:
             log.debug("device_id=%d algo_type = %s", device_id, ALGO_TYPE_NAME[info.algo_type])
             try:
                 if info.algo_type == _lib.WC_ALGO_TYPE_HASH:
-                    if info.hash.type not in DIGEST_SIZE:
+                    if info.hash.type not in DIGEST_SIZE or not self._handles_hash():
                         return _lib.CRYPTOCB_UNAVAILABLE
                     log.debug("hash_type = %s", HASH_TYPE_NAME[info.hash.type])
                     if info.hash.digest == _ffi.NULL:
@@ -145,8 +153,19 @@ if _lib.CRYPTO_CB_ENABLED:
         def hash_finalize_callback(self, device_id: int, hash_type: int) -> bytes:
             raise NotImplementedError
 
+        def _handles_hash(self) -> bool:
+            # Update and finalize must both go to the callback, otherwise wolfCrypt
+            # would hash the data in software and finalize would ignore it.
+            cls = type(self)
+            return (
+                cls.hash_update_callback is not CryptoCallback.hash_update_callback
+                and cls.hash_finalize_callback is not CryptoCallback.hash_finalize_callback
+            )
+
         def _unregister(self) -> None:
-            _lib.wc_CryptoCb_UnRegisterDevice(self.device_id)
+            if CryptoCallback._registered.get(self.device_id) is self:
+                del CryptoCallback._registered[self.device_id]
+                _lib.wc_CryptoCb_UnRegisterDevice(self.device_id)
 
         @classmethod
         def default_device_id(cls) -> int:

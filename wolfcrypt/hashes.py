@@ -73,7 +73,7 @@ class _Hash(ABC):
 
     @classmethod
     @abstractmethod
-    def new(cls, string: BytesOrStr | None) -> _Hash: ...
+    def new(cls, string: BytesOrStr | None, *, device_id: int = _lib.INVALID_DEVID) -> _Hash: ...
 
     def copy(self) -> _Hash:
         """
@@ -173,14 +173,14 @@ class _Hash(ABC):
 class _Sha(_Hash):
     @override
     @classmethod
-    def new(cls, string: BytesOrStr | None = None) -> _Hash:
+    def new(cls, string: BytesOrStr | None = None, *, device_id: int = _lib.INVALID_DEVID) -> _Hash:
         """
         Creates a new hashing object and returns it. The optional
         **string** parameter, if supplied, will be immediately
         hashed into the object's starting state, as if
         obj.update(string) was called.
         """
-        return cls(string)
+        return cls(string, device_id)
 
 
 if _lib.SHA_ENABLED:
@@ -363,7 +363,7 @@ if _lib.SHA3_ENABLED:
 
         @override
         @classmethod
-        def new(cls, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE, device_id: int = _lib.INVALID_DEVID) -> Sha3:
+        def new(cls, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE, *, device_id: int = _lib.INVALID_DEVID) -> Sha3:
             return cls(string, size, device_id)
 
         @override
@@ -488,7 +488,7 @@ if _lib.HMAC_ENABLED:
 
         @override
         @classmethod
-        def new(cls, key: BytesOrStr, string: BytesOrStr | None = None) -> _Hash:  # pylint: disable=W0221 # ty: ignore[invalid-method-override]
+        def new(cls, key: BytesOrStr, string: BytesOrStr | None = None, *, device_id: int = _lib.INVALID_DEVID) -> _Hash:  # pylint: disable=W0221 # ty: ignore[invalid-method-override]
             """
             Creates a new hashing object and returns it. **key** is
             a required parameter containing a string giving the key
@@ -496,7 +496,7 @@ if _lib.HMAC_ENABLED:
             will be immediately hashed into the object's starting
             state, as if obj.update(string) was called.
             """
-            return cls(key, string)
+            return cls(key, string, device_id)
 
 
         @property

@@ -54,6 +54,8 @@ if top_level_py not in ["setup.py", "build_ffi.py"]:
     if TYPE_CHECKING:
         if _lib.CRYPTO_CB_ENABLED:
             from types import TracebackType
+
+            from _cffi_backend import FFI
             from wolfcrypt.cryptocb import CryptoCallback  # ty: ignore[possibly-missing-import]
     from wolfcrypt.exceptions import WolfCryptApiError
 
@@ -71,10 +73,10 @@ if top_level_py not in ["setup.py", "build_ffi.py"]:
             if isinstance(exc_value, WolfCryptApiError):
                 return exc_value.err_code
             log.error(exc_value)
-            return -1
+            return _lib.WC_HW_E
 
         @_ffi.def_extern(onerror=crypto_cb_error_handler)
-        def py_wc_crypto_callback(device_id: int, info: _lib.wc_CryptoInfo, ctx: _ffi.CData) -> int:
+        def py_wc_crypto_callback(device_id: int, info: _lib.wc_CryptoInfo, ctx: FFI.CData) -> int:
             if ctx == _ffi.NULL:
                 return _lib.CRYPTOCB_UNAVAILABLE
             crypto_cb: CryptoCallback = _ffi.from_handle(ctx)
