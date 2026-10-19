@@ -83,6 +83,13 @@ if _lib.CRYPTO_CB_ENABLED:
 
 
     class CryptoCallback:
+        """
+        Registers a wolfCrypt crypto callback device for **device_id**.
+        Subclasses override rng_callback, or both hash_update_callback
+        and hash_finalize_callback. Operations that are not overridden
+        fall back to the software implementation.
+        """
+
         # Keeps each registered instance (and its ctx handle) alive until it is
         # unregistered, and records which instance owns a device id.
         _registered: ClassVar[dict[int, CryptoCallback]] = {}

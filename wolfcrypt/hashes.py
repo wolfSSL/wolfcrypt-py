@@ -349,7 +349,7 @@ if _lib.SHA3_ENABLED:
             ):
                 self._delete(self._native_object)
 
-        def __init__(self, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE, device_id:int = _lib.INVALID_DEVID) -> None:  # pylint: disable=W0231
+        def __init__(self, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE, device_id: int = _lib.INVALID_DEVID) -> None:  # pylint: disable=W0231
             self._native_object = _ffi.new(self._native_type)
             self._shallow_copy = False
             self.digest_size = size

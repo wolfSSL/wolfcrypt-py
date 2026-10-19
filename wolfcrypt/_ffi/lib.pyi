@@ -595,12 +595,7 @@ class wc_HashInfo:
     data: FFI.CData
     data_size: int
     digest: FFI.CData
-    sha1: FFI.CData
-    sha256: FFI.CData
-    sha384: FFI.CData
-    sha512: FFI.CData
-    sha3: FFI.CData
-    ctx: FFI.CData
+    u: FFI.CData
 
 
 @dataclass

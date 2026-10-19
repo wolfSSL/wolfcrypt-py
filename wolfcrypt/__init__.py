@@ -69,13 +69,15 @@ if top_level_py not in ["setup.py", "build_ffi.py"]:
         raise WolfCryptApiError("WolfCrypt_Init failed", ret)
 
     if _lib.CRYPTO_CB_ENABLED:
-        def crypto_cb_error_handler(exception: Exception, exc_value: Exception, traceback: TracebackType | None) -> int:  # noqa: ANN401
+        def crypto_cb_error_handler(
+            exc_type: object, exc_value: BaseException, traceback: TracebackType | None
+        ) -> int:
             if isinstance(exc_value, WolfCryptApiError):
                 return exc_value.err_code
-            log.error(exc_value)
+            log.error("crypto callback failed", exc_info=exc_value)
             return _lib.WC_HW_E
 
-        @_ffi.def_extern(onerror=crypto_cb_error_handler)
+        @_ffi.def_extern(error=_lib.WC_HW_E, onerror=crypto_cb_error_handler)
         def py_wc_crypto_callback(device_id: int, info: _lib.wc_CryptoInfo, ctx: FFI.CData) -> int:
             if ctx == _ffi.NULL:
                 return _lib.CRYPTOCB_UNAVAILABLE
