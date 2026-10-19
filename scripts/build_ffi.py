@@ -240,6 +240,8 @@ def make_flags(prefix, fips):
 
         # Crypto Callbacks
         flags.append("--enable-cryptocb")
+        # Hash callbacks track per-object state across wc_*Copy and wc_*Free
+        flags.append("--enable-cryptocbutils=copy,free")
         # flags.append("EXTRACPPFLAGS=-DDEBUG_CRYPTOCB")
 
         # disabling other configs enabled by default
@@ -399,6 +401,8 @@ def get_features(local_wolfssl, features):
     # CUSTOM_RAND_GENERATE_BLOCK is defined.
     features["HASHDRBG"] = 0 if ("#define WC_NO_HASHDRBG" in defines or "#define CUSTOM_RAND_GENERATE_BLOCK" in defines) else 1
     features["CRYPTO_CB"] = 1 if "#define WOLF_CRYPTO_CB" in defines else 0
+    features["CRYPTO_CB_COPY"] = 1 if "#define WOLF_CRYPTO_CB_COPY" in defines else 0
+    features["CRYPTO_CB_FREE"] = 1 if "#define WOLF_CRYPTO_CB_FREE" in defines else 0
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -522,6 +526,8 @@ def build_ffi(local_wolfssl, features):
         int HKDF_ENABLED = {features["HKDF"]};
         int HASHDRBG_ENABLED = {features["HASHDRBG"]};
         int CRYPTO_CB_ENABLED = {features["CRYPTO_CB"]};
+        int CRYPTO_CB_COPY_ENABLED = {features["CRYPTO_CB_COPY"]};
+        int CRYPTO_CB_FREE_ENABLED = {features["CRYPTO_CB_FREE"]};
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -566,6 +572,8 @@ def build_ffi(local_wolfssl, features):
         extern int HKDF_ENABLED;
         extern int HASHDRBG_ENABLED;
         extern int CRYPTO_CB_ENABLED;
+        extern int CRYPTO_CB_COPY_ENABLED;
+        extern int CRYPTO_CB_FREE_ENABLED;
 
         static const int INVALID_DEVID;
         static const int WC_HW_E;
@@ -1487,6 +1495,26 @@ def build_ffi(local_wolfssl, features):
                 byte* out;
                 word32 sz;
             } rng;
+        """
+        if features["CRYPTO_CB_COPY"]:
+            cdef += """
+            struct {
+                int algo; /* enum wc_AlgoType */
+                int type; /* enum wc_HashType for WC_ALGO_TYPE_HASH */
+                void* src;
+                void* dst;
+            } copy;
+            """
+        if features["CRYPTO_CB_FREE"]:
+            cdef += """
+            struct {
+                int algo; /* enum wc_AlgoType */
+                int type; /* enum wc_HashType for WC_ALGO_TYPE_HASH */
+                int subType;
+                void* obj;
+            } free;
+            """
+        cdef += """
             };
             ...;
         } wc_CryptoInfo;
@@ -1537,6 +1565,8 @@ def main(ffibuilder):
         "HKDF": 1,
         "HASHDRBG": 1,
         "CRYPTO_CB": 1,
+        "CRYPTO_CB_COPY": 1,
+        "CRYPTO_CB_FREE": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.

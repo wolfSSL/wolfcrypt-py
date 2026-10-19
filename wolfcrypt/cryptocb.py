@@ -22,9 +22,10 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 from collections import defaultdict
-from typing import TYPE_CHECKING, ClassVar, Final
+from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from typing_extensions import Self
 
@@ -34,6 +35,8 @@ from wolfcrypt.exceptions import WolfCryptError
 
 if TYPE_CHECKING:
     from types import TracebackType
+
+    from _cffi_backend import FFI
 
 log = logging.getLogger(__name__)
 
@@ -81,6 +84,16 @@ if _lib.CRYPTO_CB_ENABLED:
         _lib.WC_HASH_TYPE_SHA3_512: 64,
     }
 
+    NATIVE_HASH_TYPE: Final = {
+        _lib.WC_HASH_TYPE_SHA: "wc_Sha",
+        _lib.WC_HASH_TYPE_SHA256: "wc_Sha256",
+        _lib.WC_HASH_TYPE_SHA384: "wc_Sha384",
+        _lib.WC_HASH_TYPE_SHA512: "wc_Sha512",
+        _lib.WC_HASH_TYPE_SHA3_256: "wc_Sha3",
+        _lib.WC_HASH_TYPE_SHA3_384: "wc_Sha3",
+        _lib.WC_HASH_TYPE_SHA3_512: "wc_Sha3",
+    }
+
 
     class CryptoCallback:
         """
@@ -88,6 +101,13 @@ if _lib.CRYPTO_CB_ENABLED:
         Subclasses override rng_callback, or both hash_update_callback
         and hash_finalize_callback. Operations that are not overridden
         fall back to the software implementation.
+
+        Each hash object has its own context dict, passed to both hash
+        hooks for keeping per-hash state. It is deep-copied when the hash
+        object is copied and discarded when the hash is finalized or freed.
+        Hash callbacks need wolfSSL built with copy and free callback support
+        (--enable-cryptocbutils=copy,free); without it hashing falls back to
+        the software implementation.
         """
 
         # Keeps each registered instance (and its ctx handle) alive until it is
@@ -96,6 +116,7 @@ if _lib.CRYPTO_CB_ENABLED:
 
         def __init__(self, device_id: int) -> None:
             self.device_id = device_id
+            self._hash_contexts: dict[int, dict[str, Any]] = {}
             self.ctx = _ffi.new_handle(self)
             ret = _lib.wc_CryptoCb_RegisterDevice(device_id, _lib.py_wc_crypto_callback, self.ctx)
             if ret < 0:  # pragma: no cover
@@ -124,14 +145,19 @@ if _lib.CRYPTO_CB_ENABLED:
                     if info.hash.type not in DIGEST_SIZE or not self._handles_hash():
                         return _lib.CRYPTOCB_UNAVAILABLE
                     log.debug("hash_type = %s", HASH_TYPE_NAME[info.hash.type])
+                    key = _address(info.hash.u.ctx)
+                    context = self._hash_contexts.setdefault(key, {})
                     if info.hash.digest == _ffi.NULL:
                         self.hash_update_callback(
                             device_id,
                             info.hash.type,
+                            context,
                             bytes(_ffi.buffer(info.hash.data, info.hash.data_size)),
                         )
                     else:
-                        digest = self.hash_finalize_callback(device_id, info.hash.type)
+                        digest = self.hash_finalize_callback(device_id, info.hash.type, context)
+                        # wolfCrypt resets a hash object after Final
+                        del self._hash_contexts[key]
                         if len(digest) != DIGEST_SIZE[info.hash.type]:
                             raise ValueError(
                                 f"Generated digest is expected to be {DIGEST_SIZE[info.hash.type]} bytes long, "
@@ -147,6 +173,12 @@ if _lib.CRYPTO_CB_ENABLED:
                         )
                     _ffi.buffer(info.rng.out, info.rng.sz)[:] = out
                     return 0
+                if info.algo_type == _lib.WC_ALGO_TYPE_COPY and info.copy.algo == _lib.WC_ALGO_TYPE_HASH:
+                    return self._hash_copy(info.copy.type, info.copy.src, info.copy.dst)
+                if info.algo_type == _lib.WC_ALGO_TYPE_FREE and info.free.algo == _lib.WC_ALGO_TYPE_HASH:
+                    self._hash_contexts.pop(_address(info.free.obj), None)
+                    # Let wolfCrypt free the native object
+                    return _lib.CRYPTOCB_UNAVAILABLE
                 return _lib.CRYPTOCB_UNAVAILABLE
             except NotImplementedError:
                 return _lib.CRYPTOCB_UNAVAILABLE
@@ -154,15 +186,31 @@ if _lib.CRYPTO_CB_ENABLED:
         def rng_callback(self, device_id: int, rng: _lib.RNG, size: int) -> bytes:
             raise NotImplementedError
 
-        def hash_update_callback(self, device_id: int, hash_type: int, data: bytes) -> None:
+        def hash_update_callback(self, device_id: int, hash_type: int, context: dict[str, Any], data: bytes) -> None:
             raise NotImplementedError
 
-        def hash_finalize_callback(self, device_id: int, hash_type: int) -> bytes:
+        def hash_finalize_callback(self, device_id: int, hash_type: int, context: dict[str, Any]) -> bytes:
             raise NotImplementedError
+
+        def _hash_copy(self, hash_type: int, src: FFI.CData, dst: FFI.CData) -> int:
+            src_key = _address(src)
+            dst_key = _address(dst)
+            self._hash_contexts.pop(dst_key, None)
+            if src_key not in self._hash_contexts:
+                return _lib.CRYPTOCB_UNAVAILABLE
+            # Copy the native object here: on CRYPTOCB_UNAVAILABLE wolfCrypt
+            # frees dst after this callback, which would drop its context.
+            _ffi.memmove(dst, src, _ffi.sizeof(NATIVE_HASH_TYPE[hash_type]))
+            self._hash_contexts[dst_key] = copy.deepcopy(self._hash_contexts[src_key])
+            return 0
 
         def _handles_hash(self) -> bool:
             # Update and finalize must both go to the callback, otherwise wolfCrypt
             # would hash the data in software and finalize would ignore it.
+            # Without copy and free callbacks a hash context could not follow
+            # its native object.
+            if not (_lib.CRYPTO_CB_COPY_ENABLED and _lib.CRYPTO_CB_FREE_ENABLED):
+                return False
             cls = type(self)
             return (
                 cls.hash_update_callback is not CryptoCallback.hash_update_callback
@@ -177,3 +225,7 @@ if _lib.CRYPTO_CB_ENABLED:
         @classmethod
         def default_device_id(cls) -> int:
             return _lib.wc_CryptoCb_DefaultDevID()
+
+
+    def _address(ptr: FFI.CData) -> int:
+        return int(_ffi.cast("uintptr_t", ptr))

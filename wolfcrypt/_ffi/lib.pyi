@@ -34,6 +34,8 @@ CHACHA_ENABLED: int
 CHACHA_STREAM_ENABLED: int
 CHACHA20_POLY1305_ENABLED: int
 CRYPTO_CB_ENABLED: int
+CRYPTO_CB_COPY_ENABLED: int
+CRYPTO_CB_FREE_ENABLED: int
 DES3_ENABLED: int
 ECC_ENABLED: int
 ED25519_ENABLED: int
@@ -606,10 +608,28 @@ class wc_RngInfo:
 
 
 @dataclass
+class wc_CopyInfo:
+    algo: int
+    type: int
+    src: FFI.CData
+    dst: FFI.CData
+
+
+@dataclass
+class wc_FreeInfo:
+    algo: int
+    type: int
+    subType: int
+    obj: FFI.CData
+
+
+@dataclass
 class wc_CryptoInfo:
     algo_type: int
     hash: wc_HashInfo
     rng: wc_RngInfo
+    copy: wc_CopyInfo
+    free: wc_FreeInfo
 
 
 def wc_CryptoCb_RegisterDevice(dev_id: int, cb: Callable[[int, wc_CryptoInfo, FFI.CData], int], ctx: FFI.CData) -> int: ...

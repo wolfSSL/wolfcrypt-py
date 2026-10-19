@@ -25,6 +25,7 @@ import gc
 import hashlib
 import struct
 from binascii import hexlify as b2h
+from typing import Any
 
 import pytest
 from typing_extensions import override
@@ -38,6 +39,9 @@ if not _lib.CRYPTO_CB_ENABLED:
     pytest.skip("Crypto Callbacks not supported", allow_module_level=True)
 
 from wolfcrypt.cryptocb import CryptoCallback, DIGEST_SIZE
+
+HASH_CB_ENABLED = _lib.CRYPTO_CB_COPY_ENABLED and _lib.CRYPTO_CB_FREE_ENABLED
+needs_hash_cb = pytest.mark.skipif(not HASH_CB_ENABLED, reason="Hash callbacks need copy and free crypto callbacks")
 
 SHA_CLASSES: list[type[_Sha]] = []
 
@@ -89,43 +93,85 @@ def test_rng_callback():
 
 
 class HashCryptoCallback(CryptoCallback):
-    def __init__(self, device_id):
-        super().__init__(device_id)
-        self.data: list[bytes] = []
+    @override
+    def hash_update_callback(self, device_id: int, hash_type: int, context: dict[str, Any], data: bytes) -> None:
+        context.setdefault("data", []).append(data)
 
     @override
-    def hash_update_callback(self, device_id: int, hash_type: int, data: bytes) -> None:
-        self.data.append(data)
-
-    @override
-    def hash_finalize_callback(self, device_id: int, hash_type: int) -> bytes:
+    def hash_finalize_callback(self, device_id: int, hash_type: int, context: dict[str, Any]) -> bytes:
         # quite lame hash function, just returns the length of the data as an integer (padded to match the expected hash length).
-        return struct.pack(f"I{DIGEST_SIZE[hash_type] - 4}x", len(b"".join(self.data)))
+        return struct.pack(f"I{DIGEST_SIZE[hash_type] - 4}x", len(b"".join(context.get("data", []))))
 
 
+def fake_digest(sha: _Sha, length: int) -> bytes:
+    assert sha.digest_size is not None
+    return struct.pack(f"I{sha.digest_size - 4}x", length)
+
+
+@needs_hash_cb
 @pytest.mark.parametrize("sha_cls", SHA_CLASSES)
 def test_hash_callback(sha_cls: type[_Sha]) -> None:
     with HashCryptoCallback(11):
         sha = sha_cls(device_id=11)
         sha.update(bytes(10))
         sha.update(bytes(5))
-        digest = sha.digest()
-        digest_size = sha.digest_size
-        assert digest_size is not None
-        assert digest == struct.pack(f"I{digest_size - 4}x", 15)
+        assert sha.digest() == fake_digest(sha, 15)
+
+
+@needs_hash_cb
+@pytest.mark.parametrize("sha_cls", SHA_CLASSES)
+def test_hash_callback_interleaved(sha_cls: type[_Sha]) -> None:
+    with HashCryptoCallback(20):
+        first = sha_cls(device_id=20)
+        second = sha_cls(device_id=20)
+        first.update(bytes(10))
+        second.update(bytes(5))
+        assert first.digest() == fake_digest(first, 10)
+        assert second.digest() == fake_digest(second, 5)
+
+
+@needs_hash_cb
+@pytest.mark.parametrize("sha_cls", SHA_CLASSES)
+def test_hash_callback_copy(sha_cls: type[_Sha]) -> None:
+    with HashCryptoCallback(21):
+        sha = sha_cls(device_id=21)
+        sha.update(bytes(10))
+        dup = sha.copy()
+        dup.update(bytes(5))
+        assert sha.digest() == fake_digest(sha, 10)
+        assert dup.digest() == fake_digest(dup, 15)
+        # digest() finalizes a temporary copy, so the original keeps its state
+        sha.update(bytes(1))
+        assert sha.digest() == fake_digest(sha, 11)
+        assert dup.digest() == fake_digest(dup, 15)
+
+
+@needs_hash_cb
+@pytest.mark.parametrize("sha_cls", SHA_CLASSES)
+def test_hash_callback_free_drops_context(sha_cls: type[_Sha]) -> None:
+    with HashCryptoCallback(22) as cb:
+        sha = sha_cls(device_id=22)
+        sha.update(bytes(3))
+        dup = sha.copy()
+        assert sha.digest() == fake_digest(sha, 3)
+        assert len(cb._hash_contexts) == 2
+        del sha, dup
+        gc.collect()
+        assert not cb._hash_contexts
 
 
 class BadHashCryptoCallback(CryptoCallback):
     @override
-    def hash_update_callback(self, device_id: int, hash_type: int, data: bytes) -> None:
+    def hash_update_callback(self, device_id: int, hash_type: int, context: dict[str, Any], data: bytes) -> None:
         pass
 
     @override
-    def hash_finalize_callback(self, device_id: int, hash_type: int) -> bytes:
+    def hash_finalize_callback(self, device_id: int, hash_type: int, context: dict[str, Any]) -> bytes:
         return bytes(1)  # bad hash length
 
 
 if _lib.SHA_ENABLED:
+    @needs_hash_cb
     def test_hash_callback_failure():
         with BadHashCryptoCallback(12):
             sha = Sha(device_id=12)
@@ -185,7 +231,7 @@ def test_reregister_same_device_id():
 
 class FinalizeOnlyCryptoCallback(CryptoCallback):
     @override
-    def hash_finalize_callback(self, device_id: int, hash_type: int) -> bytes:
+    def hash_finalize_callback(self, device_id: int, hash_type: int, context: dict[str, Any]) -> bytes:
         return bytes(DIGEST_SIZE[hash_type])
 
 
@@ -195,6 +241,13 @@ if _lib.SHA256_ENABLED:
             sha = Sha256(b"abc", device_id=16)
             assert sha.digest() == hashlib.sha256(b"abc").digest()
 
+    @pytest.mark.skipif(HASH_CB_ENABLED, reason="Copy and free crypto callbacks are available")
+    def test_hash_without_copy_free_falls_back():
+        with HashCryptoCallback(23):
+            sha = Sha256(b"abc", device_id=23)
+            assert sha.digest() == hashlib.sha256(b"abc").digest()
+
+    @needs_hash_cb
     def test_hash_new_device_id():
         with HashCryptoCallback(17):
             sha = Sha256.new(bytes(7), device_id=17)
