@@ -21,6 +21,8 @@
 
 from __future__ import annotations
 
+import gc
+import hashlib
 import struct
 from binascii import hexlify as b2h
 
@@ -115,6 +117,10 @@ def test_hash_callback(sha_cls: type[_Sha]) -> None:
 
 class BadHashCryptoCallback(CryptoCallback):
     @override
+    def hash_update_callback(self, device_id: int, hash_type: int, data: bytes) -> None:
+        pass
+
+    @override
     def hash_finalize_callback(self, device_id: int, hash_type: int) -> bytes:
         return bytes(1)  # bad hash length
 
@@ -143,3 +149,80 @@ if _lib.AESGCM_STREAM_ENABLED:
             assert authTag is not None
             assert b2h(authTag) == bytes('ac8fcee96dc6ef8e5236da19b6197d2e', 'utf-8')
             assert b2h(buf) == bytes('5ba7d42e1bf01d7998e932', "utf-8")
+
+
+class BadRngCryptoCallback(CryptoCallback):
+    @override
+    def rng_callback(self, device_id: int, rng: _lib.RNG, size: int) -> bytes:
+        return bytes(1)  # bad random length
+
+
+def test_rng_callback_failure():
+    with BadRngCryptoCallback(14):
+        rng = Random(device_id=14)
+        with pytest.raises(WolfCryptApiError):
+            rng.bytes(4)
+
+
+def test_reregister_same_device_id():
+    gc.disable()
+    try:
+        with RngCryptoCallback(15):
+            pass
+        # A stale instance collected later must not unregister the new owner.
+        with RngCryptoCallback(15):
+            gc.collect()
+            assert Random(device_id=15).bytes(3) == b"\01\02\03"
+        # Replacing a live registration hands the device id to the new instance.
+        first = RngCryptoCallback(15)
+        with RngCryptoCallback(15):
+            del first
+            gc.collect()
+            assert Random(device_id=15).bytes(3) == b"\01\02\03"
+    finally:
+        gc.enable()
+
+
+class FinalizeOnlyCryptoCallback(CryptoCallback):
+    @override
+    def hash_finalize_callback(self, device_id: int, hash_type: int) -> bytes:
+        return bytes(DIGEST_SIZE[hash_type])
+
+
+if _lib.SHA256_ENABLED:
+    def test_hash_partial_override_falls_back():
+        with FinalizeOnlyCryptoCallback(16):
+            sha = Sha256(b"abc", device_id=16)
+            assert sha.digest() == hashlib.sha256(b"abc").digest()
+
+    def test_hash_new_device_id():
+        with HashCryptoCallback(17):
+            sha = Sha256.new(bytes(7), device_id=17)
+            assert sha.digest() == struct.pack("I28x", 7)
+
+
+if _lib.SHA3_ENABLED:
+    def test_hash_unsupported_type_falls_back():
+        with HashCryptoCallback(18):
+            sha = Sha3(b"abc", size=Sha3.SHA3_224_DIGEST_SIZE, device_id=18)
+            assert sha.digest() == hashlib.sha3_224(b"abc").digest()
+
+
+if _lib.HMAC_ENABLED and _lib.SHA256_ENABLED:
+    from wolfcrypt.hashes import HmacSha256
+
+    class RecordingCryptoCallback(CryptoCallback):
+        def __init__(self, device_id: int) -> None:
+            super().__init__(device_id)
+            self.algo_types: list[int] = []
+
+        @override
+        def callback(self, device_id: int, info: _lib.wc_CryptoInfo) -> int:
+            self.algo_types.append(info.algo_type)
+            return super().callback(device_id, info)
+
+    def test_hmac_device_id():
+        with RecordingCryptoCallback(19) as cb:
+            mac = HmacSha256.new(b"key", b"data", device_id=19).digest()
+        assert mac == HmacSha256(b"key", b"data").digest()
+        assert cb.algo_types
