@@ -34,6 +34,7 @@ from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.exceptions import WolfCryptError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import TracebackType
 
     from _cffi_backend import FFI
@@ -84,15 +85,20 @@ if _lib.CRYPTO_CB_ENABLED:
         _lib.WC_HASH_TYPE_SHA3_512: 64,
     }
 
-    NATIVE_HASH_TYPE: Final = {
-        _lib.WC_HASH_TYPE_SHA: "wc_Sha",
-        _lib.WC_HASH_TYPE_SHA256: "wc_Sha256",
-        _lib.WC_HASH_TYPE_SHA384: "wc_Sha384",
-        _lib.WC_HASH_TYPE_SHA512: "wc_Sha512",
-        _lib.WC_HASH_TYPE_SHA3_256: "wc_Sha3",
-        _lib.WC_HASH_TYPE_SHA3_384: "wc_Sha3",
-        _lib.WC_HASH_TYPE_SHA3_512: "wc_Sha3",
-    }
+    # Native type and wolfCrypt copy function for each hash type
+    NATIVE_HASH_COPY: Final[dict[int, tuple[str, Callable[[FFI.CData, FFI.CData], int]]]] = {}
+    if _lib.SHA_ENABLED:
+        NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA] = ("wc_Sha *", _lib.wc_ShaCopy)
+    if _lib.SHA256_ENABLED:
+        NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA256] = ("wc_Sha256 *", _lib.wc_Sha256Copy)
+    if _lib.SHA384_ENABLED:
+        NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA384] = ("wc_Sha384 *", _lib.wc_Sha384Copy)
+    if _lib.SHA512_ENABLED:
+        NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA512] = ("wc_Sha512 *", _lib.wc_Sha512Copy)
+    if _lib.SHA3_ENABLED:
+        NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA3_256] = ("wc_Sha3 *", _lib.wc_Sha3_256_Copy)
+        NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA3_384] = ("wc_Sha3 *", _lib.wc_Sha3_384_Copy)
+        NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA3_512] = ("wc_Sha3 *", _lib.wc_Sha3_512_Copy)
 
 
     class CryptoCallback:
@@ -104,7 +110,8 @@ if _lib.CRYPTO_CB_ENABLED:
 
         Each hash object has its own context dict, passed to both hash
         hooks for keeping per-hash state. It is deep-copied when the hash
-        object is copied and discarded when the hash is finalized or freed.
+        object is copied, so its values must support copy.deepcopy, and it
+        is discarded when the hash is finalized or freed.
         Hash callbacks need wolfSSL built with copy and free callback support
         (--enable-cryptocbutils=copy,free); without it hashing falls back to
         the software implementation.
@@ -117,6 +124,8 @@ if _lib.CRYPTO_CB_ENABLED:
         def __init__(self, device_id: int) -> None:
             self.device_id = device_id
             self._hash_contexts: dict[int, dict[str, Any]] = {}
+            # (src, dst) addresses of native hash copies in progress
+            self._hash_copies: set[tuple[int, int]] = set()
             self.ctx = _ffi.new_handle(self)
             ret = _lib.wc_CryptoCb_RegisterDevice(device_id, _lib.py_wc_crypto_callback, self.ctx)
             if ret < 0:  # pragma: no cover
@@ -195,14 +204,26 @@ if _lib.CRYPTO_CB_ENABLED:
         def _hash_copy(self, hash_type: int, src: FFI.CData, dst: FFI.CData) -> int:
             src_key = _address(src)
             dst_key = _address(dst)
-            self._hash_contexts.pop(dst_key, None)
-            if src_key not in self._hash_contexts:
+            native = NATIVE_HASH_COPY.get(hash_type)
+            if (
+                native is None
+                or src_key not in self._hash_contexts
+                or (src_key, dst_key) in self._hash_copies
+            ):
                 return _lib.CRYPTOCB_UNAVAILABLE
-            # Copy the native object here: on CRYPTOCB_UNAVAILABLE wolfCrypt
-            # frees dst after this callback, which would drop its context.
-            _ffi.memmove(dst, src, _ffi.sizeof(NATIVE_HASH_TYPE[hash_type]))
-            self._hash_contexts[dst_key] = copy.deepcopy(self._hash_contexts[src_key])
-            return 0
+            # Re-enter wolfCrypt's copy so it deep copies the native object
+            # (e.g. the SMALL_STACK_CACHE W buffer). The nested copy callback
+            # returns CRYPTOCB_UNAVAILABLE above, and the free of dst it does
+            # first drops any old context for dst.
+            ptr_type, copy_fn = native
+            self._hash_copies.add((src_key, dst_key))
+            try:
+                ret = copy_fn(_ffi.cast(ptr_type, src), _ffi.cast(ptr_type, dst))
+            finally:
+                self._hash_copies.discard((src_key, dst_key))
+            if ret == 0:
+                self._hash_contexts[dst_key] = copy.deepcopy(self._hash_contexts[src_key])
+            return ret
 
         def _handles_hash(self) -> bool:
             # Update and finalize must both go to the callback, otherwise wolfCrypt

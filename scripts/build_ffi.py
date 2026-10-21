@@ -403,6 +403,15 @@ def get_features(local_wolfssl, features):
     features["CRYPTO_CB"] = 1 if "#define WOLF_CRYPTO_CB" in defines else 0
     features["CRYPTO_CB_COPY"] = 1 if "#define WOLF_CRYPTO_CB_COPY" in defines else 0
     features["CRYPTO_CB_FREE"] = 1 if "#define WOLF_CRYPTO_CB_FREE" in defines else 0
+    # wc_HmacCopy was added in wolfSSL 5.9.0 and has no feature define.
+    features["HMAC_COPY"] = 0
+    if features["HMAC"]:
+        for d in include_dirs:
+            hmac_h = os.path.join(d, "wolfssl", "wolfcrypt", "hmac.h")
+            if os.path.exists(hmac_h):
+                with open(hmac_h) as f:
+                    if "wc_HmacCopy" in f.read():
+                        features["HMAC_COPY"] = 1
 
     if '#define HAVE_FIPS' in defines:
         if not fips:
@@ -528,6 +537,7 @@ def build_ffi(local_wolfssl, features):
         int CRYPTO_CB_ENABLED = {features["CRYPTO_CB"]};
         int CRYPTO_CB_COPY_ENABLED = {features["CRYPTO_CB_COPY"]};
         int CRYPTO_CB_FREE_ENABLED = {features["CRYPTO_CB_FREE"]};
+        int HMAC_COPY_ENABLED = {features["HMAC_COPY"]};
     """
 
     ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
@@ -574,6 +584,7 @@ def build_ffi(local_wolfssl, features):
         extern int CRYPTO_CB_ENABLED;
         extern int CRYPTO_CB_COPY_ENABLED;
         extern int CRYPTO_CB_FREE_ENABLED;
+        extern int HMAC_COPY_ENABLED;
 
         static const int INVALID_DEVID;
         static const int WC_HW_E;
@@ -1038,6 +1049,10 @@ def build_ffi(local_wolfssl, features):
         int wc_HmacFinal(Hmac*, byte*);
         void wc_HmacFree(Hmac*);
         """
+        if features["HMAC_COPY"]:
+            cdef += """
+            int wc_HmacCopy(Hmac* src, Hmac* dst);
+            """
 
     if features["RSA"]:
         cdef += """
@@ -1567,6 +1582,7 @@ def main(ffibuilder):
         "CRYPTO_CB": 1,
         "CRYPTO_CB_COPY": 1,
         "CRYPTO_CB_FREE": 1,
+        "HMAC_COPY": 1,
     }
 
     # Ed448 requires SHAKE256, which isn't part of the Windows build, yet.

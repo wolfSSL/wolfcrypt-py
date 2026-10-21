@@ -28,7 +28,7 @@ from typing_extensions import override
 
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
-from wolfcrypt.exceptions import WolfCryptApiError
+from wolfcrypt.exceptions import WolfCryptApiError, WolfCryptError
 from wolfcrypt.utils import t2b, b2h, BytesOrStr
 
 if TYPE_CHECKING:
@@ -449,22 +449,21 @@ if _lib.HMAC_ENABLED:
         A **PEP 247: Cryptographic Hash Functions** compliant
         **Keyed Hash Function Interface**.
 
-        Note: wolfCrypt provides no safe public copy for an `Hmac` object.
+        Note: `copy()` is not supported and raises `NotImplementedError`.
         Byte-copying the struct would alias the original's internal state
-        (e.g. async/hardware-accelerated builds keep pointers there), so
-        `copy()` is not supported and raises `NotImplementedError`.
+        (e.g. async/hardware-accelerated builds keep pointers there).
+        `digest()` uses wc_HmacCopy (wolfSSL 5.9.0+) when it is available.
         """
         digest_size = None
         _native_type = "Hmac *"
         _native_size = _ffi.sizeof("Hmac")
         _delete = staticmethod(_lib.wc_HmacFree)
+        if _lib.HMAC_COPY_ENABLED:
+            _copy = staticmethod(_lib.wc_HmacCopy)
 
         @override
         def copy(self) -> _Hmac:
-            raise NotImplementedError(
-                "HMAC objects cannot be safely copied: wolfCrypt has no "
-                "wc_HmacCopy and byte-copying the state would alias the "
-                "original's internal C resources")
+            raise NotImplementedError("HMAC objects do not support copy()")
 
         def __del__(self) -> None:
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
@@ -504,6 +503,16 @@ if _lib.HMAC_ENABLED:
         def _type(self) -> int: ...
 
         def _hmac_init(self, hmac: int, key: bytes, device_id: int) -> int:
+            # Without wc_HmacCopy, digest() byte-copies the Hmac, which loses
+            # the per-hash state a crypto callback keeps for the embedded hash.
+            # Hash callbacks are only used with copy and free callbacks.
+            if (
+                device_id != _lib.INVALID_DEVID
+                and not _lib.HMAC_COPY_ENABLED
+                and _lib.CRYPTO_CB_COPY_ENABLED
+                and _lib.CRYPTO_CB_FREE_ENABLED
+            ):
+                raise WolfCryptError("HMAC device_id with hash crypto callbacks requires wc_HmacCopy")
             ret = _lib.wc_HmacInit(self._native_object, _ffi.NULL, device_id)
             if ret < 0:
                 raise WolfCryptApiError("wc_HmacInit error", ret)

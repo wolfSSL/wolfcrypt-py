@@ -23,17 +23,21 @@ from __future__ import annotations
 
 import gc
 import hashlib
+import hmac as py_hmac
 import struct
 from binascii import hexlify as b2h
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from typing_extensions import override
 
 from wolfcrypt._ffi import lib as _lib
-from wolfcrypt.exceptions import WolfCryptApiError
+from wolfcrypt.exceptions import WolfCryptApiError, WolfCryptError
 from wolfcrypt.hashes import _Sha
 from wolfcrypt.random import Random
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 if not _lib.CRYPTO_CB_ENABLED:
     pytest.skip("Crypto Callbacks not supported", allow_module_level=True)
@@ -103,6 +107,29 @@ class HashCryptoCallback(CryptoCallback):
         return struct.pack(f"I{DIGEST_SIZE[hash_type] - 4}x", len(b"".join(context.get("data", []))))
 
 
+PY_HASH: dict[int, Callable[[bytes], hashlib._Hash]] = {
+    _lib.WC_HASH_TYPE_SHA: hashlib.sha1,
+    _lib.WC_HASH_TYPE_SHA256: hashlib.sha256,
+    _lib.WC_HASH_TYPE_SHA384: hashlib.sha384,
+    _lib.WC_HASH_TYPE_SHA512: hashlib.sha512,
+    _lib.WC_HASH_TYPE_SHA3_256: hashlib.sha3_256,
+    _lib.WC_HASH_TYPE_SHA3_384: hashlib.sha3_384,
+    _lib.WC_HASH_TYPE_SHA3_512: hashlib.sha3_512,
+}
+
+
+class SoftwareHashCryptoCallback(CryptoCallback):
+    """Hashes with hashlib, so results must match wolfCrypt without a device."""
+
+    @override
+    def hash_update_callback(self, device_id: int, hash_type: int, context: dict[str, Any], data: bytes) -> None:
+        context["data"] = context.get("data", b"") + data
+
+    @override
+    def hash_finalize_callback(self, device_id: int, hash_type: int, context: dict[str, Any]) -> bytes:
+        return PY_HASH[hash_type](context.get("data", b"")).digest()
+
+
 def fake_digest(sha: _Sha, length: int) -> bytes:
     assert sha.digest_size is not None
     return struct.pack(f"I{sha.digest_size - 4}x", length)
@@ -156,6 +183,23 @@ def test_hash_callback_free_drops_context(sha_cls: type[_Sha]) -> None:
         assert sha.digest() == fake_digest(sha, 3)
         assert len(cb._hash_contexts) == 2
         del sha, dup
+        gc.collect()
+        assert not cb._hash_contexts
+
+
+@needs_hash_cb
+@pytest.mark.parametrize("sha_cls", SHA_CLASSES)
+def test_hash_callback_repeated_copy_free(sha_cls: type[_Sha]) -> None:
+    # Copies must own their native resources (e.g. the SMALL_STACK_CACHE W
+    # buffer), otherwise freeing the copies frees the original's.
+    with SoftwareHashCryptoCallback(24) as cb:
+        for _ in range(50):
+            sha = sha_cls(b"abc", device_id=24)
+            dup = sha.copy()
+            dup.update(b"def")
+            assert sha.digest() == sha_cls(b"abc").digest()
+            assert dup.digest() == sha_cls(b"abcdef").digest()
+            del sha, dup
         gc.collect()
         assert not cb._hash_contexts
 
@@ -274,8 +318,28 @@ if _lib.HMAC_ENABLED and _lib.SHA256_ENABLED:
             self.algo_types.append(info.algo_type)
             return super().callback(device_id, info)
 
+    needs_hmac_copy = pytest.mark.skipif(not _lib.HMAC_COPY_ENABLED, reason="HMAC device_id needs wc_HmacCopy")
+
+    @pytest.mark.skipif(bool(HASH_CB_ENABLED and not _lib.HMAC_COPY_ENABLED), reason="HMAC device_id needs wc_HmacCopy")
     def test_hmac_device_id():
         with RecordingCryptoCallback(19) as cb:
             mac = HmacSha256.new(b"key", b"data", device_id=19).digest()
         assert mac == HmacSha256(b"key", b"data").digest()
         assert cb.algo_types
+
+    @needs_hash_cb
+    @needs_hmac_copy
+    def test_hmac_hash_callback():
+        with SoftwareHashCryptoCallback(25) as cb:
+            mac = HmacSha256(b"key", b"da", device_id=25)
+            assert mac.digest() == py_hmac.new(b"key", b"da", hashlib.sha256).digest()
+            mac.update(b"ta")
+            assert mac.digest() == py_hmac.new(b"key", b"data", hashlib.sha256).digest()
+            del mac
+            gc.collect()
+            assert not cb._hash_contexts
+
+    @pytest.mark.skipif(not HASH_CB_ENABLED or bool(_lib.HMAC_COPY_ENABLED), reason="HMAC device_id is allowed")
+    def test_hmac_device_id_needs_hmac_copy():
+        with pytest.raises(WolfCryptError):
+            HmacSha256(b"key", device_id=26)
