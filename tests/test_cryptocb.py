@@ -297,6 +297,26 @@ if _lib.SHA256_ENABLED:
             sha = Sha256.new(bytes(7), device_id=17)
             assert sha.digest() == struct.pack("I28x", 7)
 
+    @needs_hash_cb
+    def test_hash_outlives_callback():
+        with SoftwareHashCryptoCallback(27) as cb:
+            sha = Sha256(b"abc", device_id=27)
+            fresh = Sha256(device_id=27)
+        sha.update(b"def")
+        sha_copy = sha.copy()
+        fresh.update(b"xyz")
+        assert sha.digest() == hashlib.sha256(b"abcdef").digest()
+        assert sha_copy.digest() == hashlib.sha256(b"abcdef").digest()
+        assert fresh.digest() == hashlib.sha256(b"xyz").digest()
+        with pytest.raises(WolfCryptError):
+            RngCryptoCallback(27)
+        del sha, sha_copy
+        gc.collect()
+        assert not cb._hash_contexts
+        assert 27 not in CryptoCallback._registered
+        with RngCryptoCallback(27):
+            assert Random(device_id=27).bytes(3) == b"\01\02\03"
+
 
 if _lib.SHA3_ENABLED:
     def test_hash_unsupported_type_falls_back():

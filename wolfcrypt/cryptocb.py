@@ -112,6 +112,9 @@ if _lib.CRYPTO_CB_ENABLED:
         hooks for keeping per-hash state. It is deep-copied when the hash
         object is copied, so its values must support copy.deepcopy, and it
         is discarded when the hash is finalized or freed.
+        Hash objects with a context outlive the registration: the device
+        stays registered until their contexts are discarded, and another
+        callback cannot be registered for the device id until then.
         Hash callbacks need wolfSSL built with copy and free callback support
         (--enable-cryptocbutils=copy,free); without it hashing falls back to
         the software implementation.
@@ -122,7 +125,11 @@ if _lib.CRYPTO_CB_ENABLED:
         _registered: ClassVar[dict[int, CryptoCallback]] = {}
 
         def __init__(self, device_id: int) -> None:
+            owner = CryptoCallback._registered.get(device_id)
+            if owner is not None and owner._hash_contexts:
+                raise WolfCryptError(f"CryptoCb device {device_id} still has hash objects in use")
             self.device_id = device_id
+            self._closed = False
             self._hash_contexts: dict[int, dict[str, Any]] = {}
             # (src, dst) addresses of native hash copies in progress
             self._hash_copies: set[tuple[int, int]] = set()
@@ -155,6 +162,8 @@ if _lib.CRYPTO_CB_ENABLED:
                         return _lib.CRYPTOCB_UNAVAILABLE
                     log.debug("hash_type = %s", HASH_TYPE_NAME[info.hash.type])
                     key = _address(info.hash.u.ctx)
+                    if self._closed and key not in self._hash_contexts:
+                        return _lib.CRYPTOCB_UNAVAILABLE
                     context = self._hash_contexts.setdefault(key, {})
                     if info.hash.digest == _ffi.NULL:
                         self.hash_update_callback(
@@ -166,7 +175,7 @@ if _lib.CRYPTO_CB_ENABLED:
                     else:
                         digest = self.hash_finalize_callback(device_id, info.hash.type, context)
                         # wolfCrypt resets a hash object after Final
-                        del self._hash_contexts[key]
+                        self._drop_hash_context(key)
                         if len(digest) != DIGEST_SIZE[info.hash.type]:
                             raise ValueError(
                                 f"Generated digest is expected to be {DIGEST_SIZE[info.hash.type]} bytes long, "
@@ -185,7 +194,7 @@ if _lib.CRYPTO_CB_ENABLED:
                 if info.algo_type == _lib.WC_ALGO_TYPE_COPY and info.copy.algo == _lib.WC_ALGO_TYPE_HASH:
                     return self._hash_copy(info.copy.type, info.copy.src, info.copy.dst)
                 if info.algo_type == _lib.WC_ALGO_TYPE_FREE and info.free.algo == _lib.WC_ALGO_TYPE_HASH:
-                    self._hash_contexts.pop(_address(info.free.obj), None)
+                    self._drop_hash_context(_address(info.free.obj))
                     # Let wolfCrypt free the native object
                     return _lib.CRYPTOCB_UNAVAILABLE
                 return _lib.CRYPTOCB_UNAVAILABLE
@@ -238,7 +247,16 @@ if _lib.CRYPTO_CB_ENABLED:
                 and cls.hash_finalize_callback is not CryptoCallback.hash_finalize_callback
             )
 
+        def _drop_hash_context(self, key: int) -> None:
+            # Unregistering from inside this device's callback is safe: wolfCrypt
+            # does not touch the device entry after the callback returns.
+            if self._hash_contexts.pop(key, None) is not None and self._closed:
+                self._unregister()
+
         def _unregister(self) -> None:
+            self._closed = True
+            if self._hash_contexts:
+                return
             if CryptoCallback._registered.get(self.device_id) is self:
                 del CryptoCallback._registered[self.device_id]
                 _lib.wc_CryptoCb_UnRegisterDevice(self.device_id)
