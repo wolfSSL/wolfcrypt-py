@@ -28,7 +28,7 @@ from typing_extensions import override
 
 from wolfcrypt._ffi import ffi as _ffi
 from wolfcrypt._ffi import lib as _lib
-from wolfcrypt.exceptions import WolfCryptApiError
+from wolfcrypt.exceptions import WolfCryptApiError, WolfCryptError
 from wolfcrypt.utils import t2b, b2h, BytesOrStr
 
 if TYPE_CHECKING:
@@ -40,10 +40,10 @@ class _Hash(ABC):
     A **PEP 247: Cryptographic Hash Functions** compliant
     **Hash Function Interface**.
     """
-    def __init__(self, string: BytesOrStr | None = None) -> None:
+    def __init__(self, string: BytesOrStr | None = None, device_id: int = _lib.INVALID_DEVID) -> None:
         self._native_object = _ffi.new(self._native_type)
         self._shallow_copy = False
-        ret = self._init()
+        ret = self._init(device_id)
         if ret < 0:  # pragma: no cover
             raise WolfCryptApiError("Hash init error", ret)
 
@@ -51,7 +51,7 @@ class _Hash(ABC):
             self.update(string)
 
     @abstractmethod
-    def _init(self) -> int: ...
+    def _init(self, device_id: int) -> int: ...
 
     @abstractmethod
     def _update(self, data: bytes) -> int: ...
@@ -73,7 +73,7 @@ class _Hash(ABC):
 
     @classmethod
     @abstractmethod
-    def new(cls, string: BytesOrStr | None) -> _Hash: ...
+    def new(cls, string: BytesOrStr | None, *, device_id: int = _lib.INVALID_DEVID) -> _Hash: ...
 
     def copy(self) -> _Hash:
         """
@@ -173,14 +173,14 @@ class _Hash(ABC):
 class _Sha(_Hash):
     @override
     @classmethod
-    def new(cls, string: BytesOrStr | None = None) -> _Hash:
+    def new(cls, string: BytesOrStr | None = None, *, device_id: int = _lib.INVALID_DEVID) -> _Hash:
         """
         Creates a new hashing object and returns it. The optional
         **string** parameter, if supplied, will be immediately
         hashed into the object's starting state, as if
         obj.update(string) was called.
         """
-        return cls(string)
+        return cls(string, device_id)
 
 
 if _lib.SHA_ENABLED:
@@ -201,8 +201,8 @@ if _lib.SHA_ENABLED:
                 self._delete(self._native_object)
 
         @override
-        def _init(self) -> int:
-            return _lib.wc_InitSha(self._native_object)
+        def _init(self, device_id: int) -> int:
+            return _lib.wc_InitSha_ex(self._native_object, _ffi.NULL, device_id)
 
         @override
         def _update(self, data: bytes) -> int:
@@ -232,8 +232,8 @@ if _lib.SHA256_ENABLED:
                 self._delete(self._native_object)
 
         @override
-        def _init(self) -> int:
-            return _lib.wc_InitSha256(self._native_object)
+        def _init(self, device_id: int) -> int:
+            return _lib.wc_InitSha256_ex(self._native_object, _ffi.NULL, device_id)
 
         @override
         def _update(self, data: bytes) -> int:
@@ -263,8 +263,8 @@ if _lib.SHA384_ENABLED:
                 self._delete(self._native_object)
 
         @override
-        def _init(self) -> int:
-            return _lib.wc_InitSha384(self._native_object)
+        def _init(self, device_id: int) -> int:
+            return _lib.wc_InitSha384_ex(self._native_object, _ffi.NULL, device_id)
 
         @override
         def _update(self, data: bytes) -> int:
@@ -294,8 +294,8 @@ if _lib.SHA512_ENABLED:
                 self._delete(self._native_object)
 
         @override
-        def _init(self) -> int:
-            return _lib.wc_InitSha512(self._native_object)
+        def _init(self, device_id: int) -> int:
+            return _lib.wc_InitSha512_ex(self._native_object, _ffi.NULL, device_id)
 
         @override
         def _update(self, data: bytes) -> int:
@@ -349,13 +349,13 @@ if _lib.SHA3_ENABLED:
             ):
                 self._delete(self._native_object)
 
-        def __init__(self, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE) -> None:  # pylint: disable=W0231
+        def __init__(self, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE, device_id: int = _lib.INVALID_DEVID) -> None:  # pylint: disable=W0231
             self._native_object = _ffi.new(self._native_type)
             self._shallow_copy = False
             self.digest_size = size
             self._delete = self._SHA3_FREE.get(size)
             self._copy = self._SHA3_COPY.get(size)
-            ret = self._init()
+            ret = self._init(device_id)
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("Sha3 init error", ret)
             if string:
@@ -363,8 +363,8 @@ if _lib.SHA3_ENABLED:
 
         @override
         @classmethod
-        def new(cls, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE) -> Sha3:
-            return cls(string, size)
+        def new(cls, string: BytesOrStr | None = None, size: int = SHA3_384_DIGEST_SIZE, *, device_id: int = _lib.INVALID_DEVID) -> Sha3:
+            return cls(string, size, device_id)
 
         @override
         def copy(self) -> Sha3:
@@ -392,15 +392,15 @@ if _lib.SHA3_ENABLED:
             return c
 
         @override
-        def _init(self) -> int:
+        def _init(self, device_id: int) -> int:
             if self.digest_size == Sha3.SHA3_224_DIGEST_SIZE:
-                return _lib.wc_InitSha3_224(self._native_object, _ffi.NULL, 0)
+                return _lib.wc_InitSha3_224(self._native_object, _ffi.NULL, device_id)
             if self.digest_size == Sha3.SHA3_256_DIGEST_SIZE:
-                return _lib.wc_InitSha3_256(self._native_object, _ffi.NULL, 0)
+                return _lib.wc_InitSha3_256(self._native_object, _ffi.NULL, device_id)
             if self.digest_size == Sha3.SHA3_384_DIGEST_SIZE:
-                return _lib.wc_InitSha3_384(self._native_object, _ffi.NULL, 0)
+                return _lib.wc_InitSha3_384(self._native_object, _ffi.NULL, device_id)
             if self.digest_size == Sha3.SHA3_512_DIGEST_SIZE:
-                return _lib.wc_InitSha3_512(self._native_object, _ffi.NULL, 0)
+                return _lib.wc_InitSha3_512(self._native_object, _ffi.NULL, device_id)
             return -1
 
         @override
@@ -449,33 +449,32 @@ if _lib.HMAC_ENABLED:
         A **PEP 247: Cryptographic Hash Functions** compliant
         **Keyed Hash Function Interface**.
 
-        Note: wolfCrypt provides no safe public copy for an `Hmac` object.
+        Note: `copy()` is not supported and raises `NotImplementedError`.
         Byte-copying the struct would alias the original's internal state
-        (e.g. async/hardware-accelerated builds keep pointers there), so
-        `copy()` is not supported and raises `NotImplementedError`.
+        (e.g. async/hardware-accelerated builds keep pointers there).
+        `digest()` uses wc_HmacCopy (wolfSSL 5.9.0+) when it is available.
         """
         digest_size = None
         _native_type = "Hmac *"
         _native_size = _ffi.sizeof("Hmac")
         _delete = staticmethod(_lib.wc_HmacFree)
+        if _lib.HMAC_COPY_ENABLED:
+            _copy = staticmethod(_lib.wc_HmacCopy)
 
         @override
         def copy(self) -> _Hmac:
-            raise NotImplementedError(
-                "HMAC objects cannot be safely copied: wolfCrypt has no "
-                "wc_HmacCopy and byte-copying the state would alias the "
-                "original's internal C resources")
+            raise NotImplementedError("HMAC objects do not support copy()")
 
         def __del__(self) -> None:
             if hasattr(self, '_native_object') and not getattr(self, '_shallow_copy', False):
                 self._delete(self._native_object)
 
-        def __init__(self, key: BytesOrStr, string: BytesOrStr | None = None) -> None:  # pylint: disable=W0231
+        def __init__(self, key: BytesOrStr, string: BytesOrStr | None = None, device_id: int = _lib.INVALID_DEVID) -> None:  # pylint: disable=W0231
             key = t2b(key)
 
             self._native_object = _ffi.new(self._native_type)
             self._shallow_copy = False
-            ret = self._hmac_init(self._type, key)
+            ret = self._hmac_init(self._type, key, device_id)
             if ret < 0:  # pragma: no cover
                 raise WolfCryptApiError("Hmac init error", ret)
 
@@ -483,12 +482,12 @@ if _lib.HMAC_ENABLED:
                 self.update(string)
 
         @override
-        def _init(self) -> int:
+        def _init(self, device_id: int) -> int:
             return -1
 
         @override
         @classmethod
-        def new(cls, key: BytesOrStr, string: BytesOrStr | None = None) -> _Hash:  # pylint: disable=W0221 # ty: ignore[invalid-method-override]
+        def new(cls, key: BytesOrStr, string: BytesOrStr | None = None, *, device_id: int = _lib.INVALID_DEVID) -> _Hash:  # pylint: disable=W0221 # ty: ignore[invalid-method-override]
             """
             Creates a new hashing object and returns it. **key** is
             a required parameter containing a string giving the key
@@ -496,15 +495,25 @@ if _lib.HMAC_ENABLED:
             will be immediately hashed into the object's starting
             state, as if obj.update(string) was called.
             """
-            return cls(key, string)
+            return cls(key, string, device_id)
 
 
         @property
         @abstractmethod
         def _type(self) -> int: ...
 
-        def _hmac_init(self, hmac: int, key: bytes) -> int:
-            ret = _lib.wc_HmacInit(self._native_object, _ffi.NULL, -2)
+        def _hmac_init(self, hmac: int, key: bytes, device_id: int) -> int:
+            # Without wc_HmacCopy, digest() byte-copies the Hmac, which loses
+            # the per-hash state a crypto callback keeps for the embedded hash.
+            # Hash callbacks are only used with copy and free callbacks.
+            if (
+                device_id != _lib.INVALID_DEVID
+                and not _lib.HMAC_COPY_ENABLED
+                and _lib.CRYPTO_CB_COPY_ENABLED
+                and _lib.CRYPTO_CB_FREE_ENABLED
+            ):
+                raise WolfCryptError("HMAC device_id with hash crypto callbacks requires wc_HmacCopy")
+            ret = _lib.wc_HmacInit(self._native_object, _ffi.NULL, device_id)
             if ret < 0:
                 raise WolfCryptApiError("wc_HmacInit error", ret)
             # If the key isn't set, don't call wc_HmacSetKey. This can happen,

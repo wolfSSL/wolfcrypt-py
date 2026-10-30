@@ -40,9 +40,8 @@ jobs:
         uv run --no-sync pytest tests
 
   build-no-pqc:
-    # Regression coverage for issue #2659: INVALID_DEVID is only declared
-    # in the CFFI cdef when ML_KEM or ML_DSA is enabled, so a wolfSSL build
-    # without those features must still import wolfcrypt.random successfully.
+    # Regression coverage for issue #2659: a wolfSSL build without ML-KEM
+    # and ML-DSA must still import wolfcrypt.random successfully.
 
     runs-on: ubuntu-latest
     env:
@@ -96,4 +95,62 @@ jobs:
     - name: Import smoke (regression for INVALID_DEVID)
       run: uv run --no-sync python -c "from wolfcrypt.random import Random; Random()"
     - name: Run tests
+      run: uv run --no-sync pytest tests
+
+  build-cryptocb-smallstack:
+    # Crypto callback hash copies must keep wolfCrypt's native resource
+    # ownership; SMALL_STACK_CACHE allocates per-object buffers that a byte
+    # copy would share and free twice.
+    runs-on: ubuntu-latest
+    env:
+      USE_LOCAL_WOLFSSL: ${{ github.workspace }}/wolfssl-install
+
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        submodules: recursive
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.10"
+    - name: Install uv
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      with:
+        # Install a specific version of uv.
+        version: "0.11.26"
+    - name: Install build deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y autoconf automake libtool
+    - name: Build wolfSSL with crypto callbacks and SMALL_STACK_CACHE
+      run: |
+        cd lib/wolfssl
+        ./autogen.sh
+        ./configure --enable-cryptonly --disable-shared \
+                    --enable-cryptocb --enable-cryptocbutils=copy,free \
+                    --enable-smallstack --enable-smallstackcache \
+                    --enable-aes --enable-aesgcm --enable-aessiv \
+                    --enable-aesctr --enable-aesgcm-stream \
+                    --enable-des3 --enable-chacha --enable-poly1305 \
+                    --enable-sha --enable-sha384 --enable-sha512 --enable-sha3 \
+                    --enable-hkdf --enable-rsa --enable-rsapss --enable-ecc \
+                    --enable-ed25519 --enable-ed448 --enable-curve25519 \
+                    --enable-keygen --enable-pwdbased --enable-pkcs7 \
+                    --disable-md5 --disable-sha224 --disable-dh \
+                    --disable-oldtls --disable-oldnames --disable-extended-master \
+                    CFLAGS=-fPIC \
+                    --prefix=$GITHUB_WORKSPACE/wolfssl-install
+        make
+        make install
+    - name: Install wolfcrypt-py against the local wolfSSL
+      run: |
+        uv venv
+        uv pip install pytest
+        uv pip install -e .
+    - name: Check crypto callback support
+      run: |
+        uv run --no-sync python -c "from wolfcrypt._ffi import lib as _lib; assert _lib.CRYPTO_CB_COPY_ENABLED and _lib.CRYPTO_CB_FREE_ENABLED, 'copy and free callbacks should be enabled'"
+    - name: Run tests
+      env:
+        MALLOC_CHECK_: "3"
       run: uv run --no-sync pytest tests
