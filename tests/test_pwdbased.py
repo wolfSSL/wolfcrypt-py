@@ -63,12 +63,12 @@ def test_pbkdf2(pbkdf2_vectors):
                      vector.key_length, vector.hash_type)
         assert len(key) == vector.key_length
 
-def test_pbkdf2_defined_only_when_enabled(monkeypatch):
+def test_pbkdf2_defined_only_when_enabled(lib_patch):
     """F-12232: PBKDF2 needs wc_PBKDF2 in the linked wolfSSL."""
     assert hasattr(pwdbased, "PBKDF2") == bool(_lib.PBKDF2_ENABLED)
 
     # Load a fresh copy of the module as if wc_PBKDF2 were not compiled in.
-    monkeypatch.setattr(_lib, "PBKDF2_ENABLED", 0)
+    lib_patch.setattr("PBKDF2_ENABLED", 0)
     spec = importlib.util.find_spec("wolfcrypt.pwdbased")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
