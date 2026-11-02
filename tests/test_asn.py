@@ -125,7 +125,7 @@ def test_signature(signature_vectors):
         assert check_signature(vector.signature, vector.data, vector.hash_cls,
                                vector.pub_key)
 
-def test_pem_der_helpers_defined_only_when_enabled(monkeypatch):
+def test_pem_der_helpers_defined_only_when_enabled(lib_patch):
     """F-12233: each conversion direction needs its own wolfSSL function."""
     helpers = {"PEM_TO_DER_ENABLED": "pem_to_der", "DER_TO_PEM_ENABLED": "der_to_pem"}
     for flag, name in helpers.items():
@@ -133,8 +133,8 @@ def test_pem_der_helpers_defined_only_when_enabled(monkeypatch):
 
     # Load fresh copies of the module as if one direction were not compiled in.
     for disabled, disabled_name in helpers.items():
-        with monkeypatch.context() as m:
-            m.setattr(_lib, disabled, 0)
+        with lib_patch.context() as m:
+            m.setattr(disabled, 0)
             spec = importlib.util.find_spec("wolfcrypt.asn")
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)

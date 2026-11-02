@@ -212,9 +212,9 @@ if _lib.AESGCM_STREAM_ENABLED:
             del gcm
         gc.collect()
 
-    def test_decrypt_rejected_when_not_compiled_in(monkeypatch):
+    def test_decrypt_rejected_when_not_compiled_in(lib_patch):
         """F-12225: streaming decryption needs AES-GCM decryption in the linked wolfSSL."""
-        monkeypatch.setattr(_lib, "AESGCM_STREAM_DECRYPT_ENABLED", 0)
+        lib_patch.setattr("AESGCM_STREAM_DECRYPT_ENABLED", 0)
         key = "fedcba9876543210"
         iv = "0123456789abcdef"
         gcm = AesGcmStream(key, iv)

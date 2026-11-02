@@ -530,7 +530,7 @@ if _lib.RSA_ENABLED:
 
     @needs_rng
     @needs_sign_verify
-    def test_rsa_verify_without_rng(rsa_private, vectors, monkeypatch):
+    def test_rsa_verify_without_rng(rsa_private, vectors, monkeypatch, lib_patch):
         plaintext = t2b("Everyone gets Friday off.")
         signature = rsa_private.sign(plaintext)
 
@@ -539,7 +539,7 @@ if _lib.RSA_ENABLED:
 
         # Verify must not need an RNG. Blinding always needs one.
         monkeypatch.setattr(ciphers, "Random", no_rng)
-        monkeypatch.setattr(_lib, "RSA_BLINDING_ENABLED", 0)
+        lib_patch.setattr("RSA_BLINDING_ENABLED", 0)
         rsa_public = RsaPublic(vectors[RsaPublic].key)
         assert plaintext == rsa_public.verify(signature)
         with pytest.raises(NotImplementedError):
@@ -1313,23 +1313,23 @@ if _lib.DES3_ENABLED:
 
 
 if _lib.AES_ENABLED:
-    def test_aes_ctr_rejected_when_not_compiled_in(monkeypatch):
+    def test_aes_ctr_rejected_when_not_compiled_in(lib_patch):
         """F-11250: MODE_CTR needs AES-CTR support in the linked wolfSSL."""
-        monkeypatch.setattr(_lib, "AES_CTR_ENABLED", 0)
+        lib_patch.setattr("AES_CTR_ENABLED", 0)
         with pytest.raises(NotImplementedError, match="AES-CTR"):
             Aes.new(b"0" * 16, MODE_CTR, b"0" * 16)
         if _lib.AES_CBC_ENABLED:
             assert Aes.new(b"0" * 16, MODE_CBC, b"0" * 16).encrypt(b"0" * 16)
 
-    def test_aes_cbc_rejected_when_not_compiled_in(monkeypatch):
+    def test_aes_cbc_rejected_when_not_compiled_in(lib_patch):
         """F-12224: MODE_CBC needs AES-CBC support in the linked wolfSSL."""
-        monkeypatch.setattr(_lib, "AES_CBC_ENABLED", 0)
+        lib_patch.setattr("AES_CBC_ENABLED", 0)
         with pytest.raises(NotImplementedError, match="AES-CBC"):
             Aes.new(b"0" * 16, MODE_CBC, b"0" * 16)
 
-    def test_aes_cbc_decrypt_rejected_when_not_compiled_in(monkeypatch, vectors):
+    def test_aes_cbc_decrypt_rejected_when_not_compiled_in(lib_patch, vectors):
         """F-12224: CBC decryption needs AES decryption in the linked wolfSSL."""
-        monkeypatch.setattr(_lib, "AES_DECRYPT_ENABLED", 0)
+        lib_patch.setattr("AES_DECRYPT_ENABLED", 0)
         vector = vectors[Aes]
         if _lib.AES_CBC_ENABLED:
             cipher_obj = Aes.new(vector.key, MODE_CBC, vector.iv)
@@ -1452,13 +1452,13 @@ if _lib.RSA_ENABLED:
         with pytest.raises(WolfCryptError, match="Hash type not set"):
             rsa.decrypt_oaep(b"\x00" * rsa.output_size)
 
-    def test_rsa_from_pem_defined_only_when_enabled(monkeypatch):
+    def test_rsa_from_pem_defined_only_when_enabled(lib_patch):
         """F-12233: from_pem needs wc_PemToDer in the linked wolfSSL."""
         for cls in (RsaPublic, RsaPrivate):
             assert hasattr(cls, "from_pem") == bool(_lib.PEM_TO_DER_ENABLED), cls
 
         # Load a fresh copy of the module as if wc_PemToDer were not compiled in.
-        monkeypatch.setattr(_lib, "PEM_TO_DER_ENABLED", 0)
+        lib_patch.setattr("PEM_TO_DER_ENABLED", 0)
         module = load_fresh_ciphers()
         for cls in (module.RsaPublic, module.RsaPrivate):
             assert not hasattr(cls, "from_pem"), cls
@@ -1492,7 +1492,7 @@ if _lib.RSA_ENABLED:
         ("RsaPrivate", "sign_pss"): ("RSA_PSS_ENABLED", "RSA_SIGN_ENABLED"),
     }
 
-    def test_rsa_methods_defined_only_when_enabled(monkeypatch):
+    def test_rsa_methods_defined_only_when_enabled(lib_patch):
         """F-12227: each RSA method needs its wolfSSL operation to be compiled in."""
         for (cls, name), flags in RSA_GATED_METHODS.items():
             enabled = all(getattr(_lib, flag) for flag in flags)
@@ -1500,8 +1500,8 @@ if _lib.RSA_ENABLED:
 
         # Load fresh copies of the module as if one operation were not compiled in.
         for disabled in ("RSA_ENCRYPT_ENABLED", "RSA_PRIVATE_ENABLED", "RSA_SIGN_ENABLED", "RSA_OAEP_ENABLED"):
-            with monkeypatch.context() as m:
-                m.setattr(_lib, disabled, 0)
+            with lib_patch.context() as m:
+                m.setattr(disabled, 0)
                 module = load_fresh_ciphers()
             for (cls, name), flags in RSA_GATED_METHODS.items():
                 if disabled in flags:
@@ -1511,20 +1511,20 @@ if _lib.RSA_ENABLED:
             assert hasattr(module.RsaPublic, "verify"), disabled
 
     @needs_rng
-    def test_rsa_sign_rejected_when_not_compiled_in(monkeypatch, vectors):
+    def test_rsa_sign_rejected_when_not_compiled_in(lib_patch, vectors):
         """F-12227: sign() needs RSA signing in the linked wolfSSL."""
         rsa = RsaPrivate(vectors[RsaPrivate].key)
-        monkeypatch.setattr(_lib, "RSA_SIGN_ENABLED", 0)
+        lib_patch.setattr("RSA_SIGN_ENABLED", 0)
         with pytest.raises(NotImplementedError, match="RSA signing is not supported"):
             rsa.sign(b"Everyone gets Friday off.")
 
     @needs_rng
     @pytest.mark.skipif(not _lib.RSA_SIGN_ENABLED, reason="RSA signing not enabled")
-    def test_rsa_verify_rejected_when_not_compiled_in(monkeypatch, vectors):
+    def test_rsa_verify_rejected_when_not_compiled_in(lib_patch, vectors):
         """F-12227: verify() needs wc_RsaSSL_Verify in the linked wolfSSL."""
         signature = RsaPrivate(vectors[RsaPrivate].key).sign(b"Everyone gets Friday off.")
         rsa = RsaPublic(vectors[RsaPublic].key)
-        monkeypatch.setattr(_lib, "RSA_VERIFY_ENABLED", 0)
+        lib_patch.setattr("RSA_VERIFY_ENABLED", 0)
         with pytest.raises(NotImplementedError, match="RSA verification is not supported"):
             rsa.verify(signature)
 
@@ -1548,7 +1548,7 @@ if _lib.ECC_ENABLED:
         ("EccPrivate", "sign_raw"): ("ECC_SIGN_ENABLED", "MPAPI_ENABLED"),
     }
 
-    def test_ecc_methods_defined_only_when_enabled(monkeypatch):
+    def test_ecc_methods_defined_only_when_enabled(lib_patch):
         """F-12228: each ECC method needs its wolfSSL operation to be compiled in."""
         for (cls, name), flags in ECC_GATED_METHODS.items():
             enabled = all(getattr(_lib, flag) for flag in flags)
@@ -1557,17 +1557,17 @@ if _lib.ECC_ENABLED:
         # Load fresh copies of the module as if one operation were not compiled in.
         for disabled in ("ECC_KEY_IMPORT_ENABLED", "ECC_KEY_EXPORT_ENABLED", "ECC_DHE_ENABLED",
                          "ECC_SIGN_ENABLED", "ECC_VERIFY_ENABLED"):
-            with monkeypatch.context() as m:
-                m.setattr(_lib, disabled, 0)
+            with lib_patch.context() as m:
+                m.setattr(disabled, 0)
                 module = load_fresh_ciphers()
                 for (cls, name), flags in ECC_GATED_METHODS.items():
                     enabled = all(getattr(_lib, flag) for flag in flags)
                     assert hasattr(getattr(module, cls), name) == enabled, (disabled, cls, name)
             assert hasattr(module.EccPrivate, "make_key"), disabled
 
-    def test_ecc_key_rejected_without_key_import(monkeypatch, vectors):
+    def test_ecc_key_rejected_without_key_import(lib_patch, vectors):
         """F-12228: loading a key needs ECC key import in the linked wolfSSL."""
-        monkeypatch.setattr(_lib, "ECC_KEY_IMPORT_ENABLED", 0)
+        lib_patch.setattr("ECC_KEY_IMPORT_ENABLED", 0)
         for cls in (EccPublic, EccPrivate):
             with pytest.raises(NotImplementedError, match="ECC key import is not supported"):
                 cls(vectors[cls].key)
@@ -1585,22 +1585,22 @@ if _lib.ED25519_ENABLED:
         ("Ed25519Private", "sign"): "ED25519_SIGN_ENABLED",
     }
 
-    def test_ed25519_methods_defined_only_when_enabled(monkeypatch):
+    def test_ed25519_methods_defined_only_when_enabled(lib_patch):
         """F-12229: each Ed25519 method needs its wolfSSL operation to be compiled in."""
         for (cls, name), flag in ED25519_GATED_METHODS.items():
             assert hasattr(getattr(ciphers, cls), name) == bool(getattr(_lib, flag)), (cls, name)
 
         # Load fresh copies of the module as if one operation were not compiled in.
         for disabled in set(ED25519_GATED_METHODS.values()):
-            with monkeypatch.context() as m:
-                m.setattr(_lib, disabled, 0)
+            with lib_patch.context() as m:
+                m.setattr(disabled, 0)
                 module = load_fresh_ciphers()
                 for (cls, name), flag in ED25519_GATED_METHODS.items():
                     assert hasattr(getattr(module, cls), name) == bool(getattr(_lib, flag)), (disabled, cls, name)
 
-    def test_ed25519_key_rejected_without_key_import(monkeypatch, vectors):
+    def test_ed25519_key_rejected_without_key_import(lib_patch, vectors):
         """F-12229: loading a key needs Ed25519 key import in the linked wolfSSL."""
-        monkeypatch.setattr(_lib, "ED25519_KEY_IMPORT_ENABLED", 0)
+        lib_patch.setattr("ED25519_KEY_IMPORT_ENABLED", 0)
         for cls in (Ed25519Public, Ed25519Private):
             with pytest.raises(NotImplementedError, match="Ed25519 key import is not supported"):
                 cls(vectors[cls].key)
@@ -1609,9 +1609,9 @@ if _lib.ED25519_ENABLED:
             Ed25519Private(vectors[Ed25519Private].key, vectors[Ed25519Public].key)
 
     @needs_ed25519_import
-    def test_ed25519_private_only_key_needs_make_key(monkeypatch, vectors):
+    def test_ed25519_private_only_key_needs_make_key(lib_patch, vectors):
         """F-12229: deriving the public key needs wc_ed25519_make_public."""
-        monkeypatch.setattr(_lib, "ED25519_MAKE_KEY_ENABLED", 0)
+        lib_patch.setattr("ED25519_MAKE_KEY_ENABLED", 0)
         with pytest.raises(NotImplementedError, match="Deriving the Ed25519 public key is not supported"):
             Ed25519Private(vectors[Ed25519Private].key)
         Ed25519Private(vectors[Ed25519Private].key, vectors[Ed25519Public].key)
@@ -1627,7 +1627,7 @@ if _lib.ED448_ENABLED:
         ("Ed448Private", "sign"): "ED448_SIGN_ENABLED",
     }
 
-    def test_ed448_methods_defined_only_when_enabled(monkeypatch):
+    def test_ed448_methods_defined_only_when_enabled(lib_patch):
         """F-12230: each Ed448 method needs its wolfSSL operation to be compiled in."""
         for (cls, name), flag in ED448_GATED_METHODS.items():
             assert hasattr(getattr(ciphers, cls), name) == bool(getattr(_lib, flag)), (cls, name)
@@ -1635,16 +1635,16 @@ if _lib.ED448_ENABLED:
 
         # Load fresh copies of the module as if one operation were not compiled in.
         for disabled in set(ED448_GATED_METHODS.values()):
-            with monkeypatch.context() as m:
-                m.setattr(_lib, disabled, 0)
+            with lib_patch.context() as m:
+                m.setattr(disabled, 0)
                 module = load_fresh_ciphers()
                 for (cls, name), flag in ED448_GATED_METHODS.items():
                     assert hasattr(getattr(module, cls), name) == bool(getattr(_lib, flag)), (disabled, cls, name)
                 assert hasattr(module.Ed448Private, "make_key"), disabled
 
-    def test_ed448_key_rejected_without_key_import(monkeypatch, vectors):
+    def test_ed448_key_rejected_without_key_import(lib_patch, vectors):
         """F-12230: loading a key needs Ed448 key import in the linked wolfSSL."""
-        monkeypatch.setattr(_lib, "ED448_KEY_IMPORT_ENABLED", 0)
+        lib_patch.setattr("ED448_KEY_IMPORT_ENABLED", 0)
         for cls in (Ed448Public, Ed448Private):
             with pytest.raises(NotImplementedError, match="Ed448 key import is not supported"):
                 cls(vectors[cls].key)
@@ -1669,15 +1669,15 @@ if _lib.ML_KEM_ENABLED:
         ("MlKemPrivate", "encode_pub_key"),
     )
 
-    def test_ml_kem_methods_defined_only_when_enabled(monkeypatch):
+    def test_ml_kem_methods_defined_only_when_enabled(lib_patch):
         """F-12231: each ML-KEM method needs its wolfSSL operation to be compiled in."""
         for (cls, name), flag in ML_KEM_GATED_METHODS.items():
             assert hasattr(getattr(ciphers, cls), name) == bool(getattr(_lib, flag)), (cls, name)
 
         # Load fresh copies of the module as if one operation were not compiled in.
         for disabled in set(ML_KEM_GATED_METHODS.values()):
-            with monkeypatch.context() as m:
-                m.setattr(_lib, disabled, 0)
+            with lib_patch.context() as m:
+                m.setattr(disabled, 0)
                 module = load_fresh_ciphers()
                 for (cls, name), flag in ML_KEM_GATED_METHODS.items():
                     assert hasattr(getattr(module, cls), name) == bool(getattr(_lib, flag)), (disabled, cls, name)
@@ -1715,20 +1715,20 @@ if _lib.ML_DSA_ENABLED:
         ("ML_DSA_SIGN_ENABLED", "ML_DSA_VERIFY_ENABLED"),
         ("ML_DSA_MAKE_KEY_ENABLED", "ML_DSA_SIGN_ENABLED", "ML_DSA_PRIVATE_KEY_ENABLED"),
     ])
-    def test_ml_dsa_methods_defined_only_when_enabled(monkeypatch, disabled):
+    def test_ml_dsa_methods_defined_only_when_enabled(lib_patch, disabled):
         """F-10071: each ML-DSA method needs its wolfSSL operations to be compiled in."""
         for flag in disabled:
-            monkeypatch.setattr(_lib, flag, 0)
+            lib_patch.setattr(flag, 0)
         # Load a fresh copy of the module as if the operations were not compiled in.
         module = load_fresh_ciphers()
         for (cls, name), enabled in ML_DSA_GATED_METHODS.items():
             assert hasattr(getattr(module, cls), name) == bool(enabled()), (disabled, cls, name)
 
-    def test_ml_dsa_private_decode_needs_public_key_import(monkeypatch):
+    def test_ml_dsa_private_decode_needs_public_key_import(lib_patch):
         """F-10071: importing the public key part needs ML-DSA public key support."""
         if not _lib.ML_DSA_PRIVATE_KEY_ENABLED:
             pytest.skip("ML-DSA private key support not enabled")
-        monkeypatch.setattr(_lib, "ML_DSA_PUBLIC_KEY_ENABLED", 0)
+        lib_patch.setattr("ML_DSA_PUBLIC_KEY_ENABLED", 0)
         module = load_fresh_ciphers()
         key = module.MlDsaPrivate(module.MlDsaType.ML_DSA_44)
         with pytest.raises(NotImplementedError, match="ML-DSA public key import is not supported"):

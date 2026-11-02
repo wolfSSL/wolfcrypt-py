@@ -230,9 +230,9 @@ if _lib.SHA3_ENABLED:
     }
 
     @pytest.mark.parametrize("size", sorted(SHA3_FLAGS))
-    def test_sha3_size_not_compiled_in(monkeypatch, size):
+    def test_sha3_size_not_compiled_in(lib_patch, size):
         """F-12226: a SHA-3 size missing from the linked wolfSSL raises NotImplementedError."""
-        monkeypatch.setattr(_lib, SHA3_FLAGS[size], 0)
+        lib_patch.setattr(SHA3_FLAGS[size], 0)
         with pytest.raises(NotImplementedError, match="SHA3"):
             Sha3("wolfcrypt", size)   # ty: ignore[possibly-unresolved-reference]
         for other, flag in SHA3_FLAGS.items():

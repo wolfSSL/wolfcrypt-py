@@ -86,8 +86,8 @@ def test_reseed_multiple(rng):
     rng.bytes(100)
 
 
-def test_random_rejected_when_not_compiled_in(monkeypatch):
+def test_random_rejected_when_not_compiled_in(lib_patch):
     """F-13021: Random needs the RNG API in the linked wolfSSL."""
-    monkeypatch.setattr(_lib, "RNG_ENABLED", 0)
+    lib_patch.setattr("RNG_ENABLED", 0)
     with pytest.raises(NotImplementedError, match="RNG is not supported"):
         Random()
