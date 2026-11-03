@@ -350,7 +350,7 @@ if _lib.CHACHA_ENABLED:
         assert plaintext == dec
 
 if _lib.RSA_ENABLED:
-    # RSA encrypt and sign create a Random on first use.
+    # RSA encrypt and sign create a Random on first use. Verify needs none.
     needs_rng = pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
     needs_encrypt_decrypt = pytest.mark.skipif(not (_lib.RSA_ENCRYPT_ENABLED and _lib.RSA_PRIVATE_ENABLED),
                                                reason="RSA encryption or decryption not enabled")
@@ -529,11 +529,15 @@ if _lib.RSA_ENABLED:
         assert 1024 / 8 == len(signature) == rsa_private.output_size
         assert plaintext == rsa_private.verify(signature)
 
-    @needs_rng
-    @needs_sign_verify
-    def test_rsa_verify_without_rng(rsa_private, vectors, monkeypatch, lib_patch):
+    @pytest.mark.skipif(not _lib.RSA_VERIFY_ENABLED, reason="RSA verification not enabled")
+    def test_rsa_verify_without_rng(vectors, monkeypatch, lib_patch):
         plaintext = t2b("Everyone gets Friday off.")
-        signature = rsa_private.sign(plaintext)
+        # PKCS#1 v1.5 signature of plaintext with vectors[RsaPrivate].key.
+        signature = h2b(
+            "7ec4e63515b1377f58af2cc26c77bd8f099dbfacde7a90b49f1a4d88235aeacb"
+            "a6db99f535d0fe7c4d75b6b7392874812b68f2cd8876a8ba4d86cf6be8f30bb8"
+            "8e77da3ef8d55b48ea4168c6da516c6f5dddf877e7234d2d1266ae2cdda66420"
+            "46503c3b52a296684aee5f1f68aac8df414aa5dd05c4890cd7a043b775225503")
 
         def no_rng():
             raise NotImplementedError("RNG is not supported by this wolfSSL build")

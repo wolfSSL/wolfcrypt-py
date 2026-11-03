@@ -83,9 +83,13 @@ def signature_vectors():
     # Signature computed with:
     # echo -n "wolfcrypt is the best crypto around" | \
     # openssl dgst -hex -sha256 -sign tests/certs/server-key.pem
-    # RSA key objects always create a Random.
-    if (_lib.PEM_TO_DER_ENABLED and _lib.SHA256_ENABLED and _lib.RSA_ENABLED and _lib.RNG_ENABLED
-            and _lib.RSA_SIGN_ENABLED and _lib.RSA_VERIFY_ENABLED):
+    # Verify needs no RNG, so it runs in WC_NO_RNG builds too.
+    if (_lib.ASN_ENABLED and _lib.PEM_TO_DER_ENABLED and _lib.SHA256_ENABLED
+            and _lib.RSA_ENABLED and _lib.RSA_VERIFY_ENABLED):
+        priv_key = None
+        # Signing creates a Random.
+        if _lib.RSA_SIGN_ENABLED and _lib.RNG_ENABLED:
+            priv_key = RsaPrivate.from_pem(priv_key_pem)   # ty: ignore[possibly-missing-attribute]
         vectors.append(TestVector(
             data="wolfcrypt is the best crypto around",
             signature=h2b("1d65f21df8fdc9f3c2351792840423481c6b0f2332105abd9248"
@@ -100,7 +104,7 @@ def signature_vectors():
                           "60314e864190e6bb9812bfbf4b40994f2c1d4ca7aad9"),
             hash_cls=Sha256,
             pub_key=RsaPublic.from_pem(pub_key_pem),   # ty: ignore[possibly-missing-attribute]
-            priv_key=RsaPrivate.from_pem(priv_key_pem)   # ty: ignore[possibly-missing-attribute]
+            priv_key=priv_key
         ))
 
     return vectors
@@ -117,7 +121,9 @@ def test_pem_der_conversion(pem_der_conversion_vectors):
 
 def test_signature(signature_vectors):
     for vector in signature_vectors:
-        assert make_signature(vector.data, vector.hash_cls, vector.priv_key) == vector.signature
+        if vector.priv_key is not None:
+            assert make_signature(vector.data, vector.hash_cls,
+                                  vector.priv_key) == vector.signature
         assert check_signature(vector.signature, vector.data, vector.hash_cls,
                                vector.pub_key)
 
