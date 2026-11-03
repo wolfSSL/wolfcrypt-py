@@ -65,7 +65,7 @@ def pem_der_conversion_vectors():
 
             vectors.append(TestVector(pem=pem, der=der, type=f[2]))
 
-        return vectors
+    return vectors
 
 @pytest.fixture
 def signature_vectors():
