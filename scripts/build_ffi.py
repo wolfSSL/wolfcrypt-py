@@ -1831,13 +1831,14 @@ def make_cdef(features):
                 } u;
             } hash;
         """
-        cdef += """
+        if features["RNG"]:
+            cdef += """
             struct {
                 WC_RNG* rng;
                 byte* out;
                 word32 sz;
             } rng;
-        """
+            """
         if features["CRYPTO_CB_COPY"]:
             cdef += """
             struct {
