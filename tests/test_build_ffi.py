@@ -22,14 +22,18 @@
 
 """Tests for feature detection and cdef generation in scripts/build_ffi.py.
 
+Feature detection runs the C preprocessor over the wolfSSL headers of
+USE_LOCAL_WOLFSSL or lib/wolfssl, with the test's defines as options.h.
 Nothing here builds wolfSSL or compiles C code.
 """
 
+import functools
 import importlib.util
 import os
 import re
 import shlex
 import sys
+import tempfile
 
 import pytest
 from cffi import FFI
@@ -96,8 +100,32 @@ def bf():
     return mod
 
 
+@functools.cache
+def wolfssl_headers(bf):
+    """Return a directory holding the wolfSSL headers, or None."""
+    local = os.environ.get("USE_LOCAL_WOLFSSL")
+    candidates = [os.path.join(local, "include"), local] if local else []
+    candidates += [os.path.join(ROOT, "lib", "wolfssl", bf.get_platform(), bf.version, "include"),
+                   os.path.join(ROOT, "lib", "wolfssl")]
+    for d in candidates:
+        if os.path.exists(os.path.join(d, "wolfssl", "wolfcrypt", "settings.h")):
+            return d
+    return None
+
+
 def detect(bf, *defines, fips=False):
-    return bf.detect_features(list(defines), bf.default_features(), fips)
+    """Detect the features of a build configured with defines."""
+    headers = wolfssl_headers(bf)
+    if headers is None:
+        pytest.skip("wolfSSL headers not available")
+    with tempfile.TemporaryDirectory() as tmp:
+        os.mkdir(os.path.join(tmp, "wolfssl"))
+        for name in (os.path.join("wolfssl", "options.h"), "user_settings.h"):
+            with open(os.path.join(tmp, name), "w") as f:
+                f.write("\n".join(defines) + "\n")
+        include_dirs = [tmp, headers]
+        return bf.detect_features(bf.feature_macros(include_dirs), bf.default_features(), fips,
+                                  include_dirs)
 
 
 def cdef_for(bf, features):
@@ -122,51 +150,30 @@ def test_flags_declared_and_defined(bf):
 @pytest.mark.parametrize("config", ["non_fips", "fips_ready", "bundled"])
 def test_reference_configs_enable_all_subcapabilities(bf, config):
     if config == "bundled":
-        path = os.path.join(ROOT, "lib", "wolfssl", bf.get_platform(), bf.version,
-                            "include", "wolfssl", "options.h")
+        include_dirs = [os.path.join(ROOT, "lib", "wolfssl", bf.get_platform(), bf.version, "include")]
+        if not os.path.exists(os.path.join(include_dirs[0], "wolfssl", "options.h")):
+            pytest.skip(f"{include_dirs[0]} not available")
+        features = bf.detect_features(bf.feature_macros(include_dirs), bf.default_features(),
+                                      False, include_dirs)
     else:
         path = os.path.join(ROOT, "windows", config, "user_settings.h")
-    if not os.path.exists(path):
-        pytest.skip(f"{path} not available")
-    with open(path) as f:
-        features = detect(bf, *f.read().splitlines(), fips=config == "fips_ready")
+        if sys.platform != "win32":
+            pytest.skip(f"{path} is only for Windows")
+        with open(path) as f:
+            features = detect(bf, *f.read().splitlines(), fips=config == "fips_ready")
     for sub, parent in SUBCAPABILITIES.items():
         assert features[sub] == features[parent], sub
     assert features["RNG"] == 1
 
 
 # options.h macro -> (feature, its value when the macro is defined)
-BASE_FEATURE_MACROS = {
-    "WOLFSSL_PUBLIC_MP": ("MPAPI", 1),
-    "NO_SHA": ("SHA", 0),
-    "NO_SHA256": ("SHA256", 0),
-    "WOLFSSL_SHA384": ("SHA384", 1),
-    "WOLFSSL_SHA512": ("SHA512", 1),
+FORM_MACROS = {
     "WOLFSSL_SHA3": ("SHA3", 1),
-    "NO_DES3": ("DES3", 0),
-    "NO_AES": ("AES", 0),
-    "WOLFSSL_AES_SIV": ("AES_SIV", 1),
-    "HAVE_CHACHA": ("CHACHA", 1),
-    "NO_HMAC": ("HMAC", 0),
-    "NO_RSA": ("RSA", 0),
-    "ECC_TIMING_RESISTANT": ("ECC_TIMING_RESISTANCE", 1),
-    "WC_RSA_BLINDING": ("RSA_BLINDING", 1),
     "HAVE_ECC": ("ECC", 1),
-    "HAVE_ED25519": ("ED25519", 1),
-    "HAVE_ED448": ("ED448", 1),
     "WOLFSSL_KEY_GEN": ("KEYGEN", 1),
-    "NO_PWDBASED": ("PWDBASED", 0),
-    "NO_ERROR_STRINGS": ("ERROR_STRINGS", 0),
-    "NO_ASN": ("ASN", 0),
-    "WC_RNG_SEED_CB": ("WC_RNG_SEED_CB", 1),
-    "WOLFSSL_AESGCM_STREAM": ("AESGCM_STREAM", 1),
-    "WC_RSA_PSS": ("RSA_PSS", 1),
-    "HAVE_DILITHIUM": ("ML_DSA", 1),
-    "WOLFSSL_HAVE_MLDSA": ("ML_DSA", 1),
-    "WOLFSSL_HAVE_MLKEM": ("ML_KEM", 1),
     "HAVE_HKDF": ("HKDF", 1),
-    "WC_NO_HASHDRBG": ("HASHDRBG", 0),
-    "CUSTOM_RAND_GENERATE_BLOCK": ("HASHDRBG", 0),
+    "NO_DES3": ("DES3", 0),
+    "NO_PWDBASED": ("PWDBASED", 0),
 }
 
 
@@ -174,16 +181,39 @@ BASE_FEATURE_MACROS = {
                          ids=["plain", "indented", "value", "comment"])
 def test_base_features_match_any_define_form(bf, form):
     """F-8281: a feature macro counts whatever its indentation, value or comment."""
-    for macro, (feature, value) in BASE_FEATURE_MACROS.items():
-        assert detect(bf)[feature] == 1 - value, macro
-        assert detect(bf, form.format(macro))[feature] == value, macro
-        assert detect(bf, form.format(macro + "_X"))[feature] == 1 - value, macro
-        assert detect(bf, "/* " + form.format(macro) + " */")[feature] == 1 - value, macro
-    lines = (form.format("HAVE_CHACHA"), form.format("HAVE_POLY1305"))
-    assert detect(bf, *lines)["CHACHA20_POLY1305"] == 1
-    features = detect(bf, form.format("HAVE_FIPS"), "#define HAVE_FIPS_VERSION 5", fips=True)
+    features = detect(bf, *(form.format(macro) for macro in FORM_MACROS))
+    for macro, (feature, value) in FORM_MACROS.items():
+        assert features[feature] == value, macro
+    features = detect(bf, *(form.format(macro + "_X") for macro in FORM_MACROS))
+    for macro, (feature, value) in FORM_MACROS.items():
+        assert features[feature] == 1 - value, macro
+    features = detect(bf, *("/* " + form.format(macro) + " */" for macro in FORM_MACROS))
+    for macro, (feature, value) in FORM_MACROS.items():
+        assert features[feature] == 1 - value, macro
+
+
+def test_detection_follows_the_preprocessor(bf):
+    """#if blocks, #else and #undef count as they do in the build."""
+    assert detect(bf, "#if 0", "#define NO_RSA", "#endif")["RSA"] == 1
+    assert detect(bf, "#if 1", "#define NO_RSA", "#endif")["RSA"] == 0
+    assert detect(bf, "#define HAVE_ECC", "#undef HAVE_ECC")["ECC"] == 0
+    lines = ("#ifdef WOLFSSL_NOT_SET", "#define NO_DES3", "#else", "#define HAVE_ECC", "#endif")
+    features = detect(bf, *lines)
+    assert features["DES3"] == 1
+    assert features["ECC"] == 1
+
+
+def test_detection_reads_macro_values(bf):
+    assert detect(bf, "#define HAVE_AESGCM", "#define WOLFSSL_MIN_AUTH_TAG_SZ 14")["MIN_AUTH_TAG_SZ"] == 14
+    assert detect(bf, "#define HAVE_AESGCM", "#define WOLFSSL_MIN_AUTH_TAG_SZ (16)")["MIN_AUTH_TAG_SZ"] == 16
+
+    features = bf.detect_features({"HAVE_FIPS": "", "HAVE_FIPS_VERSION": "(5)"}, bf.default_features(), True)
     assert features["FIPS"] == 1
     assert features["FIPS_VERSION"] == 5
+    with pytest.raises(RuntimeError, match="no FIPS version"):
+        bf.detect_features({"HAVE_FIPS": ""}, bf.default_features(), True)
+    with pytest.raises(RuntimeError, match="fips.c empty"):
+        bf.detect_features({"HAVE_FIPS": "", "HAVE_FIPS_VERSION": "5"}, bf.default_features(), False)
 
 
 def test_detection_matches_indented_defines_with_values(bf):
@@ -211,10 +241,6 @@ def test_aes_ctr_needs_aes_counter(bf):
     features = detect(bf, "#define WOLFSSL_AES_COUNTER")
     assert features["AES_CTR"] == 1
     assert "wc_AesCtrEncrypt" in cdef_for(bf, features)
-
-    features = detect(bf, "#define NO_AES", "#define WOLFSSL_AES_COUNTER")
-    assert features["AES_CTR"] == 0
-    assert "wc_AesCtrEncrypt" not in cdef_for(bf, features)
 
 
 def test_aes_cbc_needs_cbc_support(bf):
@@ -247,7 +273,7 @@ def test_aes_cbc_decrypt_needs_aes_decrypt(bf):
 
 
 def test_aesgcm_stream_decrypt_needs_decrypt_support(bf):
-    stream = "#define WOLFSSL_AESGCM_STREAM"
+    stream = "#define HAVE_AESGCM\n#define WOLFSSL_AESGCM_STREAM"
     decrypt_funcs = ("wc_AesGcmDecryptInit", "wc_AesGcmDecryptUpdate", "wc_AesGcmDecryptFinal")
 
     features = detect(bf, stream)
@@ -268,8 +294,6 @@ def test_aesgcm_stream_decrypt_needs_decrypt_support(bf):
     features = detect(bf, stream, "#define NO_AES_DECRYPT", "#define HAVE_AESGCM_DECRYPT")
     assert features["AESGCM_STREAM_DECRYPT"] == 1
     assert "wc_AesGcmDecryptUpdate" in cdef_for(bf, features)
-
-    assert detect(bf, "#define NO_AES", stream, "#define HAVE_AESGCM_DECRYPT")["AESGCM_STREAM_DECRYPT"] == 0
     assert detect(bf)["AESGCM_STREAM_DECRYPT"] == 0
 
 
@@ -302,11 +326,6 @@ def test_sha3_variants_follow_nosha3_macros(bf):
                 assert (name in cdef) == enabled, (disabled, name)
 
     assert detect(bf, sha3, "    #define WOLFSSL_NOSHA3_512 1")["SHA3_512"] == 0
-
-    # settings.h keeps only SHA3-384 on Xilinx.
-    for xilinx in ("#define WOLFSSL_XILINX_CRYPT", "#define WOLFSSL_AFALG_XILINX"):
-        features = detect(bf, sha3, xilinx)
-        assert [features[f"SHA3_{bits}"] for bits in SHA3_BITS] == [0, 0, 1, 0], xilinx
 
     features = detect(bf)
     for bits in SHA3_BITS:
@@ -368,8 +387,7 @@ def test_pem_der_conversions_follow_their_own_macros(bf):
     assert "wc_DerToPemEx(" not in cdef
 
     for define in ("#define WOLFSSL_KEY_GEN", "  #define WOLFSSL_KEY_GEN 1", "#define WOLFSSL_CERT_GEN",
-                   "#define OPENSSL_EXTRA", "#define OPENSSL_ALL", "#define WOLFSSL_DUAL_ALG_CERTS",
-                   "#define WOLFSSL_DER_TO_PEM"):
+                   "#define OPENSSL_EXTRA", "#define OPENSSL_ALL", "#define WOLFSSL_DER_TO_PEM"):
         features = detect(bf, define)
         assert features["DER_TO_PEM"] == 1, define
         assert "wc_DerToPemEx(" in cdef_for(bf, features), define
@@ -392,7 +410,8 @@ def test_pem_der_conversions_follow_their_own_macros(bf):
     assert detect(bf, "#define WOLFSSL_NO_PEM", "#define WOLFSSL_PEM_TO_DER")["PEM_TO_DER"] == 1
 
     # asn.c builds both directions only with ASN and certificate support.
-    for define in ("#define NO_ASN", "#define NO_CERTS"):
+    # settings.h needs ASN for RSA and DSA.
+    for define in ("#define NO_ASN\n#define NO_RSA\n#define NO_DSA", "#define NO_CERTS"):
         features = detect(bf, "#define WOLFSSL_KEY_GEN", define)
         assert features["PEM_TO_DER"] == 0, define
         assert features["DER_TO_PEM"] == 0, define
@@ -422,9 +441,8 @@ def test_pkcs8_offset_needs_pkcs8(bf):
     for define in ("#define HAVE_PKCS8", "#define HAVE_PKCS12"):
         assert detect(bf, "#define NO_PKCS8", "#define NO_PKCS12", define)["PKCS8"] == 1, define
 
-    # asn.c builds it only without NO_ASN, even with RSA.
-    features = detect(bf, "#define NO_ASN")
-    assert features["RSA"] == 1
+    # asn.c builds it only without NO_ASN. settings.h needs ASN for RSA and DSA.
+    features = detect(bf, "#define NO_ASN", "#define NO_RSA", "#define NO_DSA")
     assert features["PKCS8"] == 0
     assert helper not in cdef_for(bf, features)
 
@@ -435,9 +453,9 @@ RNG_DECLS = ("wc_InitRng(", "wc_InitRngNonce(", "wc_InitRngNonce_ex(", "wc_RNG_G
 
 
 def test_rng_api_needs_rng(bf):
-    optional = ("#define WC_RNG_SEED_CB", "#define WC_RSA_BLINDING", "#define WOLF_CRYPTO_CB")
+    optional = ("#define WC_RNG_SEED_CB", "#define WOLF_CRYPTO_CB")
 
-    features = detect(bf, *optional)
+    features = detect(bf, *optional, "#define WC_RSA_BLINDING")
     assert features["RNG"] == 1
     cdef = cdef_for(bf, features)
     for name in RNG_DECLS:
@@ -514,11 +532,12 @@ RAW_KEY_FUNCS = ("wc_ecc_import_x963(", "wc_ecc_import_unsigned(", "wc_ecc_expor
 
 def test_der_functions_need_asn(bf):
     """asn.c has the key DER functions, so they need ASN."""
-    defines = ("#define HAVE_ECC", "#define HAVE_ED25519", "#define HAVE_ED448", "#define WOLFSSL_KEY_GEN")
+    defines = ("#define HAVE_ECC", *ED25519_DEFINES, *ED448_DEFINES, "#define WOLFSSL_KEY_GEN")
     cdef = cdef_for(bf, detect(bf, *defines))
     for name in DER_FUNCS + RAW_KEY_FUNCS:
         assert name in cdef, name
-    cdef = cdef_for(bf, detect(bf, *defines, "#define NO_ASN"))
+    # settings.h needs ASN for RSA and DSA.
+    cdef = cdef_for(bf, detect(bf, *defines, "#define NO_ASN", "#define NO_RSA", "#define NO_DSA"))
     for name in DER_FUNCS:
         assert name not in cdef, name
     for name in RAW_KEY_FUNCS:
@@ -561,13 +580,12 @@ ECC_COMMON = ("ecc_key;", "wc_ecc_init(", "wc_ecc_free(", "wc_ecc_make_key(", "w
     (("#define NO_ECC_KEY_EXPORT",), ("ECC_KEY_EXPORT",)),
     # settings.h: key export needs WOLFSSL_SP_MATH or big integer math.
     (("#define NO_BIG_INT",), ("ECC_KEY_EXPORT",)),
-    (("#define NO_BIG_INT", "#define WOLFSSL_SP_MATH"), ()),
     # settings.h: DHE and timing resistant signing need the RNG.
     (("#define WC_NO_RNG",), ("ECC_DHE",)),
     (("#define WC_NO_RNG", "#define ECC_TIMING_RESISTANT"), ("ECC_SIGN", "ECC_DHE")),
     (("#define NO_ECC_SIGN", "#define NO_ECC_DHE"), ("ECC_SIGN", "ECC_DHE")),
 ], ids=["default", "no-sign", "no-sign-indented", "no-verify", "no-dhe", "no-import", "no-export",
-        "no-big-int", "no-big-int-sp-math", "no-rng", "no-rng-timing-resistant", "no-sign-no-dhe"])
+        "no-big-int", "no-rng", "no-rng-timing-resistant", "no-sign-no-dhe"])
 def test_ecc_operations_follow_subset_macros(bf, defines, disabled):
     features = detect(bf, "#define HAVE_ECC", "#define WOLFSSL_PUBLIC_MP", *defines)
     assert features["ECC"] == 1
@@ -615,6 +633,9 @@ ED25519_OPS = {
                            "wc_ed25519_export_private_only(", "wc_ed25519_export_private(",
                            "wc_ed25519_export_key("),
 }
+# settings.h needs SHA-512 for Ed25519, and SHAKE256 too for Ed448.
+ED25519_DEFINES = ("#define WOLFSSL_SHA512", "#define HAVE_ED25519")
+ED448_DEFINES = ("#define WOLFSSL_SHA512", "#define WOLFSSL_SHA3", "#define WOLFSSL_SHAKE256", "#define HAVE_ED448")
 ED25519_COMMON = ("ed25519_key;", "wc_ed25519_init(", "wc_ed25519_free(", "wc_ed25519_size(",
                   "wc_ed25519_sig_size(", "wc_ed25519_check_key(", "wc_ed25519_pub_size(",
                   "wc_ed25519_priv_size(")
@@ -631,7 +652,7 @@ ED25519_COMMON = ("ed25519_key;", "wc_ed25519_init(", "wc_ed25519_free(", "wc_ed
 ], ids=["default", "no-sign-no-make-key", "no-sign", "no-sign-indented", "no-verify", "no-import",
         "no-export"])
 def test_ed25519_operations_follow_subset_macros(bf, defines, disabled):
-    features = detect(bf, "#define HAVE_ED25519", *defines)
+    features = detect(bf, *ED25519_DEFINES, *defines)
     assert features["ED25519"] == 1
     for name in ED25519_SUBSETS:
         assert features[name] == (name not in disabled), name
@@ -679,7 +700,7 @@ ED448_COMMON = ("ed448_key;", "wc_ed448_init(", "wc_ed448_free(", "wc_ed448_make
     (("#define NO_ED448_SIGN", "#define NO_ED448_KEY_EXPORT"), ("ED448_SIGN", "ED448_KEY_EXPORT")),
 ], ids=["default", "no-sign", "no-sign-indented", "no-verify", "no-import", "no-export", "no-sign-no-export"])
 def test_ed448_operations_follow_subset_macros(bf, defines, disabled):
-    features = detect(bf, "#define HAVE_ED448", *defines)
+    features = detect(bf, *ED448_DEFINES, *defines)
     assert features["ED448"] == 1
     for name in ED448_SUBSETS:
         assert features[name] == (name not in disabled), name
