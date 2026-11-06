@@ -1299,10 +1299,15 @@ def make_cdef(features):
         int wc_InitRsaKey(RsaKey* key, void*);
         int wc_FreeRsaKey(RsaKey* key);
 
-        int wc_RsaPrivateKeyDecode(const byte*, word32*, RsaKey*, word32);
-        int wc_RsaPublicKeyDecode(const byte*, word32*, RsaKey*, word32);
         int wc_RsaEncryptSize(RsaKey*);
         """
+
+        # asn.c has the RSA DER functions.
+        if features["ASN"]:
+            cdef += """
+            int wc_RsaPrivateKeyDecode(const byte*, word32*, RsaKey*, word32);
+            int wc_RsaPublicKeyDecode(const byte*, word32*, RsaKey*, word32);
+            """
 
         if features["RSA_ENCRYPT"]:
             cdef += """
@@ -1364,7 +1369,7 @@ def make_cdef(features):
             int wc_MakeRsaKey(RsaKey* key, int size, long e, WC_RNG* rng);
             """
 
-        if features["KEYGEN"]:
+        if features["KEYGEN"] and features["ASN"]:
             cdef += """
             int wc_RsaKeyToDer(RsaKey* key, byte* output, word32 inLen);
             int wc_RsaKeyToPublicDer(RsaKey* key, byte* output, word32 inLen);
@@ -1386,21 +1391,29 @@ def make_cdef(features):
         int wc_ecc_check_key(ecc_key* key);
         """
 
-        if features["ECC_KEY_IMPORT"]:
+        if features["ECC_KEY_IMPORT"] and features["ASN"]:
             cdef += """
             int wc_EccPrivateKeyDecode(const byte*, word32*, ecc_key*, word32);
             int wc_EccPublicKeyDecode(const byte*, word32*, ecc_key*, word32);
+            """
+
+        if features["ECC_KEY_IMPORT"]:
+            cdef += """
             int wc_ecc_import_x963(const byte* in, word32 inLen, ecc_key* key);
             int wc_ecc_import_unsigned(ecc_key* key, const byte* qx, const byte* qy,
                            const byte* d, int curve_id);
             """
 
-        if features["ECC_KEY_EXPORT"]:
+        if features["ECC_KEY_EXPORT"] and features["ASN"]:
             cdef += """
             int wc_EccKeyToDer(ecc_key*, byte* output, word32 inLen);
             int wc_EccKeyDerSize(ecc_key*, int pub);
             int wc_EccPublicKeyToDer(ecc_key*, byte* output,
                                      word32 inLen, int with_AlgCurve);
+            """
+
+        if features["ECC_KEY_EXPORT"]:
+            cdef += """
             int wc_ecc_export_x963(ecc_key*, byte* out, word32* outLen);
             int wc_ecc_export_private_raw(ecc_key* key, byte* qx, word32* qxLen,
                                       byte* qy, word32* qyLen, byte* d, word32* dLen);
@@ -1477,20 +1490,28 @@ def make_cdef(features):
                                   word32 msglen, int* stat, ed25519_key* key);
             """
 
-        if features["ED25519_KEY_IMPORT"]:
+        if features["ED25519_KEY_IMPORT"] and features["ASN"]:
             cdef += """
             int wc_Ed25519PrivateKeyDecode(const byte*, word32*, ed25519_key*, word32);
             int wc_Ed25519PublicKeyDecode(const byte*, word32*, ed25519_key*, word32);
+            """
+
+        if features["ED25519_KEY_IMPORT"]:
+            cdef += """
             int wc_ed25519_import_public(const byte* in, word32 inLen, ed25519_key* key);
             int wc_ed25519_import_private_only(const byte* priv, word32 privSz, ed25519_key* key);
             int wc_ed25519_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed25519_key* key);
             """
 
-        if features["ED25519_KEY_EXPORT"]:
+        if features["ED25519_KEY_EXPORT"] and features["ASN"]:
             cdef += """
             int wc_Ed25519KeyToDer(ed25519_key*, byte* output, word32 inLen);
             int wc_Ed25519PublicKeyToDer(ed25519_key*, byte* output,
                                      word32 inLen, int with_AlgCurve);
+            """
+
+        if features["ED25519_KEY_EXPORT"]:
+            cdef += """
             int wc_ed25519_export_public(ed25519_key*, byte* out, word32* outLen);
             int wc_ed25519_export_private_only(ed25519_key* key, byte* out, word32* outLen);
             int wc_ed25519_export_private(ed25519_key* key, byte* out, word32* outLen);
@@ -1528,20 +1549,28 @@ def make_cdef(features):
                                   byte ctx_len);
             """
 
-        if features["ED448_KEY_IMPORT"]:
+        if features["ED448_KEY_IMPORT"] and features["ASN"]:
             cdef += """
             int wc_Ed448PrivateKeyDecode(const byte*, word32*, ed448_key*, word32);
             int wc_Ed448PublicKeyDecode(const byte*, word32*, ed448_key*, word32);
+            """
+
+        if features["ED448_KEY_IMPORT"]:
+            cdef += """
             int wc_ed448_import_public(const byte* in, word32 inLen, ed448_key* key);
             int wc_ed448_import_private_only(const byte* priv, word32 privSz, ed448_key* key);
             int wc_ed448_import_private_key(const byte* priv, word32 privSz, const byte* pub, word32 pubSz, ed448_key* key);
             """
 
-        if features["ED448_KEY_EXPORT"]:
+        if features["ED448_KEY_EXPORT"] and features["ASN"]:
             cdef += """
             int wc_Ed448KeyToDer(ed448_key*, byte* output, word32 inLen);
             int wc_Ed448PublicKeyToDer(ed448_key*, byte* output,
                                      word32 inLen, int with_AlgCurve);
+            """
+
+        if features["ED448_KEY_EXPORT"]:
+            cdef += """
             int wc_ed448_export_public(ed448_key*, byte* out, word32* outLen);
             int wc_ed448_export_private_only(ed448_key* key, byte* out, word32* outLen);
             int wc_ed448_export_private(ed448_key* key, byte* out, word32* outLen);
