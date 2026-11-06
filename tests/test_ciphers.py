@@ -1549,7 +1549,7 @@ if _lib.RSA_ENABLED:
         ("RsaPrivate", "decrypt"): ("RSA_PRIVATE_ENABLED",),
         ("RsaPrivate", "decrypt_oaep"): ("RSA_PRIVATE_ENABLED", "RSA_OAEP_ENABLED"),
         ("RsaPrivate", "make_key"): ("KEYGEN_ENABLED", "RSA_PRIVATE_ENABLED"),
-        ("RsaPrivate", "encode_key"): ("KEYGEN_ENABLED", "ASN_ENABLED"),
+        ("RsaPrivate", "encode_key"): ("KEYGEN_ENABLED", "CERTS_ENABLED"),
         ("RsaPrivate", "sign_pss"): ("RSA_PSS_ENABLED", "RSA_SIGN_ENABLED"),
     }
 
@@ -1561,7 +1561,7 @@ if _lib.RSA_ENABLED:
 
         # Load fresh copies of the module as if one operation were not compiled in.
         for disabled in ("RSA_ENCRYPT_ENABLED", "RSA_PRIVATE_ENABLED", "RSA_SIGN_ENABLED", "RSA_OAEP_ENABLED",
-                         "ASN_ENABLED"):
+                         "CERTS_ENABLED"):
             with lib_patch.context() as m:
                 m.setattr(disabled, 0)
                 module = load_fresh_ciphers()

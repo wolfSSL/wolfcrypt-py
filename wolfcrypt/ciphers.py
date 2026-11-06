@@ -1034,7 +1034,7 @@ if _lib.RSA_ENABLED:
                 der = pem_to_der(file, _lib.PRIVATEKEY_TYPE)
                 return cls(key=der, hash_type=hash_type, rng=rng)
 
-        if _lib.KEYGEN_ENABLED and _lib.ASN_ENABLED:
+        if _lib.KEYGEN_ENABLED and _lib.CERTS_ENABLED:
             def encode_key(self) -> tuple[bytes, bytes]:
                 """
                 Encodes the RSA private and public keys in an ASN sequence.
