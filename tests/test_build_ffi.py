@@ -55,6 +55,7 @@ SUBCAPABILITIES = {
     "PEM_TO_DER": "ASN",
     "DER_TO_PEM": "ASN",
     "PKCS8": "ASN",
+    "CERTS": "ASN",
     "RSA_ENCRYPT": "RSA",
     "RSA_PRIVATE": "RSA",
     "RSA_SIGN": "RSA",
@@ -522,6 +523,18 @@ def test_der_functions_need_asn(bf):
         assert name not in cdef, name
     for name in RAW_KEY_FUNCS:
         assert name in cdef, name
+
+
+def test_rsa_public_der_needs_certs(bf):
+    """asn.c builds wc_RsaKeyToPublicDer only with certificate support."""
+    cdef = cdef_for(bf, detect(bf, "#define WOLFSSL_KEY_GEN"))
+    assert "wc_RsaKeyToDer(" in cdef
+    assert "wc_RsaKeyToPublicDer(" in cdef
+    features = detect(bf, "#define WOLFSSL_KEY_GEN", "#define NO_CERTS")
+    assert features["CERTS"] == 0
+    cdef = cdef_for(bf, features)
+    assert "wc_RsaKeyToDer(" in cdef
+    assert "wc_RsaKeyToPublicDer(" not in cdef
 
 
 ECC_SUBSETS = ("ECC_SIGN", "ECC_VERIFY", "ECC_DHE", "ECC_KEY_IMPORT", "ECC_KEY_EXPORT")

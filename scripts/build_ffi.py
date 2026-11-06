@@ -464,7 +464,8 @@ def detect_features(defines, features, fips=False, include_dirs=()):
         or defined("HAVE_SCRYPT")) else 0
     # asn.c builds the PEM/DER conversions only with certificate support.
     # settings.h derives WOLFSSL_PEM_TO_DER and WOLFSSL_DER_TO_PEM.
-    certs = features["ASN"] and not defined("NO_CERTS")
+    features["CERTS"] = 1 if features["ASN"] and not defined("NO_CERTS") else 0
+    certs = features["CERTS"]
     features["PEM_TO_DER"] = 1 if certs and (defined("WOLFSSL_PEM_TO_DER") or not (
         defined("WOLFSSL_NO_PEM") or defined("NO_CODING"))) else 0
     features["DER_TO_PEM"] = 1 if certs and (defined("WOLFSSL_DER_TO_PEM")
@@ -646,6 +647,7 @@ def make_source(features):
         int FIPS_ENABLED = {features["FIPS"]};
         int FIPS_VERSION = {features["FIPS_VERSION"]};
         int ASN_ENABLED = {features["ASN"]};
+        int CERTS_ENABLED = {features["CERTS"]};
         int WC_RNG_SEED_CB_ENABLED = {features["WC_RNG_SEED_CB"]};
         int AESGCM_STREAM_ENABLED = {features["AESGCM_STREAM"]};
         int MIN_AUTH_TAG_SZ = {features["MIN_AUTH_TAG_SZ"]};
@@ -733,6 +735,7 @@ def make_cdef(features):
         extern int FIPS_ENABLED;
         extern int FIPS_VERSION;
         extern int ASN_ENABLED;
+        extern int CERTS_ENABLED;
         extern int WC_RNG_SEED_CB_ENABLED;
         extern int AESGCM_STREAM_ENABLED;
         extern int MIN_AUTH_TAG_SZ;
@@ -1372,6 +1375,11 @@ def make_cdef(features):
         if features["KEYGEN"] and features["ASN"]:
             cdef += """
             int wc_RsaKeyToDer(RsaKey* key, byte* output, word32 inLen);
+            """
+
+        # asn.c builds wc_RsaKeyToPublicDer only with certificate support.
+        if features["KEYGEN"] and features["CERTS"]:
+            cdef += """
             int wc_RsaKeyToPublicDer(RsaKey* key, byte* output, word32 inLen);
 
             """
@@ -1938,6 +1946,7 @@ def default_features():
         "FIPS_VERSION": 0,
         "ERROR_STRINGS": 1,
         "ASN": 1,
+        "CERTS": 1,
         "WC_RNG_SEED_CB": 0,
         "AESGCM_STREAM": 1,
         "MIN_AUTH_TAG_SZ": 12,
