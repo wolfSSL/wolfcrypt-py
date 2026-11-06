@@ -434,13 +434,14 @@ RNG_DECLS = ("wc_InitRng(", "wc_InitRngNonce(", "wc_InitRngNonce_ex(", "wc_RNG_G
 
 
 def test_rng_api_needs_rng(bf):
-    optional = ("#define WC_RNG_SEED_CB", "#define WC_RSA_BLINDING")
+    optional = ("#define WC_RNG_SEED_CB", "#define WC_RSA_BLINDING", "#define WOLF_CRYPTO_CB")
 
     features = detect(bf, *optional)
     assert features["RNG"] == 1
     cdef = cdef_for(bf, features)
     for name in RNG_DECLS:
         assert name in cdef, name
+    assert "} rng;" in cdef
 
     # random.h replaces the RNG API with macros under WC_NO_RNG. random.c and
     # rsa.c then build no RNG, DRBG, seed or RSA blinding functions.
@@ -452,6 +453,8 @@ def test_rng_api_needs_rng(bf):
         assert "WC_RNG;" in cdef, define
         for name in RNG_DECLS:
             assert name not in cdef, (define, name)
+        # cryptocb.h has wc_CryptoInfo.rng only without WC_NO_RNG.
+        assert "} rng;" not in cdef, define
 
 
 RSA_OPS = ("wc_RsaPublicEncrypt(", "wc_RsaPublicEncrypt_ex(", "wc_RsaPrivateDecrypt(",

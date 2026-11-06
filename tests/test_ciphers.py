@@ -653,8 +653,9 @@ if _lib.ECC_ENABLED:
         with pytest.raises(WolfCryptError):
             EccPrivate(vectors[EccPublic].key)        # invalid key type
 
-        with pytest.raises(WolfCryptError):           # invalid key size
-            EccPrivate.make_key(1024)
+        if _lib.RNG_ENABLED:
+            with pytest.raises(WolfCryptError):       # invalid key size
+                EccPrivate.make_key(1024)
 
     @needs_ecc_import
     @needs_ecc_export

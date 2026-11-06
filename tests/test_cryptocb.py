@@ -46,6 +46,7 @@ from wolfcrypt.cryptocb import CryptoCallback, DIGEST_SIZE
 
 HASH_CB_ENABLED = _lib.CRYPTO_CB_COPY_ENABLED and _lib.CRYPTO_CB_FREE_ENABLED
 needs_hash_cb = pytest.mark.skipif(not HASH_CB_ENABLED, reason="Hash callbacks need copy and free crypto callbacks")
+needs_rng = pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
 
 SHA_CLASSES: list[type[_Sha]] = []
 
@@ -82,6 +83,7 @@ class RngCryptoCallback(CryptoCallback):
         return bytes(range(1, 1 + size))
 
 
+@needs_rng
 def test_rng_callback():
     with RngCryptoCallback(10):
         rng = Random(device_id=10)
@@ -247,6 +249,7 @@ class BadRngCryptoCallback(CryptoCallback):
         return bytes(1)  # bad random length
 
 
+@needs_rng
 def test_rng_callback_failure():
     with BadRngCryptoCallback(14):
         rng = Random(device_id=14)
@@ -254,6 +257,7 @@ def test_rng_callback_failure():
             rng.bytes(4)
 
 
+@needs_rng
 def test_reregister_same_device_id():
     gc.disable()
     try:

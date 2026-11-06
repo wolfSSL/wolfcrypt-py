@@ -184,7 +184,7 @@ if _lib.CRYPTO_CB_ENABLED:
                             )
                         _ffi.buffer(info.hash.digest, DIGEST_SIZE[info.hash.type])[:] = digest
                     return 0
-                if info.algo_type == _lib.WC_ALGO_TYPE_RNG:
+                if _lib.RNG_ENABLED and info.algo_type == _lib.WC_ALGO_TYPE_RNG:
                     out = self.rng_callback(device_id, info.rng.rng, info.rng.sz)
                     if len(out) != info.rng.sz:
                         raise ValueError(
