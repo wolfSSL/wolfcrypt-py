@@ -634,18 +634,30 @@ if _lib.ECC_ENABLED:
                                                reason="ECC signing or verification not enabled")
     needs_ecc_verify = pytest.mark.skipif(not _lib.ECC_VERIFY_ENABLED, reason="ECC verification not enabled")
     needs_ecc_dhe = pytest.mark.skipif(not _lib.ECC_DHE_ENABLED, reason="ECDH not enabled")
+    needs_asn = pytest.mark.skipif(not _lib.ASN_ENABLED, reason="ASN not enabled")
 
     @pytest.fixture
     def ecc_private(vectors):
-        return EccPrivate(vectors[EccPrivate].key)
+        if _lib.ASN_ENABLED:
+            return EccPrivate(vectors[EccPrivate].key)
+        key = vectors[EccPrivate].raw_key
+        ecc = EccPrivate()
+        ecc.decode_key_raw(key[0:32], key[32:64], key[64:96])
+        return ecc
 
 
     @pytest.fixture
     def ecc_public(vectors):
-        return EccPublic(vectors[EccPublic].key)
+        if _lib.ASN_ENABLED:
+            return EccPublic(vectors[EccPublic].key)
+        key = vectors[EccPublic].raw_key
+        ecc = EccPublic()
+        ecc.decode_key_raw(key[0:32], key[32:64])
+        return ecc
 
 
     @needs_ecc_import
+    @needs_asn
     def test_new_ecc_raises(vectors):
         with pytest.raises(WolfCryptError):
             EccPrivate(vectors[EccPrivate].key[:-1])  # invalid key length
@@ -663,6 +675,7 @@ if _lib.ECC_ENABLED:
 
     @needs_ecc_import
     @needs_ecc_export
+    @needs_asn
     def test_key_encoding(vectors):
         priv = EccPrivate()
         pub = EccPublic()
@@ -703,6 +716,7 @@ if _lib.ECC_ENABLED:
 
     @needs_ecc_import
     @needs_ecc_export
+    @needs_asn
     def test_ecc_encode_key_buffer_not_from_field_size(vectors, monkeypatch):
         """
         F-10070: the private key DER is larger than four times the field
@@ -716,6 +730,7 @@ if _lib.ECC_ENABLED:
     @pytest.mark.parametrize("curve_id", [ECC_SECP112R1, ECC_SECP128R1, ECC_SECP160R1, ECC_SECP192R1])
     @needs_ecc_import
     @needs_ecc_export
+    @needs_asn
     def test_ecc_encode_key_small_curves(curve_id):
         """
         F-10070: private key DER encoding round-trips on small curves.
@@ -733,6 +748,7 @@ if _lib.ECC_ENABLED:
 
     @needs_ecc_import
     @needs_ecc_export
+    @needs_asn
     def test_ecc_encode_key_p192_vector():
         """
         F-10070: an imported P-192 private key re-encodes to the same DER.
@@ -816,9 +832,10 @@ if _lib.ECC_ENABLED:
         with pytest.raises(WolfCryptApiError):
             EccPublic().import_x963(b"\x04" + key[0:32] + bad_qy)
 
-        der = vectors[EccPublic].key
-        with pytest.raises(WolfCryptApiError):
-            EccPublic(der[:-1] + bytes([der[-1] ^ 1]))
+        if _lib.ASN_ENABLED:
+            der = vectors[EccPublic].key
+            with pytest.raises(WolfCryptApiError):
+                EccPublic(der[:-1] + bytes([der[-1] ^ 1]))
 
 
     @needs_ecc_import
@@ -832,12 +849,14 @@ if _lib.ECC_ENABLED:
         with pytest.raises(WolfCryptApiError):
             EccPrivate().decode_key_raw(qx, qy[:-1] + bytes([qy[-1] ^ 1]), d)
 
-        der = vectors[EccPrivate].key
-        with pytest.raises(WolfCryptApiError):
-            EccPrivate(der[:-1] + bytes([der[-1] ^ 1]))
+        if _lib.ASN_ENABLED:
+            der = vectors[EccPrivate].key
+            with pytest.raises(WolfCryptApiError):
+                EccPrivate(der[:-1] + bytes([der[-1] ^ 1]))
 
 
     @needs_ecc_import
+    @needs_asn
     def test_ecc_private_key_without_public_key(vectors):
         """The public key is optional in an ECPrivateKey."""
         der = vectors[EccPrivate].key
@@ -915,6 +934,8 @@ if _lib.ECC_ENABLED:
 
     @needs_ecc_import
     @needs_ecc_verify
+    # Without ASN wolfSSL uses raw R || S signatures, not DER.
+    @needs_asn
     def test_ecc_verify_openssl_signature(ecc_public):
         """
         F-8279: verify() takes the digest of the message, as signed by
@@ -1528,6 +1549,7 @@ if _lib.RSA_ENABLED:
         ("RsaPrivate", "decrypt"): ("RSA_PRIVATE_ENABLED",),
         ("RsaPrivate", "decrypt_oaep"): ("RSA_PRIVATE_ENABLED", "RSA_OAEP_ENABLED"),
         ("RsaPrivate", "make_key"): ("KEYGEN_ENABLED", "RSA_PRIVATE_ENABLED"),
+        ("RsaPrivate", "encode_key"): ("KEYGEN_ENABLED", "ASN_ENABLED"),
         ("RsaPrivate", "sign_pss"): ("RSA_PSS_ENABLED", "RSA_SIGN_ENABLED"),
     }
 
@@ -1538,7 +1560,8 @@ if _lib.RSA_ENABLED:
             assert hasattr(getattr(ciphers, cls), name) == enabled, (cls, name)
 
         # Load fresh copies of the module as if one operation were not compiled in.
-        for disabled in ("RSA_ENCRYPT_ENABLED", "RSA_PRIVATE_ENABLED", "RSA_SIGN_ENABLED", "RSA_OAEP_ENABLED"):
+        for disabled in ("RSA_ENCRYPT_ENABLED", "RSA_PRIVATE_ENABLED", "RSA_SIGN_ENABLED", "RSA_OAEP_ENABLED",
+                         "ASN_ENABLED"):
             with lib_patch.context() as m:
                 m.setattr(disabled, 0)
                 module = load_fresh_ciphers()
@@ -1548,6 +1571,13 @@ if _lib.RSA_ENABLED:
             # sign() and verify() implement the RSA protocols, so they stay.
             assert hasattr(module.RsaPrivate, "sign"), disabled
             assert hasattr(module.RsaPublic, "verify"), disabled
+
+    def test_rsa_key_rejected_without_asn(lib_patch, vectors):
+        """Loading a DER key needs ASN in the linked wolfSSL."""
+        lib_patch.setattr("ASN_ENABLED", 0)
+        for cls in (RsaPublic, RsaPrivate):
+            with pytest.raises(NotImplementedError, match="RSA DER key import is not supported"):
+                cls(vectors[cls].key)
 
     @needs_rng
     def test_rsa_sign_rejected_when_not_compiled_in(lib_patch, vectors):
@@ -1570,17 +1600,17 @@ if _lib.RSA_ENABLED:
 if _lib.ECC_ENABLED:
     # Method -> flags of the wolfSSL operations it needs.
     ECC_GATED_METHODS = {
-        ("EccPublic", "decode_key"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPublic", "decode_key"): ("ECC_KEY_IMPORT_ENABLED", "ASN_ENABLED"),
         ("EccPublic", "decode_key_raw"): ("ECC_KEY_IMPORT_ENABLED",),
         ("EccPublic", "import_x963"): ("ECC_KEY_IMPORT_ENABLED",),
-        ("EccPublic", "encode_key"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPublic", "encode_key"): ("ECC_KEY_EXPORT_ENABLED", "ASN_ENABLED"),
         ("EccPublic", "encode_key_raw"): ("ECC_KEY_EXPORT_ENABLED",),
         ("EccPublic", "export_x963"): ("ECC_KEY_EXPORT_ENABLED",),
         ("EccPublic", "verify"): ("ECC_VERIFY_ENABLED",),
         ("EccPublic", "verify_raw"): ("ECC_VERIFY_ENABLED", "MPAPI_ENABLED"),
-        ("EccPrivate", "decode_key"): ("ECC_KEY_IMPORT_ENABLED",),
+        ("EccPrivate", "decode_key"): ("ECC_KEY_IMPORT_ENABLED", "ASN_ENABLED"),
         ("EccPrivate", "decode_key_raw"): ("ECC_KEY_IMPORT_ENABLED",),
-        ("EccPrivate", "encode_key"): ("ECC_KEY_EXPORT_ENABLED",),
+        ("EccPrivate", "encode_key"): ("ECC_KEY_EXPORT_ENABLED", "ASN_ENABLED"),
         ("EccPrivate", "encode_key_raw"): ("ECC_KEY_EXPORT_ENABLED",),
         ("EccPrivate", "shared_secret"): ("ECC_DHE_ENABLED",),
         ("EccPrivate", "sign"): ("ECC_SIGN_ENABLED",),
@@ -1595,7 +1625,7 @@ if _lib.ECC_ENABLED:
 
         # Load fresh copies of the module as if one operation were not compiled in.
         for disabled in ("ECC_KEY_IMPORT_ENABLED", "ECC_KEY_EXPORT_ENABLED", "ECC_DHE_ENABLED",
-                         "ECC_SIGN_ENABLED", "ECC_VERIFY_ENABLED"):
+                         "ECC_SIGN_ENABLED", "ECC_VERIFY_ENABLED", "ASN_ENABLED"):
             with lib_patch.context() as m:
                 m.setattr(disabled, 0)
                 module = load_fresh_ciphers()
@@ -1604,11 +1634,12 @@ if _lib.ECC_ENABLED:
                     assert hasattr(getattr(module, cls), name) == enabled, (disabled, cls, name)
             assert hasattr(module.EccPrivate, "make_key"), disabled
 
-    def test_ecc_key_rejected_without_key_import(lib_patch, vectors):
-        """F-12228: loading a key needs ECC key import in the linked wolfSSL."""
-        lib_patch.setattr("ECC_KEY_IMPORT_ENABLED", 0)
+    @pytest.mark.parametrize("disabled", ["ECC_KEY_IMPORT_ENABLED", "ASN_ENABLED"])
+    def test_ecc_key_rejected_without_key_import(lib_patch, vectors, disabled):
+        """F-12228: loading a DER key needs ECC key import and ASN in the linked wolfSSL."""
+        lib_patch.setattr(disabled, 0)
         for cls in (EccPublic, EccPrivate):
-            with pytest.raises(NotImplementedError, match="ECC key import is not supported"):
+            with pytest.raises(NotImplementedError, match="ECC DER key import is not supported"):
                 cls(vectors[cls].key)
             assert cls().size == 0, cls
 

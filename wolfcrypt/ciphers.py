@@ -833,6 +833,8 @@ if _lib.RSA_ENABLED:
         def __init__(self, key: BytesOrStr, hash_type: int | None = None, rng: Random | None = None) -> None:
             super().__init__(rng)
 
+            if not _lib.ASN_ENABLED:
+                raise NotImplementedError("RSA DER key import is not supported by this wolfSSL build")
             key = t2b(key)
             self._hash_type = hash_type
 
@@ -997,6 +999,8 @@ if _lib.RSA_ENABLED:
             idx[0] = 0
 
             if key is not None:
+                if not _lib.ASN_ENABLED:
+                    raise NotImplementedError("RSA DER key import is not supported by this wolfSSL build")
                 key = t2b(key)
                 ret = _lib.wc_RsaPrivateKeyDecode(key, idx,
                                               self.native_object, len(key))
@@ -1030,7 +1034,7 @@ if _lib.RSA_ENABLED:
                 der = pem_to_der(file, _lib.PRIVATEKEY_TYPE)
                 return cls(key=der, hash_type=hash_type, rng=rng)
 
-        if _lib.KEYGEN_ENABLED:
+        if _lib.KEYGEN_ENABLED and _lib.ASN_ENABLED:
             def encode_key(self) -> tuple[bytes, bytes]:
                 """
                 Encodes the RSA private and public keys in an ASN sequence.
@@ -1206,8 +1210,8 @@ if _lib.ECC_ENABLED:
             _Ecc.__init__(self)
 
             if key:
-                if not _lib.ECC_KEY_IMPORT_ENABLED:
-                    raise NotImplementedError("ECC key import is not supported by this wolfSSL build")
+                if not (_lib.ECC_KEY_IMPORT_ENABLED and _lib.ASN_ENABLED):
+                    raise NotImplementedError("ECC DER key import is not supported by this wolfSSL build")
                 self.decode_key(key)
 
         def _check_key(self) -> None:
@@ -1215,7 +1219,7 @@ if _lib.ECC_ENABLED:
             if ret != 0:
                 raise WolfCryptApiError("Key check error", ret)
 
-        if _lib.ECC_KEY_IMPORT_ENABLED:
+        if _lib.ECC_KEY_IMPORT_ENABLED and _lib.ASN_ENABLED:
             def decode_key(self, key: BytesOrStr) -> None:
                 """
                 Decodes an ECC public key from an ASN sequence.
@@ -1235,6 +1239,7 @@ if _lib.ECC_ENABLED:
                     raise WolfCryptError(f"Key decode error ({self.max_signature_size})")
                 self._check_key()
 
+        if _lib.ECC_KEY_IMPORT_ENABLED:
             def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
                 """
                 Decodes an ECC public key from its raw elements: (Qx,Qy)
@@ -1254,7 +1259,7 @@ if _lib.ECC_ENABLED:
                     raise WolfCryptApiError("Key decode error", ret)
                 self._check_key()
 
-        if _lib.ECC_KEY_EXPORT_ENABLED:
+        if _lib.ECC_KEY_EXPORT_ENABLED and _lib.ASN_ENABLED:
             def encode_key(self, with_curve: bool = True) -> bytes:
                 """
                 Encodes the ECC public key in an ASN sequence.
@@ -1270,6 +1275,7 @@ if _lib.ECC_ENABLED:
 
                 return _ffi.buffer(key, ret)[:]
 
+        if _lib.ECC_KEY_EXPORT_ENABLED:
             def encode_key_raw(self) -> tuple[bytes, bytes]:
                 """
                 Encodes the ECC public key in its two raw elements
@@ -1411,7 +1417,7 @@ if _lib.ECC_ENABLED:
 
             return ecc
 
-        if _lib.ECC_KEY_IMPORT_ENABLED:
+        if _lib.ECC_KEY_IMPORT_ENABLED and _lib.ASN_ENABLED:
             @override
             def decode_key(self, key: BytesOrStr) -> None:
                 """
@@ -1434,6 +1440,7 @@ if _lib.ECC_ENABLED:
                 if self.native_object.type == _lib.ECC_PRIVATEKEY:
                     self._check_key()
 
+        if _lib.ECC_KEY_IMPORT_ENABLED:
             @override
             def decode_key_raw(self, qx: BytesOrStr, qy: BytesOrStr, d: BytesOrStr, curve_id: int = ECC_SECP256R1) -> None:
                 """
@@ -1457,7 +1464,7 @@ if _lib.ECC_ENABLED:
                     raise WolfCryptApiError("Key decode error", ret)
                 self._check_key()
 
-        if _lib.ECC_KEY_EXPORT_ENABLED:
+        if _lib.ECC_KEY_EXPORT_ENABLED and _lib.ASN_ENABLED:
             @override
             def encode_key(self) -> bytes:
                 """
@@ -1476,6 +1483,7 @@ if _lib.ECC_ENABLED:
 
                 return _ffi.buffer(key, ret)[:]
 
+        if _lib.ECC_KEY_EXPORT_ENABLED:
             @override
             def encode_key_raw(self) -> tuple[bytes, bytes, bytes]:
                 """

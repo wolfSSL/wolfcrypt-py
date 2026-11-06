@@ -501,6 +501,29 @@ def test_rsa_subsets_need_rsa(bf):
         assert name not in cdef, name
 
 
+DER_FUNCS = ("wc_RsaPublicKeyDecode(", "wc_RsaPrivateKeyDecode(", "wc_RsaKeyToDer(", "wc_RsaKeyToPublicDer(",
+             "wc_EccPrivateKeyDecode(", "wc_EccPublicKeyDecode(", "wc_EccKeyToDer(", "wc_EccKeyDerSize(",
+             "wc_EccPublicKeyToDer(", "wc_Ed25519PrivateKeyDecode(", "wc_Ed25519PublicKeyDecode(",
+             "wc_Ed25519KeyToDer(", "wc_Ed25519PublicKeyToDer(", "wc_Ed448PrivateKeyDecode(",
+             "wc_Ed448PublicKeyDecode(", "wc_Ed448KeyToDer(", "wc_Ed448PublicKeyToDer(")
+RAW_KEY_FUNCS = ("wc_ecc_import_x963(", "wc_ecc_import_unsigned(", "wc_ecc_export_x963(",
+                 "wc_ecc_export_private_raw(", "wc_ecc_export_public_raw(", "wc_ed25519_import_public(",
+                 "wc_ed25519_export_public(", "wc_ed448_import_public(", "wc_ed448_export_public(")
+
+
+def test_der_functions_need_asn(bf):
+    """asn.c has the key DER functions, so they need ASN."""
+    defines = ("#define HAVE_ECC", "#define HAVE_ED25519", "#define HAVE_ED448", "#define WOLFSSL_KEY_GEN")
+    cdef = cdef_for(bf, detect(bf, *defines))
+    for name in DER_FUNCS + RAW_KEY_FUNCS:
+        assert name in cdef, name
+    cdef = cdef_for(bf, detect(bf, *defines, "#define NO_ASN"))
+    for name in DER_FUNCS:
+        assert name not in cdef, name
+    for name in RAW_KEY_FUNCS:
+        assert name in cdef, name
+
+
 ECC_SUBSETS = ("ECC_SIGN", "ECC_VERIFY", "ECC_DHE", "ECC_KEY_IMPORT", "ECC_KEY_EXPORT")
 ECC_OPS = {
     "ECC_SIGN": ("wc_ecc_sign_hash(", "wc_ecc_sign_hash_ex("),
