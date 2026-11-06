@@ -70,8 +70,9 @@ should be set equal to the installation path for the wolfSSL library:
 
 If building wolfcrypt-py against a local wolfSSL library, wolfcrypt-py
 will attempt to do native feature detection to enable/disable wolfcrypt-py
-features based on how native wolfSSL has been compiled.  It uses the
-<wolfssl/options.h> header to do feature detection.
+features based on how native wolfSSL has been compiled.  It runs the C
+preprocessor over <wolfssl/options.h> and the wolfSSL headers to do feature
+detection.
 
 After this the local build can be installed from the locally built wheel in dist.
 

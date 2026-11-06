@@ -338,37 +338,88 @@ def get_features(local_wolfssl, features):
                 fips = True
 
     include_dirs = wolfssl_inc_dirs(local_wolfssl, fips)
-    defines_files = []
-
     for d in include_dirs:
         if not os.path.exists(d):
             e = f"Invalid wolfSSL include dir: {d}"
             raise FileNotFoundError(e)
 
-        options = os.path.join(d, "wolfssl", "options.h")
-        if os.path.exists(options):
-            defines_files.append(options)
-        user_settings = os.path.join(d, "user_settings.h")
-        if os.path.exists(user_settings):
-            defines_files.append(user_settings)
+    return detect_features(feature_macros(include_dirs), features, fips, include_dirs)
 
-    if len(defines_files) == 0:
-        e = "No options.h or user_settings.h found for feature detection."
+PROBE_DEFINED = "WOLFCRYPT_PY_DEFINED"
+PROBE_VALUE = "WOLFCRYPT_PY_VALUE"
+# Macros whose values detect_features() reads.
+VALUE_MACROS = ("WOLFSSL_MIN_AUTH_TAG_SZ", "HAVE_FIPS_VERSION")
+
+def header_macro_names(include_dirs):
+    """Return the names #defined in the headers the extension can include."""
+    names = set()
+    for d in include_dirs:
+        paths = [os.path.join(d, name) for name in os.listdir(d) if name.endswith(".h")]
+        for root, _dirs, files in os.walk(os.path.join(d, "wolfssl")):
+            paths += [os.path.join(root, name) for name in files if name.endswith(".h")]
+        for path in paths:
+            with open(path, errors="replace") as f:
+                names.update(re.findall(r"^\s*#\s*define\s+(\w+)", f.read(), re.MULTILINE))
+    return names
+
+def probe_source(names):
+    """Return C source that marks which of names the extension sees defined."""
+    lines = [source_includes()]
+    for name in sorted(names):
+        lines += [f"#ifdef {name}", f'{PROBE_DEFINED} "{name}"']
+        if name in VALUE_MACROS:
+            lines.append(f'{PROBE_VALUE} "{name}" {name}')
+        lines.append("#endif")
+    return "\n".join(lines) + "\n"
+
+def preprocess(path, include_dirs):
+    """Run the C preprocessor of the extension build and return its output."""
+    import setuptools  # noqa: F401  # provides distutils on Python >= 3.12
+    from distutils.ccompiler import new_compiler
+    from distutils.sysconfig import customize_compiler
+
+    compiler = new_compiler()
+    customize_compiler(compiler)
+    if compiler.compiler_type == "msvc":
+        compiler.initialize()
+        cmd = [compiler.cc, "/nologo", "/EP"] + [f"/I{d}" for d in include_dirs]
+    else:
+        cmd = list(compiler.preprocessor or compiler.compiler[:1] + ["-E"])
+        cmd += [f"-I{d}" for d in include_dirs]
+    result = subprocess.run(cmd + [path], capture_output=True, text=True)
+    if result.returncode != 0:
+        e = f"Preprocessing the wolfSSL headers failed:\n{result.stderr}"
         raise RuntimeError(e)
+    return result.stdout
 
-    defines = []
-    for file in defines_files:
-        with open(file) as f:
-            defines += f.read().splitlines()
+def feature_macros(include_dirs):
+    """Return {name: value} of the macros the extension compile sees.
 
-    return detect_features(defines, features, fips, include_dirs)
+    The compiler reads options.h or user_settings.h and settings.h, so #if
+    blocks, #undef and the macros settings.h derives count as in the build.
+    """
+    import tempfile
 
-def detect_features(defines, features, fips=False, include_dirs=()):
-    """Set features from the lines of options.h/user_settings.h."""
-    text = "\n".join(defines)
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "wolfcrypt_py_probe.c")
+        with open(path, "w") as f:
+            f.write(probe_source(header_macro_names(include_dirs)))
+        output = preprocess(path, include_dirs)
 
+    macros = dict.fromkeys(re.findall(rf'^\s*{PROBE_DEFINED}\s+"(\w+)"', output, re.MULTILINE), "")
+    for name, value in re.findall(rf'^\s*{PROBE_VALUE}\s+"(\w+)"[ \t]*(.*)$', output, re.MULTILINE):
+        macros[name] = value.strip()
+    return macros
+
+def macro_int(macros, name):
+    """Return the integer value of macro name, or None."""
+    match = re.match(r"[(\s]*(\d+)", macros.get(name, ""))
+    return int(match.group(1)) if match else None
+
+def detect_features(macros, features, fips=False, include_dirs=()):
+    """Set features from the macros the extension compile sees."""
     def defined(name):
-        return re.search(rf"^\s*#\s*define\s+{name}\b", text, re.MULTILINE) is not None
+        return name in macros
 
     features["MPAPI"] = 1 if defined("WOLFSSL_PUBLIC_MP") else 0
     features["SHA"] = 0 if defined("NO_SHA") else 1
@@ -393,27 +444,18 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     features["ASN"] = 0 if defined("NO_ASN") else 1
     features["WC_RNG_SEED_CB"] = 1 if defined("WC_RNG_SEED_CB") else 0
     features["AESGCM_STREAM"] = 1 if defined("WOLFSSL_AESGCM_STREAM") else 0
-    # Try to read minimum AESGCM authentication tag size from settings, else use default.
-    min_auth_tag_sz = re.search(r'#define\s+WOLFSSL_MIN_AUTH_TAG_SZ\s+(\d+)', '\n'.join(defines))
-    features["MIN_AUTH_TAG_SZ"] = int(min_auth_tag_sz.group(1)) if min_auth_tag_sz else 12
+    min_auth_tag_sz = macro_int(macros, "WOLFSSL_MIN_AUTH_TAG_SZ")
+    features["MIN_AUTH_TAG_SZ"] = 12 if min_auth_tag_sz is None else min_auth_tag_sz
     features["RSA_PSS"] = 1 if defined("WC_RSA_PSS") else 0
     features["CHACHA20_POLY1305"] = 1 if (defined("HAVE_CHACHA") and defined("HAVE_POLY1305")) else 0
     features["ML_DSA"] = 1 if (defined("HAVE_DILITHIUM") or defined("WOLFSSL_HAVE_MLDSA")) else 0
-    # Determine if support for ML-DSA signing & verification without context has been enabled.
-    mldsa_no_context_defines = [
-        "WOLFSSL_MLDSA_NO_CTX",
-        "WOLFSSL_MLDSA_FIPS204_DRAFT",
-        # Legacy options:
-        "WOLFSSL_DILITHIUM_NO_CTX",
-        "WOLFSSL_DILITHIUM_FIPS204_DRAFT",
-    ]
-    features["ML_DSA_NO_CTX"] = 1 if any(defined(name) for name in mldsa_no_context_defines) else 0
+    # dilithium.h maps the legacy WOLFSSL_DILITHIUM_<gate> names to WOLFSSL_MLDSA_<gate>.
+    features["ML_DSA_NO_CTX"] = 1 if (defined("WOLFSSL_MLDSA_NO_CTX")
+        or defined("WOLFSSL_MLDSA_FIPS204_DRAFT")) else 0
     features["ML_KEM"] = 1 if defined("WOLFSSL_HAVE_MLKEM") else 0
     # hmac.h and hmac.c provide HKDF only without NO_HMAC.
     features["HKDF"] = 1 if defined("HAVE_HKDF") and features["HMAC"] else 0
-    # Unlike the other fatures, HASHDRBG is enabled by default in random.h, unless WC_NO_HASHDRBG or
-    # CUSTOM_RAND_GENERATE_BLOCK is defined.
-    features["HASHDRBG"] = 0 if (defined("WC_NO_HASHDRBG") or defined("CUSTOM_RAND_GENERATE_BLOCK")) else 1
+    features["HASHDRBG"] = 1 if defined("HAVE_HASHDRBG") else 0
     features["CRYPTO_CB"] = 1 if defined("WOLF_CRYPTO_CB") else 0
     features["CRYPTO_CB_COPY"] = 1 if defined("WOLF_CRYPTO_CB_COPY") else 0
     features["CRYPTO_CB_FREE"] = 1 if defined("WOLF_CRYPTO_CB_FREE") else 0
@@ -435,37 +477,22 @@ def detect_features(defines, features, fips=False, include_dirs=()):
         features["RSA_BLINDING"] = 0
     # aes.h declares wc_AesCtrEncrypt only with WOLFSSL_AES_COUNTER.
     features["AES_CTR"] = 1 if features["AES"] and defined("WOLFSSL_AES_COUNTER") else 0
-    # settings.h derives HAVE_AES_CBC and HAVE_AES_DECRYPT unless NO_AES_CBC/NO_AES_DECRYPT.
-    features["AES_CBC"] = 1 if features["AES"] and not defined("NO_AES_CBC") else 0
-    features["AES_DECRYPT"] = 1 if features["AES"] and not defined("NO_AES_DECRYPT") else 0
+    features["AES_CBC"] = 1 if features["AES"] and defined("HAVE_AES_CBC") else 0
+    features["AES_DECRYPT"] = 1 if features["AES"] and defined("HAVE_AES_DECRYPT") else 0
     # aes.c builds streaming GCM decryption only with HAVE_AES_DECRYPT or HAVE_AESGCM_DECRYPT.
     features["AESGCM_STREAM_DECRYPT"] = 1 if features["AES"] and features["AESGCM_STREAM"] and (
         features["AES_DECRYPT"] or defined("HAVE_AESGCM_DECRYPT")) else 0
-    # sha3.c builds each SHA-3 size unless WOLFSSL_NOSHA3_<bits>. settings.h
-    # leaves only SHA3-384 on Xilinx.
-    xilinx_sha3 = defined("WOLFSSL_XILINX_CRYPT") or defined("WOLFSSL_AFALG_XILINX")
+    # sha3.c builds each SHA-3 size unless WOLFSSL_NOSHA3_<bits>.
     for bits in (224, 256, 384, 512):
-        disabled = defined(f"WOLFSSL_NOSHA3_{bits}") or (xilinx_sha3 and bits != 384)
-        features[f"SHA3_{bits}"] = 1 if features["SHA3"] and not disabled else 0
+        features[f"SHA3_{bits}"] = 1 if features["SHA3"] and not defined(f"WOLFSSL_NOSHA3_{bits}") else 0
     # pwdbased.c builds wc_PBKDF2 only with HAVE_PBKDF2 and without NO_HMAC.
-    # settings.h defines HAVE_PBKDF2 unless NO_PBKDF2, and always for PKCS7 and scrypt.
-    features["PBKDF2"] = 1 if features["PWDBASED"] and features["HMAC"] and (
-        not defined("NO_PBKDF2") or defined("HAVE_PBKDF2") or defined("HAVE_PKCS7")
-        or defined("HAVE_SCRYPT")) else 0
+    features["PBKDF2"] = 1 if features["PWDBASED"] and features["HMAC"] and defined("HAVE_PBKDF2") else 0
     # asn.c builds the PEM/DER conversions only with certificate support.
-    # settings.h derives WOLFSSL_PEM_TO_DER and WOLFSSL_DER_TO_PEM.
     features["CERTS"] = 1 if features["ASN"] and not defined("NO_CERTS") else 0
-    certs = features["CERTS"]
-    features["PEM_TO_DER"] = 1 if certs and (defined("WOLFSSL_PEM_TO_DER") or not (
-        defined("WOLFSSL_NO_PEM") or defined("NO_CODING"))) else 0
-    features["DER_TO_PEM"] = 1 if certs and (defined("WOLFSSL_DER_TO_PEM")
-        or defined("WOLFSSL_CERT_GEN") or defined("OPENSSL_EXTRA") or defined("OPENSSL_ALL")
-        or defined("WOLFSSL_DUAL_ALG_CERTS")
-        or (defined("WOLFSSL_KEY_GEN") and not defined("WOLFSSL_NO_DER_TO_PEM"))) else 0
+    features["PEM_TO_DER"] = 1 if features["CERTS"] and defined("WOLFSSL_PEM_TO_DER") else 0
+    features["DER_TO_PEM"] = 1 if features["CERTS"] and defined("WOLFSSL_DER_TO_PEM") else 0
     # asn.c builds wc_GetPkcs8TraditionalOffset only with HAVE_PKCS8.
-    # settings.h defines HAVE_PKCS8 unless both NO_PKCS8 and NO_PKCS12.
-    features["PKCS8"] = 1 if features["ASN"] and (not defined("NO_PKCS8") or not defined("NO_PKCS12")
-        or defined("HAVE_PKCS8") or defined("HAVE_PKCS12")) else 0
+    features["PKCS8"] = 1 if features["ASN"] and defined("HAVE_PKCS8") else 0
     # rsa.c leaves out RSA operations for the subset macros set by
     # --enable-rsapub, --enable-rsavfy and --disable-oaep.
     rsa_public_only = defined("WOLFSSL_RSA_PUBLIC_ONLY")
@@ -475,45 +502,24 @@ def detect_features(defines, features, fips=False, include_dirs=()):
     features["RSA_SIGN"] = 1 if features["RSA_PRIVATE"] and not rsa_verify_only else 0
     features["RSA_VERIFY"] = 1 if features["RSA"] and not defined("WOLFSSL_RSA_VERIFY_INLINE") else 0
     features["RSA_OAEP"] = 1 if features["RSA"] and not defined("WC_NO_RSA_OAEP") else 0
-    # settings.h derives the ECC operations unless NO_ECC_<op>. Timing
-    # resistant signing and DHE need the RNG. Key export needs SP or big
-    # integer math.
-    ecc = features["ECC"]
-    features["ECC_SIGN"] = 1 if ecc and not defined("NO_ECC_SIGN") and (
-        features["RNG"] or not defined("ECC_TIMING_RESISTANT")) else 0
-    features["ECC_VERIFY"] = 1 if ecc and not defined("NO_ECC_VERIFY") else 0
-    features["ECC_DHE"] = 1 if ecc and not defined("NO_ECC_DHE") and features["RNG"] else 0
-    features["ECC_KEY_IMPORT"] = 1 if ecc and not defined("NO_ECC_KEY_IMPORT") else 0
-    features["ECC_KEY_EXPORT"] = 1 if ecc and not defined("NO_ECC_KEY_EXPORT") and (
-        defined("WOLFSSL_SP_MATH") or not defined("NO_BIG_INT")) else 0
-    # settings.h derives the Ed25519 operations unless NO_ED25519_<op>.
+    # settings.h derives HAVE_<alg>_<op> for the ECC and EdDSA operations.
+    for op in ("SIGN", "VERIFY", "DHE", "KEY_IMPORT", "KEY_EXPORT"):
+        features[f"ECC_{op}"] = 1 if features["ECC"] and defined(f"HAVE_ECC_{op}") else 0
     for op in ("MAKE_KEY", "SIGN", "VERIFY", "KEY_IMPORT", "KEY_EXPORT"):
-        features[f"ED25519_{op}"] = 1 if features["ED25519"] and not defined(f"NO_ED25519_{op}") else 0
-    # settings.h derives the Ed448 operations unless NO_ED448_<op>.
+        features[f"ED25519_{op}"] = 1 if features["ED25519"] and defined(f"HAVE_ED25519_{op}") else 0
     for op in ("SIGN", "VERIFY", "KEY_IMPORT", "KEY_EXPORT"):
-        features[f"ED448_{op}"] = 1 if features["ED448"] and not defined(f"NO_ED448_{op}") else 0
+        features[f"ED448_{op}"] = 1 if features["ED448"] and defined(f"HAVE_ED448_{op}") else 0
     # wc_mlkem.c builds each ML-KEM operation unless WOLFSSL_MLKEM_NO_<op>.
     # wc_mlkem.h maps the legacy WOLFSSL_KYBER_NO_<op> names to these.
     for op in ("MAKE_KEY", "ENCAPSULATE", "DECAPSULATE"):
-        features[f"ML_KEM_{op}"] = 1 if features["ML_KEM"] and not (
-            defined(f"WOLFSSL_MLKEM_NO_{op}") or defined(f"WOLFSSL_KYBER_NO_{op}")) else 0
-    # dilithium.h derives the ML-DSA operations and key parts from
-    # WOLFSSL_MLDSA_<gate> or the legacy WOLFSSL_DILITHIUM_<gate> names.
-    def mldsa_defined(gate):
-        return defined(f"WOLFSSL_MLDSA_{gate}") or defined(f"WOLFSSL_DILITHIUM_{gate}")
-
-    mldsa_verify_only = mldsa_defined("VERIFY_ONLY")
-    mldsa_no_make_key = mldsa_verify_only or mldsa_defined("NO_MAKE_KEY")
-    mldsa_no_sign = mldsa_verify_only or mldsa_defined("NO_SIGN")
-    mldsa_no_verify = mldsa_defined("NO_VERIFY")
+        features[f"ML_KEM_{op}"] = 1 if features["ML_KEM"] and not defined(f"WOLFSSL_MLKEM_NO_{op}") else 0
+    # dilithium.h derives the ML-DSA operations and key parts.
     ml_dsa = features["ML_DSA"]
-    features["ML_DSA_MAKE_KEY"] = 1 if ml_dsa and not mldsa_no_make_key else 0
-    features["ML_DSA_SIGN"] = 1 if ml_dsa and not mldsa_no_sign else 0
-    features["ML_DSA_VERIFY"] = 1 if ml_dsa and not mldsa_no_verify else 0
-    features["ML_DSA_PUBLIC_KEY"] = 1 if ml_dsa and (not mldsa_no_make_key or not mldsa_no_verify
-        or mldsa_defined("PUBLIC_KEY")) else 0
-    features["ML_DSA_PRIVATE_KEY"] = 1 if ml_dsa and (not mldsa_no_make_key or not mldsa_no_sign
-        or mldsa_defined("PRIVATE_KEY")) else 0
+    features["ML_DSA_MAKE_KEY"] = 1 if ml_dsa and not defined("WOLFSSL_MLDSA_NO_MAKE_KEY") else 0
+    features["ML_DSA_SIGN"] = 1 if ml_dsa and not defined("WOLFSSL_MLDSA_NO_SIGN") else 0
+    features["ML_DSA_VERIFY"] = 1 if ml_dsa and not defined("WOLFSSL_MLDSA_NO_VERIFY") else 0
+    features["ML_DSA_PUBLIC_KEY"] = 1 if ml_dsa and defined("WOLFSSL_MLDSA_PUBLIC_KEY") else 0
+    features["ML_DSA_PRIVATE_KEY"] = 1 if ml_dsa and defined("WOLFSSL_MLDSA_PRIVATE_KEY") else 0
 
     if defined("HAVE_FIPS"):
         if not fips:
@@ -521,12 +527,11 @@ def detect_features(defines, features, fips=False, include_dirs=()):
             raise RuntimeError(e)
 
         features["FIPS"] = 1
-        version_match = re.search(r'#define HAVE_FIPS_VERSION\s+(\d+)', '\n'.join(defines))
-        if version_match is not None:
-            features["FIPS_VERSION"] = int(version_match.group(1))
-        else:
+        fips_version = macro_int(macros, "HAVE_FIPS_VERSION")
+        if fips_version is None:
             e = "Saw #define HAVE_FIPS but no FIPS version found."
             raise RuntimeError(e)
+        features["FIPS_VERSION"] = fips_version
 
     return features
 
@@ -557,8 +562,8 @@ def build_ffi(local_wolfssl, features):
 
     ffibuilder.cdef(make_cdef(features))
 
-def make_source(features):
-    """Return the C source passed to set_source()."""
+def source_includes():
+    """Return the wolfSSL #include lines of the extension source."""
     includes_string = ""
 
     if sys.platform == 'win32':
@@ -602,6 +607,12 @@ def make_source(features):
         #include <wolfssl/wolfcrypt/wc_mldsa.h>
         #include <wolfssl/wolfcrypt/cryptocb.h>
     """
+
+    return includes_string
+
+def make_source(features):
+    """Return the C source passed to set_source()."""
+    includes_string = source_includes()
 
     init_source_string = f"""
         #ifdef __cplusplus
