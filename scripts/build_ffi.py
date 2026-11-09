@@ -374,7 +374,10 @@ def probe_source(names):
 
 def preprocess(path, include_dirs):
     """Run the C preprocessor of the extension build and return its output."""
-    import setuptools  # noqa: F401  # provides distutils on Python >= 3.12
+    try:
+        import setuptools  # noqa: F401  # provides distutils on Python >= 3.12
+    except ImportError:
+        pass
     from distutils.ccompiler import new_compiler
     from distutils.sysconfig import customize_compiler
 
