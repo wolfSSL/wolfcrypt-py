@@ -100,7 +100,6 @@ if _lib.CRYPTO_CB_ENABLED:
         NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA3_384] = ("wc_Sha3 *", _lib.wc_Sha3_384_Copy)
         NATIVE_HASH_COPY[_lib.WC_HASH_TYPE_SHA3_512] = ("wc_Sha3 *", _lib.wc_Sha3_512_Copy)
 
-
     class CryptoCallback:
         """
         Registers a wolfCrypt crypto callback device for **device_id**.
@@ -264,7 +263,6 @@ if _lib.CRYPTO_CB_ENABLED:
         @classmethod
         def default_device_id(cls) -> int:
             return _lib.wc_CryptoCb_DefaultDevID()
-
 
     def _address(ptr: FFI.CData) -> int:
         return int(_ffi.cast("uintptr_t", ptr))

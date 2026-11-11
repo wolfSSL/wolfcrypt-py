@@ -28,13 +28,16 @@ from cffi import FFI
 import shutil
 from wolfcrypt._version import __wolfssl_version__ as version
 
+
 def local_path(path):
     """ Return path relative to the root of this project
     """
     current = os.path.abspath(os.getcwd())
     return os.path.abspath(os.path.join(current, path))
 
+
 WOLFSSL_SRC_PATH = local_path("lib/wolfssl")
+
 
 def wolfssl_inc_dirs(local_wolfssl=None, fips=False):
     """Returns the wolfSSL include directories needed to build the CFFI.
@@ -65,6 +68,7 @@ def wolfssl_inc_dirs(local_wolfssl=None, fips=False):
             include_paths.append(os.path.join(WOLFSSL_SRC_PATH, "build"))
 
     return include_paths
+
 
 def wolfssl_lib_dir(local_wolfssl=None, fips=False):
     """Returns the directory containg the wolfSSL library.
@@ -100,6 +104,7 @@ def wolfssl_lib_dir(local_wolfssl=None, fips=False):
 
     return lib_dir
 
+
 def call(cmd):
     print(f"Calling: '{cmd}' from working directory {os.getcwd()}")
 
@@ -107,6 +112,7 @@ def call(cmd):
     os.environ["PATH"] = f"{WOLFSSL_SRC_PATH}:{old_env}"
     subprocess.check_call(cmd, shell=True, env=os.environ)
     os.environ["PATH"] = old_env
+
 
 @contextmanager
 def chdir(new_path, mkdir=False):
@@ -284,6 +290,7 @@ def make(configure_flags, fips=False):
             call("make")
             call("make install")
 
+
 def get_libwolfssl():
     if sys.platform == "win32":
         libwolfssl_path = os.path.join(wolfssl_lib_dir(), "wolfssl.lib")
@@ -302,10 +309,12 @@ def get_libwolfssl():
         else:
             return True
 
+
 def generate_libwolfssl(fips):
     ensure_wolfssl_src(version)
     prefix = os.path.join(WOLFSSL_SRC_PATH, get_platform(), version)
     make(make_flags(prefix, fips))
+
 
 def get_features(local_wolfssl, features):
     fips = False
@@ -395,7 +404,7 @@ def get_features(local_wolfssl, features):
     ]
     have_mldsa_no_context_support = re.search(r'#define\s+(' + '|'.join(mldsa_no_context_defines) + r')\s+', '\n'.join(defines))
     features["ML_DSA_NO_CTX"] = 1 if have_mldsa_no_context_support else 0
-    features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM'  in defines else 0
+    features["ML_KEM"] = 1 if '#define WOLFSSL_HAVE_MLKEM' in defines else 0
     features["HKDF"] = 1 if "#define HAVE_HKDF" in defines else 0
     # Unlike the other fatures, HASHDRBG is enabled by default in random.h, unless WC_NO_HASHDRBG or
     # CUSTOM_RAND_GENERATE_BLOCK is defined.
@@ -427,6 +436,7 @@ def get_features(local_wolfssl, features):
             raise RuntimeError(e)
 
     return features
+
 
 def build_ffi(local_wolfssl, features):
     cffi_include_dirs = wolfssl_inc_dirs(local_wolfssl, features["FIPS"])
@@ -540,7 +550,7 @@ def build_ffi(local_wolfssl, features):
         int HMAC_COPY_ENABLED = {features["HMAC_COPY"]};
     """
 
-    ffibuilder.set_source( "wolfcrypt._ffi", init_source_string,
+    ffibuilder.set_source("wolfcrypt._ffi", init_source_string,
         include_dirs=cffi_include_dirs,
         library_dirs=[wolfssl_lib_dir(local_wolfssl, features["FIPS"])],
         libraries=cffi_libraries)
@@ -1186,7 +1196,6 @@ def build_ffi(local_wolfssl, features):
             int wc_ecc_set_rng(ecc_key* key, WC_RNG* rng);
             """
 
-
     if features["ED25519"]:
         cdef += """
         typedef struct {...; } ed25519_key;
@@ -1418,7 +1427,6 @@ def build_ffi(local_wolfssl, features):
         static const int WC_HASH_TYPE_SHA3_512;
         """
 
-
         cdef += """
         typedef struct {
             int algo_type; /* enum wc_AlgoType */
@@ -1543,6 +1551,7 @@ def build_ffi(local_wolfssl, features):
         """
 
     ffibuilder.cdef(cdef)
+
 
 def main(ffibuilder):
     # Default features.

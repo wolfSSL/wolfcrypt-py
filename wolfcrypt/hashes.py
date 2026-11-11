@@ -497,7 +497,6 @@ if _lib.HMAC_ENABLED:
             """
             return cls(key, string, device_id)
 
-
         @property
         @abstractmethod
         def _type(self) -> int: ...
@@ -534,7 +533,6 @@ if _lib.HMAC_ENABLED:
         def _final(self, obj: FFI.CData, ret: FFI.CData) -> int:
             return _lib.wc_HmacFinal(obj, ret)
 
-
     if _lib.SHA_ENABLED:
         class HmacSha(_Hmac):
             """
@@ -545,7 +543,6 @@ if _lib.HMAC_ENABLED:
             """
             _type = _TYPE_SHA
             digest_size = Sha.digest_size  # ty: ignore[possibly-unresolved-reference]
-
 
     if _lib.SHA256_ENABLED:
         class HmacSha256(_Hmac):
@@ -558,7 +555,6 @@ if _lib.HMAC_ENABLED:
             _type = _TYPE_SHA256
             digest_size = Sha256.digest_size  # ty: ignore[possibly-unresolved-reference]
 
-
     if _lib.SHA384_ENABLED:
         class HmacSha384(_Hmac):
             """
@@ -570,7 +566,6 @@ if _lib.HMAC_ENABLED:
             _type = _TYPE_SHA384
             digest_size = Sha384.digest_size  # ty: ignore[possibly-unresolved-reference]
 
-
     if _lib.SHA512_ENABLED:
         class HmacSha512(_Hmac):
             """
@@ -581,6 +576,7 @@ if _lib.HMAC_ENABLED:
             """
             _type = _TYPE_SHA512
             digest_size = Sha512.digest_size  # ty: ignore[possibly-unresolved-reference]
+
 
 def hash_type_to_cls(hash_type: int) -> type[_Hash] | None:
     if _lib.SHA_ENABLED and hash_type == _lib.WC_HASH_TYPE_SHA:

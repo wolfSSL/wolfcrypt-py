@@ -33,6 +33,7 @@ if _lib.SHA_ENABLED:
     if _lib.HMAC_ENABLED:
         from wolfcrypt.hashes import HmacSha
 
+
 @pytest.fixture
 def pbkdf2_vectors():
     TestVector = namedtuple("TestVector", """password salt iterations key_length
@@ -54,6 +55,7 @@ def pbkdf2_vectors():
         ))
 
     return vectors
+
 
 def test_pbkdf2(pbkdf2_vectors):
     for vector in pbkdf2_vectors:

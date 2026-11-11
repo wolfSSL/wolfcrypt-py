@@ -9,4 +9,3 @@ __wolfssl_version__ = "v5.9.2-stable"
 # MAJOR.MINOR.BUILD-POST
 
 __version__ = "5.9.2-0"
-

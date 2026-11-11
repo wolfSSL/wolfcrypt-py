@@ -68,27 +68,27 @@ def vectors():
     vectorArray = {}
 
     if _lib.AES_ENABLED:
-        vectorArray[Aes]=TestVector(
+        vectorArray[Aes] = TestVector(
             key="0123456789abcdef",
             iv="1234567890abcdef",
             plaintext=t2b("now is the time "),
             ciphertext=h2b("959492575f4281532ccc9d4677a233cb"),
-            ciphertext_ctr = h2b('287528ddf484b1055debbe751eb52b8a')
+            ciphertext_ctr=h2b('287528ddf484b1055debbe751eb52b8a')
         )  # ty: ignore[missing-argument]
     if _lib.CHACHA_ENABLED:
-        vectorArray[ChaCha]=TestVector(
+        vectorArray[ChaCha] = TestVector(
             key="0123456789abcdef0123456789abcdef",
             iv="1234567890ab",
         )  # ty: ignore[missing-argument]
     if _lib.DES3_ENABLED:
-        vectorArray[Des3]=TestVector(
+        vectorArray[Des3] = TestVector(
             key=h2b("0123456789abcdeffedeba987654321089abcdef01234567"),
             iv=h2b("1234567890abcdef"),
             plaintext=t2b("Now is the time for all "),
             ciphertext=h2b("43a0297ed184f80e8964843212d508981894157487127db0")
         )  # ty: ignore[missing-argument]
     if _lib.RSA_ENABLED:
-        vectorArray[RsaPublic]=TestVector(
+        vectorArray[RsaPublic] = TestVector(
             key=h2b(
                 "30819F300D06092A864886F70D010101050003818D0030818902818100BC"
                 "730EA849F374A2A9EF18A5DA559921F9C8ECB36D48E53535757737ECD161"
@@ -98,7 +98,7 @@ def vectors():
                 "2700F6916865A90203010001"),
             pem=os.path.join(certs_dir, "server-keyPub.pem")
         )  # ty: ignore[missing-argument]
-        vectorArray[RsaPrivate]=TestVector(
+        vectorArray[RsaPrivate] = TestVector(
             key=h2b(
                 "3082025C02010002818100BC730EA849F374A2A9EF18A5DA559921F9C8EC"
                 "B36D48E53535757737ECD161905F3ED9E4D5DF94CAC1A9D719DA86C9E84D"
@@ -166,7 +166,7 @@ def vectors():
         )  # ty: ignore[missing-argument]
 
     if _lib.ECC_ENABLED:
-        vectorArray[EccPublic]=TestVector(
+        vectorArray[EccPublic] = TestVector(
             key=h2b(
                 "3059301306072A8648CE3D020106082A8648CE3D0301070342000455BFF4"
                 "0F44509A3DCE9BB7F0C54DF5707BD4EC248E1980EC5A4CA22403622C9BDA"
@@ -178,7 +178,7 @@ def vectors():
                 "daefa2351243847616c6569506cc01a9bdf6751a42f7bda9b236225fc75d7fb4"
             )
         )  # ty: ignore[missing-argument]
-        vectorArray[EccPrivate]=TestVector(
+        vectorArray[EccPrivate] = TestVector(
             key=h2b(
                 "30770201010420F8CF926BBD1E28F1A8ABA1234F3274188850AD7EC7EC92"
                 "F88F974DAF568965C7A00A06082A8648CE3D030107A1440342000455BFF4"
@@ -194,26 +194,26 @@ def vectors():
         )  # ty: ignore[missing-argument]
 
     if _lib.ED25519_ENABLED:
-        vectorArray[Ed25519Private]=TestVector(
-             key = h2b(
-                 "47CD22B276161AA18BA1E0D13DBE84FE4840E4395D784F555A92E8CF739B"
-                 "F86B"
+        vectorArray[Ed25519Private] = TestVector(
+            key=h2b(
+                "47CD22B276161AA18BA1E0D13DBE84FE4840E4395D784F555A92E8CF739B"
+                "F86B"
             )
         )  # ty: ignore[missing-argument]
-        vectorArray[Ed25519Public]=TestVector(
+        vectorArray[Ed25519Public] = TestVector(
             key=h2b(
                 "8498C65F4841145F9C51E8BFF4504B5527E0D5753964B7CB3C707A2B9747"
                 "FC96"
             )
         )  # ty: ignore[missing-argument]
     if _lib.ED448_ENABLED:
-        vectorArray[Ed448Private]=TestVector(
+        vectorArray[Ed448Private] = TestVector(
             key=h2b("c2b29804e9a893c9e275cac1f8a3033f3d4b78b79eb427ed359fdeb8"
                     "82d657c129c7930936b181971b795167ad18cabeeb52b59b94f115ad"
                     "59"
             )
         )  # ty: ignore[missing-argument]
-        vectorArray[Ed448Public]=TestVector(
+        vectorArray[Ed448Public] = TestVector(
             key=h2b("89fb2b5a5ab67dd317794cc5f1700cace295b043f3ad73a66299e10a"
                     "d3fc0a28289ddd1c641598a354113867a42e82ad844b4d858d92e4e7"
                     "80"
@@ -221,11 +221,13 @@ def vectors():
         )  # ty: ignore[missing-argument]
     return vectorArray
 
+
 algo_params = []
 if _lib.AES_ENABLED:
     algo_params.append(Aes)   # ty: ignore[possibly-unresolved-reference]
 if _lib.DES3_ENABLED:
     algo_params.append(Des3)   # ty: ignore[possibly-unresolved-reference]
+
 
 @pytest.fixture(params=algo_params)
 def cipher_cls(request):
@@ -237,6 +239,7 @@ def cipher_new(cipher_cls, vectors):
         vectors[cipher_cls].key,
         MODE_CBC,
         vectors[cipher_cls].iv)
+
 
 def test_block_cipher(cipher_cls, vectors):
     key = vectors[cipher_cls].key
@@ -260,7 +263,6 @@ def test_block_cipher(cipher_cls, vectors):
     with pytest.raises(ValueError):
         cipher_cls.new(key, MODE_CBC, iv[:-1])  # invalid iv length
 
-
     # Test AES in counter mode
     if ciphertext_ctr is not None:
         cipher_obj = cipher_cls.new(key, MODE_CTR, iv)
@@ -273,7 +275,6 @@ def test_block_cipher(cipher_cls, vectors):
     cipher_obj = cipher_new(cipher_cls, vectors)
 
     assert cipher_obj.encrypt(plaintext) == ciphertext
-
 
     # many encryptions
     cipher_obj = cipher_new(cipher_cls, vectors)
@@ -310,6 +311,7 @@ def test_block_cipher(cipher_cls, vectors):
 
     with pytest.raises(ValueError):
         cipher_obj.decrypt(ciphertext[:-1])
+
 
 if _lib.CHACHA_ENABLED:
     @pytest.fixture
@@ -401,7 +403,6 @@ if _lib.RSA_ENABLED:
             with pytest.raises(WolfCryptError):           # invalid key size
                 RsaPrivate.make_key(16384)   # ty: ignore[possibly-missing-attribute]
 
-
     def test_rsa_encrypt_decrypt(rsa_private, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -450,7 +451,6 @@ if _lib.RSA_ENABLED:
         assert 1024 / 8 == len(ciphertext) == rsa_private_oaep.output_size
         assert plaintext == rsa_private_oaep.decrypt_oaep(ciphertext)
 
-
     def test_rsa_pkcs8_encrypt_decrypt(rsa_private_pkcs8, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
 
@@ -466,7 +466,6 @@ if _lib.RSA_ENABLED:
 
         assert 1024 / 8 == len(ciphertext) == rsa_private_pkcs8.output_size
         assert plaintext == rsa_private_pkcs8.decrypt(ciphertext)
-
 
     def test_rsa_sign_verify(rsa_private, rsa_public):
         plaintext = t2b("Everyone gets Friday off.")
@@ -555,11 +554,9 @@ if _lib.ECC_ENABLED:
     def ecc_private(vectors):
         return EccPrivate(vectors[EccPrivate].key)
 
-
     @pytest.fixture
     def ecc_public(vectors):
         return EccPublic(vectors[EccPublic].key)
-
 
     def test_new_ecc_raises(vectors):
         with pytest.raises(WolfCryptError):
@@ -574,13 +571,11 @@ if _lib.ECC_ENABLED:
         with pytest.raises(WolfCryptError):           # invalid key size
             EccPrivate.make_key(1024)
 
-
     def test_key_encoding(vectors):
         priv = EccPrivate()
         pub = EccPublic()
         raw_priv = EccPrivate()
         raw_pub = EccPublic()
-
 
         # Test default encode/decode key
         priv.decode_key(vectors[EccPrivate].key)
@@ -611,7 +606,6 @@ if _lib.ECC_ENABLED:
         qx, qy = pub.encode_key_raw()
         assert qx[0:32] == vectors[EccPublic].raw_key[0:32]
         assert qy[0:32] == vectors[EccPublic].raw_key[32:64]
-
 
     def test_ecc_decode_key_raw_rejects_wrong_length(vectors):
         """
@@ -645,11 +639,8 @@ if _lib.ECC_ENABLED:
         raw_pub.decode_key_raw(qx_good, qy_good)
         raw_priv.decode_key_raw(qx_good, qy_good, d_good)
 
-
-
     def test_x963(ecc_private, ecc_public):
         assert ecc_private.export_x963() == ecc_public.export_x963()
-
 
     def test_ecc_sign_verify(ecc_private, ecc_public):
         plaintext = "Everyone gets Friday off."
@@ -685,7 +676,7 @@ if _lib.ECC_ENABLED:
             plaintext = "Everyone gets Friday off."
 
             # normal usage, sign with private, verify with public
-            r,s = ecc_private.sign_raw(plaintext)
+            r, s = ecc_private.sign_raw(plaintext)
 
             assert len(r) + len(s) <= 2 * ecc_private.size
             assert ecc_public.verify_raw(r, s, plaintext)
@@ -697,7 +688,6 @@ if _lib.ECC_ENABLED:
             # private object holds both private and public info, so it can also verify
             # using the known public key.
             assert ecc_private.verify_raw(r, s, plaintext)
-
 
     def test_ecc_make_shared_secret():
         a = EccPrivate.make_key(32, rng=Random())
@@ -725,11 +715,9 @@ if _lib.ED25519_ENABLED:
     def ed25519_private(vectors):
         return Ed25519Private(vectors[Ed25519Private].key, vectors[Ed25519Public].key)
 
-
     @pytest.fixture
     def ed25519_public(vectors):
         return Ed25519Public(vectors[Ed25519Public].key)
-
 
     def test_new_ed25519_raises(vectors):
         with pytest.raises(WolfCryptError):
@@ -741,7 +729,6 @@ if _lib.ED25519_ENABLED:
         with pytest.raises(WolfCryptError):           # invalid key size
             Ed25519Private.make_key(1024)
 
-
     def test_ed25519_key_encoding(vectors):
         priv = Ed25519Private()
         pub = Ed25519Public()
@@ -750,9 +737,8 @@ if _lib.ED25519_ENABLED:
         pub.decode_key(vectors[Ed25519Public].key)
 
         assert priv.encode_key()[0] == vectors[Ed25519Private].key
-        assert priv.encode_key()[1] == vectors[Ed25519Public].key # Automatically re-generated from private-only
+        assert priv.encode_key()[1] == vectors[Ed25519Public].key  # Automatically re-generated from private-only
         assert pub.encode_key() == vectors[Ed25519Public].key
-
 
     def test_ed25519_sign_verify(ed25519_private, ed25519_public):
         plaintext = "Everyone gets Friday off."
@@ -776,11 +762,9 @@ if _lib.ED448_ENABLED:
     def ed448_private(vectors):
         return Ed448Private(vectors[Ed448Private].key, vectors[Ed448Public].key)
 
-
     @pytest.fixture
     def ed448_public(vectors):
         return Ed448Public(vectors[Ed448Public].key)
-
 
     def test_new_ed448_raises(vectors):
         with pytest.raises(WolfCryptError):
@@ -792,7 +776,6 @@ if _lib.ED448_ENABLED:
         with pytest.raises(WolfCryptError):           # invalid key size
             Ed448Private.make_key(1024)
 
-
     def test_ed448_key_encoding(vectors):
         priv = Ed448Private()
         pub = Ed448Public()
@@ -801,9 +784,8 @@ if _lib.ED448_ENABLED:
         pub.decode_key(vectors[Ed448Public].key)
 
         assert priv.encode_key()[0] == vectors[Ed448Private].key
-        assert priv.encode_key()[1] == vectors[Ed448Public].key # Automatically re-generated from private-only
+        assert priv.encode_key()[1] == vectors[Ed448Public].key  # Automatically re-generated from private-only
         assert pub.encode_key() == vectors[Ed448Public].key
-
 
     def test_ed448_sign_verify(ed448_private, ed448_public):
         plaintext = "Everyone gets Friday off."

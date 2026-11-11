@@ -29,6 +29,7 @@ class SupportsRsaSign(Protocol):
     def sign(self, plaintext: BytesOrStr) -> bytes:
         raise NotImplementedError
 
+
 class SupportsRsaVerify(Protocol):
     @abstractmethod
     def verify(self, signature: BytesOrStr) -> bytes:
