@@ -38,7 +38,8 @@ __copyright__ = "Copyright (C) 2006-2026 wolfSSL Inc"
 __all__ = [
     "__title__", "__summary__", "__uri__", "__version__", "__wolfssl_version__",
     "__author__", "__email__", "__license__", "__copyright__",
-    "ciphers", "hashes", "random", "pwdbased", "cryptocb"
+    # Submodules: valid in __all__, but preview-mode ruff F822 reports them as undefined.
+    "ciphers", "hashes", "random", "pwdbased", "cryptocb"  # noqa: F822
 ]
 
 top_level_py = os.path.basename(sys.argv[0])

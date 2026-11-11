@@ -544,7 +544,6 @@ if _lib.AESGCM_STREAM_ENABLED:
                     raise WolfCryptApiError("Decryption error", ret)
 
 
-
 if _lib.CHACHA_ENABLED:
     class ChaCha(_Cipher):
         """
@@ -626,6 +625,7 @@ if _lib.CHACHA_ENABLED:
             assert self._enc is not None
             return _lib.wc_Chacha_Process(self._enc, destination,
                                          source, len(source))
+
         @override
         def _decrypt(self, destination: _ffi.CData, source: bytes) -> int:
             assert self._dec is not None
@@ -806,8 +806,6 @@ if _lib.RSA_ENABLED:
             else:
                 self._mgf = _lib.WC_MGF1NONE
 
-
-
     class RsaPublic(_Rsa, SupportsRsaVerify):
         def __init__(self, key: BytesOrStr, hash_type: int | None = None, rng: Random | None = None) -> None:
             super().__init__(rng)
@@ -940,7 +938,6 @@ if _lib.RSA_ENABLED:
 
                 return ret == 0
 
-
     class RsaPrivate(RsaPublic, SupportsRsaSign):
         if _lib.KEYGEN_ENABLED:
             @classmethod
@@ -1012,7 +1009,6 @@ if _lib.RSA_ENABLED:
                 """
                 priv = _ffi.new(f"byte[{self.size * 4}]")
                 pub = _ffi.new(f"byte[{self.size * 4}]")
-
 
                 ret = _lib.wc_RsaKeyToDer(self.native_object, priv, self.size)
                 if ret <= 0:  # pragma: no cover
@@ -1157,7 +1153,6 @@ if _lib.ECC_ENABLED:
         @property
         def max_signature_size(self) -> int:
             return _lib.wc_ecc_sig_size(self.native_object)
-
 
     class EccPublic(_Ecc):
         def __init__(self, key: BytesOrStr | None = None) -> None:
@@ -1321,7 +1316,6 @@ if _lib.ECC_ENABLED:
                 finally:
                     _lib.mp_clear(mpR)
                     _lib.mp_clear(mpS)
-
 
     class EccPrivate(EccPublic):
 
@@ -1547,7 +1541,6 @@ if _lib.ED25519_ENABLED:
         def max_signature_size(self) -> int:
             return _lib.wc_ed25519_sig_size(self.native_object)
 
-
     class Ed25519Public(_Ed25519):
         def __init__(self, key: BytesOrStr | None = None) -> None:
             _Ed25519.__init__(self)
@@ -1609,8 +1602,6 @@ if _lib.ED25519_ENABLED:
 
             return status[0] == 1
 
-
-
     class Ed25519Private(Ed25519Public):
         def __init__(self, key: BytesOrStr | None = None, pub: bytes | None = None) -> None:
             _Ed25519.__init__(self)
@@ -1620,7 +1611,7 @@ if _lib.ED25519_ENABLED:
             if key and not pub:
                 self.decode_key(key)
             if key and pub:
-                self.decode_key(key,pub)
+                self.decode_key(key, pub)
 
         @classmethod
         def make_key(cls, size: int, rng: Random | None = None) -> Ed25519Private:
@@ -1749,7 +1740,6 @@ if _lib.ED448_ENABLED:
         def max_signature_size(self) -> int:
             return _lib.wc_ed448_sig_size(self.native_object)
 
-
     class Ed448Public(_Ed448):
         def __init__(self, key: BytesOrStr | None = None) -> None:
             _Ed448.__init__(self)
@@ -1818,8 +1808,6 @@ if _lib.ED448_ENABLED:
                 raise WolfCryptApiError("Verify error", ret)
 
             return status[0] == 1
-
-
 
     class Ed448Private(Ed448Public):
         def __init__(self, key: BytesOrStr | None = None, pub: bytes | None = None) -> None:
@@ -1914,7 +1902,7 @@ if _lib.ED448_ENABLED:
 
             return _ffi.buffer(key, priv_size[0])[:], _ffi.buffer(pubkey, pub_size[0])[:]
 
-        def sign(self, plaintext: BytesOrStr, ctx : BytesOrStr | None = None) -> bytes:
+        def sign(self, plaintext: BytesOrStr, ctx: BytesOrStr | None = None) -> bytes:
             """
             Signs **plaintext**, using the private key data in the object.
 
@@ -2636,7 +2624,6 @@ if _lib.ML_DSA_ENABLED:
                 )
                 if ret < 0:  # pragma: no cover
                     raise WolfCryptApiError("wc_dilithium_sign_msg_with_seed() error", ret)
-
 
             if in_size != out_size[0]:
                 raise WolfCryptError(f"{in_size=} and {out_size[0]=} don't match")

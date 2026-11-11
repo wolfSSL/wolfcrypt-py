@@ -36,6 +36,7 @@ if _lib.RSA_ENABLED:
 
 certs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "certs")
 
+
 @pytest.fixture
 def pem_der_conversion_vectors():
     TestVector = namedtuple("TestVector", "pem der type")
@@ -60,6 +61,7 @@ def pem_der_conversion_vectors():
             vectors.append(TestVector(pem=pem, der=der, type=f[2]))
 
         return vectors
+
 
 @pytest.fixture
 def signature_vectors():
@@ -97,6 +99,7 @@ def signature_vectors():
 
     return vectors
 
+
 def test_pem_der_conversion(pem_der_conversion_vectors):
     for vector in pem_der_conversion_vectors:
         computed_der = pem_to_der(vector.pem, vector.type)
@@ -104,6 +107,7 @@ def test_pem_der_conversion(pem_der_conversion_vectors):
 
         computed_pem = der_to_pem(vector.der, vector.type)
         assert computed_pem == vector.pem
+
 
 def test_signature(signature_vectors):
     for vector in signature_vectors:

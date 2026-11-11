@@ -467,7 +467,7 @@ RsaKey: TypeAlias = FFI.CData
 def wc_InitRsaKey(key: RsaKey, heap: FFI.CData) -> int: ...
 def wc_RsaSetRNG(key: RsaKey, rng: RNG) -> int: ...
 def wc_FreeRsaKey(key: RsaKey) -> int: ...
-def wc_RsaPublicKeyDecode(input: bytes, in_out_idx: IntPtr, key: RsaKey, input_len:int ) -> int: ...
+def wc_RsaPublicKeyDecode(input: bytes, in_out_idx: IntPtr, key: RsaKey, input_len: int) -> int: ...
 def wc_RsaPublicEncrypt(plaintext: bytes, plaintext_len: int, out: BytePtr, out_len: int, key: RsaKey, rng: RNG) -> int: ...
 def wc_RsaPublicEncrypt_ex(plaintext: bytes, plaintext_len: int, out: BytePtr, out_len: int, key: RsaKey, rng: RNG, pad_type: int, hash_type: int, mgf: int, label: bytes | BytePtr, label_len: int) -> int: ...
 def wc_RsaSSL_Verify(signature: bytes, signature_len: int, out: BytePtr, out_len: int, key: RsaKey) -> int: ...
@@ -484,7 +484,6 @@ def wc_RsaPSS_Sign(digest: bytes, digest_len: int, out: BytePtr, out_len: int, h
 
 def wc_GetPkcs8TraditionalOffset(input: BytePtr, in_out_idx: IntPtr, size: int) -> int: ...
 def wc_RsaKeyToPublicDer(key: RsaKey, output: BytePtr, in_len: int) -> int: ...
-
 
 MpInt: TypeAlias = FFI.CData
 
@@ -601,13 +600,11 @@ class wc_HashInfo:
     digest: FFI.CData
     u: FFI.CData
 
-
 @dataclass
 class wc_RngInfo:
     rng: RNG
     out: FFI.CData
     sz: int
-
 
 @dataclass
 class wc_CopyInfo:
@@ -616,14 +613,12 @@ class wc_CopyInfo:
     src: FFI.CData
     dst: FFI.CData
 
-
 @dataclass
 class wc_FreeInfo:
     algo: int
     type: int
     subType: int
     obj: FFI.CData
-
 
 @dataclass
 class wc_CryptoInfo:
@@ -632,7 +627,6 @@ class wc_CryptoInfo:
     rng: wc_RngInfo
     copy: wc_CopyInfo
     free: wc_FreeInfo
-
 
 def wc_CryptoCb_RegisterDevice(dev_id: int, cb: Callable[[int, wc_CryptoInfo, FFI.CData], int], ctx: FFI.CData) -> int: ...
 def wc_CryptoCb_UnRegisterDevice(dev_id: int) -> None: ...
