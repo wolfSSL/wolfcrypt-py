@@ -65,6 +65,7 @@ def test_pbkdf2(pbkdf2_vectors):
                      vector.key_length, vector.hash_type)
         assert len(key) == vector.key_length
 
+
 def test_pbkdf2_defined_only_when_enabled(lib_patch):
     """F-12232: PBKDF2 needs wc_PBKDF2 in the linked wolfSSL."""
     assert hasattr(pwdbased, "PBKDF2") == bool(_lib.PBKDF2_ENABLED)
