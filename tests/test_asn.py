@@ -22,13 +22,19 @@
 # ty: ignore[possibly-missing-import]
 
 from collections import namedtuple
+import importlib.util
 import pytest
 import os
+from wolfcrypt import asn
 from wolfcrypt._ffi import lib as _lib
 from wolfcrypt.utils import h2b
 
 if _lib.ASN_ENABLED:
-    from wolfcrypt.asn import pem_to_der, der_to_pem, make_signature, check_signature
+    from wolfcrypt.asn import make_signature, check_signature
+if _lib.PEM_TO_DER_ENABLED:
+    from wolfcrypt.asn import pem_to_der
+if _lib.DER_TO_PEM_ENABLED:
+    from wolfcrypt.asn import der_to_pem
 if _lib.SHA256_ENABLED:
     from wolfcrypt.hashes import Sha256
 if _lib.RSA_ENABLED:
@@ -60,7 +66,7 @@ def pem_der_conversion_vectors():
 
             vectors.append(TestVector(pem=pem, der=der, type=f[2]))
 
-        return vectors
+    return vectors
 
 
 @pytest.fixture
@@ -79,7 +85,13 @@ def signature_vectors():
     # Signature computed with:
     # echo -n "wolfcrypt is the best crypto around" | \
     # openssl dgst -hex -sha256 -sign tests/certs/server-key.pem
-    if _lib.ASN_ENABLED and _lib.SHA256_ENABLED and _lib.RSA_ENABLED:
+    # Verify needs no RNG, so it runs in WC_NO_RNG builds too.
+    if (_lib.ASN_ENABLED and _lib.PEM_TO_DER_ENABLED and _lib.SHA256_ENABLED
+            and _lib.RSA_ENABLED and _lib.RSA_VERIFY_ENABLED):
+        priv_key = None
+        # Signing creates a Random.
+        if _lib.RSA_SIGN_ENABLED and _lib.RNG_ENABLED:
+            priv_key = RsaPrivate.from_pem(priv_key_pem)   # ty: ignore[possibly-missing-attribute]
         vectors.append(TestVector(
             data="wolfcrypt is the best crypto around",
             signature=h2b("1d65f21df8fdc9f3c2351792840423481c6b0f2332105abd9248"
@@ -94,7 +106,7 @@ def signature_vectors():
                           "60314e864190e6bb9812bfbf4b40994f2c1d4ca7aad9"),
             hash_cls=Sha256,
             pub_key=RsaPublic.from_pem(pub_key_pem),   # ty: ignore[possibly-missing-attribute]
-            priv_key=RsaPrivate.from_pem(priv_key_pem)   # ty: ignore[possibly-missing-attribute]
+            priv_key=priv_key
         ))
 
     return vectors
@@ -102,15 +114,39 @@ def signature_vectors():
 
 def test_pem_der_conversion(pem_der_conversion_vectors):
     for vector in pem_der_conversion_vectors:
-        computed_der = pem_to_der(vector.pem, vector.type)
-        assert computed_der == vector.der
+        if _lib.PEM_TO_DER_ENABLED:
+            computed_der = pem_to_der(vector.pem, vector.type)
+            assert computed_der == vector.der
 
-        computed_pem = der_to_pem(vector.der, vector.type)
-        assert computed_pem == vector.pem
+        if _lib.DER_TO_PEM_ENABLED:
+            computed_pem = der_to_pem(vector.der, vector.type)
+            assert computed_pem == vector.pem
 
 
 def test_signature(signature_vectors):
     for vector in signature_vectors:
-        assert make_signature(vector.data, vector.hash_cls, vector.priv_key) == vector.signature
+        if vector.priv_key is not None:
+            assert make_signature(vector.data, vector.hash_cls,
+                                  vector.priv_key) == vector.signature
         assert check_signature(vector.signature, vector.data, vector.hash_cls,
                                vector.pub_key)
+
+
+def test_pem_der_helpers_defined_only_when_enabled(lib_patch):
+    """F-12233: each conversion direction needs its own wolfSSL function."""
+    helpers = {"PEM_TO_DER_ENABLED": "pem_to_der", "DER_TO_PEM_ENABLED": "der_to_pem"}
+    for flag, name in helpers.items():
+        assert hasattr(asn, name) == bool(getattr(_lib, flag)), name
+
+    # Load fresh copies of the module as if one direction were not compiled in.
+    for disabled, disabled_name in helpers.items():
+        with lib_patch.context() as m:
+            m.setattr(disabled, 0)
+            spec = importlib.util.find_spec("wolfcrypt.asn")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+        assert not hasattr(module, disabled_name), disabled
+        for flag, name in helpers.items():
+            if flag != disabled:
+                assert hasattr(module, name) == bool(getattr(_lib, flag)), (disabled, name)
+        assert hasattr(module, "make_signature") == bool(_lib.ASN_ENABLED), disabled
