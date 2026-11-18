@@ -46,6 +46,7 @@ from wolfcrypt.cryptocb import CryptoCallback, DIGEST_SIZE
 
 HASH_CB_ENABLED = _lib.CRYPTO_CB_COPY_ENABLED and _lib.CRYPTO_CB_FREE_ENABLED
 needs_hash_cb = pytest.mark.skipif(not HASH_CB_ENABLED, reason="Hash callbacks need copy and free crypto callbacks")
+needs_rng = pytest.mark.skipif(not _lib.RNG_ENABLED, reason="RNG not enabled")
 
 SHA_CLASSES: list[type[_Sha]] = []
 
@@ -65,7 +66,8 @@ if _lib.SHA512_ENABLED:
     from wolfcrypt.hashes import Sha512
     SHA_CLASSES.append(Sha512)
 
-if _lib.SHA3_ENABLED:
+# Sha3() defaults to SHA3-384.
+if _lib.SHA3_384_ENABLED:
     from wolfcrypt.hashes import Sha3
     SHA_CLASSES.append(Sha3)
 
@@ -82,6 +84,7 @@ class RngCryptoCallback(CryptoCallback):
         return bytes(range(1, 1 + size))
 
 
+@needs_rng
 def test_rng_callback():
     with RngCryptoCallback(10):
         rng = Random(device_id=10)
@@ -247,6 +250,7 @@ class BadRngCryptoCallback(CryptoCallback):
         return bytes(1)  # bad random length
 
 
+@needs_rng
 def test_rng_callback_failure():
     with BadRngCryptoCallback(14):
         rng = Random(device_id=14)
@@ -254,6 +258,7 @@ def test_rng_callback_failure():
             rng.bytes(4)
 
 
+@needs_rng
 def test_reregister_same_device_id():
     gc.disable()
     try:
@@ -298,6 +303,7 @@ if _lib.SHA256_ENABLED:
             assert sha.digest() == struct.pack("I28x", 7)
 
     @needs_hash_cb
+    @needs_rng
     def test_hash_outlives_callback():
         with SoftwareHashCryptoCallback(27) as cb:
             sha = Sha256(b"abc", device_id=27)
@@ -318,7 +324,9 @@ if _lib.SHA256_ENABLED:
             assert Random(device_id=27).bytes(3) == b"\01\02\03"
 
 
-if _lib.SHA3_ENABLED:
+if _lib.SHA3_224_ENABLED:
+    from wolfcrypt.hashes import Sha3
+
     def test_hash_unsupported_type_falls_back():
         with HashCryptoCallback(18):
             sha = Sha3(b"abc", size=Sha3.SHA3_224_DIGEST_SIZE, device_id=18)

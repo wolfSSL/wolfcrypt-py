@@ -42,7 +42,7 @@ if _lib.SHA384_ENABLED:
 if _lib.SHA512_ENABLED:
     from wolfcrypt.hashes import Sha512  # ty: ignore[possibly-missing-import]
 
-if _lib.ASN_ENABLED:
+if _lib.PEM_TO_DER_ENABLED:
     def pem_to_der(pem: bytes, pem_type: int) -> bytes:
         der = _ffi.new("DerBuffer**")
         ret = _lib.wc_PemToDer(pem, len(pem), pem_type, der, _ffi.NULL,
@@ -56,6 +56,7 @@ if _lib.ASN_ENABLED:
             _lib.wc_FreeDer(der)
         return result
 
+if _lib.DER_TO_PEM_ENABLED:
     def der_to_pem(der: bytes, pem_type: int) -> bytes:
         pem_length = _lib.wc_DerToPemEx(der, len(der), _ffi.NULL, 0, _ffi.NULL,
                                         pem_type)
@@ -70,6 +71,7 @@ if _lib.ASN_ENABLED:
 
         return _ffi.buffer(pem, pem_length)[:]
 
+if _lib.ASN_ENABLED:
     def hash_oid_from_class(hash_cls: type[_Hash]) -> int:
         if _lib.SHA_ENABLED and hash_cls == Sha:
             return _lib.SHAh

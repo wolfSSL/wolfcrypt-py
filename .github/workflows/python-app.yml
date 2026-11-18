@@ -15,7 +15,12 @@ permissions:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, ubuntu-24.04-arm ]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v7
@@ -153,4 +158,75 @@ jobs:
     - name: Run tests
       env:
         MALLOC_CHECK_: "3"
+      run: uv run --no-sync pytest tests
+
+  build-reduced:
+    # wolfSSL builds without optional features must build, import and pass.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: no-asn
+            flags: --disable-asn --disable-rsa --disable-rsapss --disable-pkcs7
+          - name: no-rng-cryptocb
+            # wolfSSL needs the RNG for PKCS#7, AES-GCM streaming and key
+            # generation.
+            flags: >-
+              --disable-rng --disable-pkcs7 --disable-aesgcm-stream
+              --disable-keygen
+              --enable-cryptocb --enable-cryptocbutils=copy,free
+          - name: no-ecc-sign
+            # wolfSSL PKCS#7 needs ECC signing.
+            flags: --disable-pkcs7
+            cflags: -DNO_ECC_SIGN
+          - name: no-error-strings
+            flags: --disable-errorstrings
+
+    name: build-reduced (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    env:
+      USE_LOCAL_WOLFSSL: ${{ github.workspace }}/wolfssl-install
+
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        submodules: recursive
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.10"
+    - name: Install uv
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      with:
+        # Install a specific version of uv.
+        version: "0.11.26"
+    - name: Install build deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y autoconf automake libtool
+    - name: Build wolfSSL
+      run: |
+        cd lib/wolfssl
+        ./autogen.sh
+        ./configure --enable-cryptonly --disable-shared --disable-crypttests \
+                    --enable-aes --enable-aesgcm --enable-aessiv \
+                    --enable-aesctr --enable-aesgcm-stream \
+                    --enable-des3 --enable-chacha --enable-poly1305 \
+                    --enable-sha --enable-sha384 --enable-sha512 --enable-sha3 \
+                    --enable-hkdf --enable-rsa --enable-rsapss --enable-ecc \
+                    --enable-ed25519 --enable-ed448 --enable-curve25519 \
+                    --enable-keygen --enable-pwdbased --enable-pkcs7 \
+                    --disable-md5 --disable-sha224 --disable-dh \
+                    --disable-oldtls --disable-oldnames --disable-extended-master \
+                    ${{ matrix.flags }} \
+                    CFLAGS="-fPIC ${{ matrix.cflags }}" \
+                    --prefix=$GITHUB_WORKSPACE/wolfssl-install
+        make
+        make install
+    - name: Install wolfcrypt-py against the local wolfSSL
+      run: |
+        uv venv
+        uv pip install pytest
+        uv pip install -e .
+    - name: Run tests
       run: uv run --no-sync pytest tests
