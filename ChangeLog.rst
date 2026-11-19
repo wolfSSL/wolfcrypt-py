@@ -1,3 +1,16 @@
+wolfCrypt-py Unreleased
+=======================
+
+* Build against wolfSSL builds that leave out optional features. Methods for
+  operations the linked wolfSSL does not provide are not defined.
+* ECC: `sign()` and `sign_raw()` raise `ValueError` when the input is not
+  `WC_MIN_DIGEST_SIZE` to `WC_MAX_DIGEST_SIZE` bytes long. `verify()` and
+  `verify_raw()` return `False` for such inputs.
+* ECC: Key import checks the key with `wc_ecc_check_key()`, and that a private
+  key matches its public key when wolfSSL provides `wc_ecc_make_pub()`. A key
+  that fails is not kept.
+
+
 wolfCrypt-py Release 5.9.2 (Jul 16, 2026)
 ==========================================
 

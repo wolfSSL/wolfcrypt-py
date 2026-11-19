@@ -24,14 +24,19 @@
 import pytest
 
 from wolfcrypt._ffi import lib as _lib
-from wolfcrypt.hkdf import HKDF, HKDF_Extract, HKDF_Expand
-from wolfcrypt.hashes import HmacSha, HmacSha256
+
+if _lib.HKDF_ENABLED:
+    from wolfcrypt.hkdf import HKDF, HKDF_Extract, HKDF_Expand
+    from wolfcrypt.hashes import HmacSha256
+    if _lib.SHA_ENABLED:
+        from wolfcrypt.hashes import HmacSha
 
 # Skip the whole module if required features are not available.
 pytestmark = pytest.mark.skipif(
     not (_lib.HKDF_ENABLED and _lib.SHA256_ENABLED and _lib.HMAC_ENABLED),
     reason="HKDF/SHA256/HMAC not enabled in the underlying wolfCrypt library",
 )
+needs_sha = pytest.mark.skipif(not _lib.SHA_ENABLED, reason="SHA-1 not enabled")
 
 
 def test_hkdf_rfc5869_case1_full():
@@ -149,6 +154,7 @@ def test_hkdf_rfc5869_case3_full_and_split():
     assert okm2 == expected_okm
 
 
+@needs_sha
 def test_hkdf_rfc5869_case4_sha1_full_and_split():
     """
     RFC 5869 Test Case 4 (SHA-1) - basic test
@@ -175,6 +181,7 @@ def test_hkdf_rfc5869_case4_sha1_full_and_split():
     assert okm2 == expected_okm
 
 
+@needs_sha
 def test_hkdf_rfc5869_case5_sha1_long_full_and_split():
     """
     RFC 5869 Test Case 5 (SHA-1) - longer inputs/outputs
@@ -204,6 +211,7 @@ def test_hkdf_rfc5869_case5_sha1_long_full_and_split():
     assert okm2 == expected_okm
 
 
+@needs_sha
 def test_hkdf_rfc5869_case6_sha1_zero_salt_info():
     """
     RFC 5869 Test Case 6 (SHA-1) - zero-length salt/info
@@ -230,6 +238,7 @@ def test_hkdf_rfc5869_case6_sha1_zero_salt_info():
     assert okm2 == expected_okm
 
 
+@needs_sha
 def test_hkdf_rfc5869_case7_sha1_salt_not_provided():
     """
     RFC 5869 Test Case 7 (SHA-1) - salt not provided (defaults to zeros),
