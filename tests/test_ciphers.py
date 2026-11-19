@@ -844,7 +844,7 @@ if _lib.ECC_ENABLED:
                 EccPrivate(der[:-1] + bytes([der[-1] ^ 1]))
 
     @needs_ecc_import
-    def test_ecc_rejected_import_clears_key(vectors):
+    def test_ecc_rejected_import_clears_key(vectors, ecc_private):
         """A key that fails validation is not left loaded."""
         key = vectors[EccPublic].raw_key
         qx, qy = key[0:32], key[32:64]
@@ -854,9 +854,8 @@ if _lib.ECC_ENABLED:
         assert pub.size == 0
 
         if _lib.ECC_DHE_ENABLED and _lib.RNG_ENABLED:
-            priv = EccPrivate.make_key(32)
             with pytest.raises(WolfCryptError):
-                priv.shared_secret(pub)
+                ecc_private.shared_secret(pub)
 
         key = vectors[EccPrivate].raw_key
         priv = EccPrivate()
