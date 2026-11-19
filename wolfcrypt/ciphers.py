@@ -1230,7 +1230,7 @@ if _lib.ECC_ENABLED:
             """Checks that the public key is d * G."""
             point = _lib.wc_ecc_new_point()
             if point == _ffi.NULL:  # pragma: no cover
-                raise MemoryError("Failed to allocate an ECC point")
+                raise self._fail(MemoryError("Failed to allocate an ECC point"))
             try:
                 ret = _lib.wc_ecc_make_pub(self.native_object, point)
                 # Without HAVE_ECC_MAKE_PUB the pair can't be checked.
